@@ -8,21 +8,29 @@ BUILD_PATH=$SCRIPT_PATH/build
 
 CMAKE_DIR="$SCRIPT_PATH/external/cmake"
 HOST_OS=$(uname -s)
-
 CMAKE_PREFIX=cmake-3.3.2-$HOST_OS-x86_64
+
 if [ "$HOST_OS" == "Darwin" ]; then
     CMAKE="$CMAKE_DIR/$CMAKE_PREFIX/CMake.app/Contents/bin/cmake"
 else
     CMAKE="$CMAKE_DIR/$CMAKE_PREFIX/bin/cmake"
 fi
 
-# Actually go wget the latest build
 if [ ! -f "$CMAKE" ]; then
-    echo CMake not found in path or at $CMAKE, retrieving...
+    echo CMake not found at $CMAKE, retrieving...
     mkdir -p "$CMAKE_DIR"
+
     CMAKE_ARCHIVE="$CMAKE_PREFIX.tar.gz"
     rm -f "$CMAKE_DIR/$CMAKE_ARCHIVE"
-    wget -P "$CMAKE_DIR" http://cmake.org/files/v3.3/$CMAKE_ARCHIVE
+
+    CMAKE_URL=http://cmake.org/files/v3.3/$CMAKE_ARCHIVE
+
+    if [ "$HOST_OS" == "Darwin" ]; then
+        curl -o "$CMAKE_DIR/$CMAKE_ARCHIVE" $CMAKE_URL
+    else
+        wget -P "$CMAKE_DIR" $CMAKE_URL
+    fi
+
     tar xzf "$CMAKE_DIR/$CMAKE_ARCHIVE" -C "$CMAKE_DIR"
     rm "$CMAKE_DIR/$CMAKE_ARCHIVE"
 fi
