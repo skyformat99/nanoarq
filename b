@@ -22,7 +22,7 @@ if [ ! -f "$CMAKE" ]; then
     mkdir -p "$CMAKE_DIR"
     CMAKE_ARCHIVE="$CMAKE_PREFIX.tar.gz"
     rm -f "$CMAKE_DIR/$CMAKE_ARCHIVE"
-    wget -P "$CMAKE_DIR" https://cmake.org/files/v3.3/$CMAKE_ARCHIVE
+    wget -P "$CMAKE_DIR" http://cmake.org/files/v3.3/$CMAKE_ARCHIVE
     tar xzf "$CMAKE_DIR/$CMAKE_ARCHIVE" -C "$CMAKE_DIR"
     rm "$CMAKE_DIR/$CMAKE_ARCHIVE"
 fi
