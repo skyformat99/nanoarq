@@ -21,16 +21,10 @@ ExternalProject_Add(CppUTest
                     PREFIX ${CPPUTEST_ROOT_DIR}
                     GIT_REPOSITORY "https://github.com/cpputest/cpputest.git"
                     GIT_TAG "${GIT_TAG}"
+                    INSTALL_COMMAND ""
+                    UPDATE_COMMAND ""
                     CMAKE_GENERATOR "${CMAKE_GENERATOR}"
                     CMAKE_ARGS "${CMAKE_ARGS}")
 
-                #add_library(libhidapi STATIC IMPORTED)
-                #set_target_properties(libhidapi PROPERTIES IMPORTED_LOCATION ${HIDAPI_LIB_DIR}/libhidapi.a)
-                #add_dependencies(libhidapi hidapi_external)
-
-################ test app
-
-#include_directories(${HIDAPI_INCLUDE_DIR})
-#add_executable(hidapi-test src/main.cpp)
-#target_link_libraries(hidapi-test ${IOKIT} ${COREFOUNDATION} libhidapi)
+################ unit tests
 
