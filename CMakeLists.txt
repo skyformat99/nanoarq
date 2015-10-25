@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 ################ CppUTest
 
-set(CPPUTEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/external/cpputest)
+set(CPPUTEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/external/CppUTest)
 set(CPPUTEST_LIB_DIR ${CPPUTEST_ROOT_DIR}/bin/lib)
 set(CPPUTEST_INCLUDE_DIR ${CPPUTEST_ROOT_DIR}/bin/include)
 
@@ -22,7 +22,8 @@ ExternalProject_Add(CppUTest_external
                     INSTALL_DIR ${CPPUTEST_ROOT_DIR}/bin
                     CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR>
                     BUILD_COMMAND make
-                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a)
+                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a
+                                     ${CPPUTEST_LIB_DIR}/libCppUTestExt.a)
 
 ExternalProject_Add_Step(CppUTest_external
                          autogen
@@ -32,11 +33,24 @@ ExternalProject_Add_Step(CppUTest_external
                          WORKING_DIRECTORY ${CPPUTEST_ROOT_DIR}/src/CppUTest)
 
 add_library(libCppUTest STATIC IMPORTED)
-add_library(libCppUTestExt STATIC IMPORTED)
 set_target_properties(libCppUTest PROPERTIES IMPORTED_LOCATION ${CPPUTEST_LIB_DIR}/libCppUTest.a)
+
+add_library(libCppUTestExt STATIC IMPORTED)
 set_target_properties(libCppUTestExt PROPERTIES IMPORTED_LOCATION ${CPPUTEST_LIB_DIR}/libCppUTestExt.a)
+
 add_dependencies(libCppUTest CppUTest_external)
 add_dependencies(libCppUTestExt CppUTest_external)
 
-################ unit tests
+################ tests
+
+include_directories(${CPPUTEST_INCLUDE_DIR})
+add_executable(nanoarq_tests unit_tests/main.cpp)
+target_link_libraries(nanoarq_tests libCppUTest libCppUTestExt)
+
+set(NANOARQ_TESTS_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/nanoarq_tests.timestamp)
+add_custom_target(RUN_NANOARQ_TESTS ALL DEPENDS ${NANOARQ_TESTS_TIMESTAMP_FILE})
+add_custom_command(OUTPUT ${NANOARQ_TESTS_TIMESTAMP_FILE}
+                   COMMAND nanoarq_tests && touch ${NANOARQ_TESTS_TIMESTAMP_FILE}
+                   DEPENDS nanoarq_tests
+                   COMMENT "Running nanoarq_tests")
 
