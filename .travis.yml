@@ -3,5 +3,5 @@ os:
     - linux
 compiler:
     - clang
-script: b
+script: ./b
 
