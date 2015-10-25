@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 ################ CppUTest
 
-set(CPPUTEST_ROOT_DIR ${CMAKE_BINARY_DIR}/.deps/cpputest)
+set(CPPUTEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/external/cpputest)
 set(CPPUTEST_LIB_DIR ${CPPUTEST_ROOT_DIR}/lib)
 set(CPPUTEST_INCLUDE_DIR ${CPPUTEST_ROOT_DIR}/include)
 
