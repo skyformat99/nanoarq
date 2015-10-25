@@ -3,5 +3,6 @@ os:
     - linux
 compiler:
     - clang
+    - gcc
 script: ./b
 
