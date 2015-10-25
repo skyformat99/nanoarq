@@ -30,3 +30,8 @@
 
 # Debug files
 *.dSYM/
+
+# temp / external directories
+build
+external
+
