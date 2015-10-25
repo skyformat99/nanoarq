@@ -23,6 +23,7 @@ ExternalProject_Add(CppUTest
                     GIT_TAG "${GIT_TAG}"
                     INSTALL_COMMAND ""
                     UPDATE_COMMAND ""
+                    PATCH_COMMAND ""
                     CMAKE_GENERATOR "${CMAKE_GENERATOR}"
                     CMAKE_ARGS "${CMAKE_ARGS}")
 
