@@ -22,13 +22,12 @@ if [ ! -f "$CMAKE" ]; then
 
     CMAKE_ARCHIVE="$CMAKE_PREFIX.tar.gz"
     rm -f "$CMAKE_DIR/$CMAKE_ARCHIVE"
-
-    CMAKE_URL=http://cmake.org/files/v3.3/$CMAKE_ARCHIVE
+    CMAKE_URL=https://cmake.org/files/v3.3/$CMAKE_ARCHIVE
 
     if [ "$HOST_OS" == "Darwin" ]; then
         curl -o "$CMAKE_DIR/$CMAKE_ARCHIVE" $CMAKE_URL
     else
-        wget -P "$CMAKE_DIR" $CMAKE_URL
+        wget --no-check-certificate -P "$CMAKE_DIR" $CMAKE_URL
     fi
 
     tar xzf "$CMAKE_DIR/$CMAKE_ARCHIVE" -C "$CMAKE_DIR"
