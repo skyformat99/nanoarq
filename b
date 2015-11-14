@@ -37,16 +37,14 @@ fi
 #### prefer ninja, fall back to make
 
 BUILD_GENERATOR="Unix Makefiles"
-BUILD_COMMAND=make
 
 if command -v ninja >/dev/null 2>&1; then
     BUILD_GENERATOR=Ninja
-    BUILD_COMMAND=ninja
 fi
 
 #### everything builds inside of 'build' subdirectory
 
 [ ! -d $BUILD_PATH ] && mkdir -p $BUILD_PATH
 [ ! -d $BUILD_PATH/CMakeFiles ] && (cd $BUILD_PATH; "$CMAKE" -G "$BUILD_GENERATOR" $SCRIPT_PATH)
-(cd $BUILD_PATH; $BUILD_COMMAND "$@")
+(cd $BUILD_PATH; "$CMAKE" --build . -- "$@")
 
