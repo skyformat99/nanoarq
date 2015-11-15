@@ -54,7 +54,10 @@ ExternalProject_Add(plthook_external
                     PATCH_COMMAND ""
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
-                    INSTALL_COMMAND "")
+                    INSTALL_COMMAND ""
+                    BUILD_BYPRODUCTS ${PLTHOOK_SRC_DIR}/plthook_osx.c
+                                     ${PLTHOOK_SRC_DIR}/plthook_elf.c
+                                     ${PLTHOOK_SRC_DIR}/plthook.h)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(PLTHOOK_SOURCES ${PLTHOOK_SRC_DIR}/plthook_osx.c)
