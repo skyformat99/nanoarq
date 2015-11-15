@@ -43,7 +43,7 @@ add_dependencies(libCppUTestExt CppUTest_external)
 ################ plthook
 
 set(PLTHOOK_ROOT_DIR ${CMAKE_SOURCE_DIR}/external/plthook)
-set(PLTHOOK_SRC_DIR ${PLTHOOK_ROOT_DIR}/src/plthook_external)
+set(PLTHOOK_SRC_DIR ${PLTHOOK_ROOT_DIR}/bin)
 set(PLTHOOK_INCLUDE_DIR ${PLTHOOK_SRC_DIR})
 
 ExternalProject_Add(plthook_external
@@ -54,9 +54,10 @@ ExternalProject_Add(plthook_external
                     PATCH_COMMAND ""
                     CONFIGURE_COMMAND ""
                     BUILD_COMMAND ""
-                    INSTALL_COMMAND ""
+                    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory ${PLTHOOK_ROOT_DIR}/src/plthook_external ${PLTHOOK_SRC_DIR}
                     BUILD_BYPRODUCTS ${PLTHOOK_SRC_DIR}/plthook_osx.c
                                      ${PLTHOOK_SRC_DIR}/plthook_elf.c
+                                     ${PLTHOOK_SRC_DIR}/plthook_win32.c
                                      ${PLTHOOK_SRC_DIR}/plthook.h)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -67,14 +68,14 @@ else()
     error("Unsupported platform ${CMAKE_SYSTEM_NAME}")
 endif()
 
-add_library(libplthook STATIC ${PLTHOOK_SOURCES})
-add_dependencies(libplthook plthook_external)
+add_library(plthook STATIC ${PLTHOOK_SOURCES})
+add_dependencies(plthook plthook_external)
 
 ################ tests
 
 include_directories(${CPPUTEST_INCLUDE_DIR} ${PLTHOOK_INCLUDE_DIR})
 add_executable(nanoarq_tests unit_tests/main.cpp)
-target_link_libraries(nanoarq_tests libCppUTest libCppUTestExt libplthook)
+target_link_libraries(nanoarq_tests libCppUTest libCppUTestExt plthook dl)
 
 set(NANOARQ_TESTS_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/nanoarq_tests.timestamp)
 add_custom_target(RUN_NANOARQ_TESTS ALL DEPENDS ${NANOARQ_TESTS_TIMESTAMP_FILE})
