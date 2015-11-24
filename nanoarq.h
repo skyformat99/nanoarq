@@ -21,6 +21,7 @@ typedef enum
 } arq_state_t;
 
 typedef struct arq_t arq_t;
+typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 typedef void (*arq_state_cb_t)(arq_t *arq, arq_state_t old_state, arq_state_t new_state);
 
@@ -30,7 +31,7 @@ typedef struct arq_cfg_t
     int send_window_count;
     int recv_frame_size;
     int recv_window_count;
-    int retransmission_timeout;
+    arq_time_t retransmission_timeout;
     arq_assert_cb_t assert_cb;
     arq_state_cb_t state_cb;
 } arq_cfg_t;
@@ -42,9 +43,9 @@ arq_err_t arq_connect(arq_t *arq);
 arq_err_t arq_close(arq_t *arq);
 
 // primary API. non-blocking, all calls return ARQ_COMPLETED or ARQ_MORE.
-arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size, unsigned int now);
-arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size, unsigned int now);
-arq_err_t arq_poll(arq_t *arq, unsigned int now);
+arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size, arq_time_t now, arq_time_t *out_next);
+arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size, arq_time_t now, arq_time_t *out_next);
+arq_err_t arq_poll(arq_t *arq, unsigned int now, arq_time_t *out_next);
 
 // glue API for connecting to data source / sink (UART, pipe, etc)
 arq_err_t arq_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
