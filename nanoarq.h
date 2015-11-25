@@ -7,8 +7,8 @@ extern "C" {
 
 typedef enum
 {
-    ARQ_COMPLETED = 0,
-    ARQ_MORE,
+    ARQ_OK_COMPLETED = 0,
+    ARQ_OK_MORE,
     ARQ_ERR_INVALID_PARAM,
 } arq_err_t;
 
@@ -74,7 +74,7 @@ arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
 {
     (void)cfg;
     *out_required_size = 0;
-    return ARQ_COMPLETED;
+    return ARQ_OK_COMPLETED;
 }
 
 #endif

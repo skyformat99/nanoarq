@@ -13,7 +13,7 @@ set(CPPUTEST_INCLUDE_DIR ${CPPUTEST_ROOT_DIR}/bin/include)
 ExternalProject_Add(CppUTest_external
                     PREFIX ${CPPUTEST_ROOT_DIR}
                     GIT_REPOSITORY "https://github.com/cpputest/cpputest.git"
-                    GIT_TAG "f09a20eab1510357514f0f655253537f2dcbc229"
+                    GIT_TAG "efd7a2b75f79d4ee5bd92d1e48a78f8a5b869cd1"
                     UPDATE_COMMAND ""
                     PATCH_COMMAND ""
                     BINARY_DIR ${CPPUTEST_ROOT_DIR}/src/CppUTest
