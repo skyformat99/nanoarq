@@ -49,7 +49,7 @@ arq_err_t arq_poll(arq_t *arq, unsigned int now, arq_time_t *out_poll);
 
 // glue API for connecting to data source / sink (UART, pipe, etc)
 arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
-arq_err_t arq_backend_notify_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
+arq_err_t arq_backend_fill_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
 
 typedef struct arq_t
 {
