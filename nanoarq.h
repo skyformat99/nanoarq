@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+
 typedef enum
 {
     ARQ_OK_COMPLETED = 0,
@@ -20,10 +22,10 @@ typedef enum
     ARQ_STATE_CONNECTED
 } arq_state_t;
 
-typedef struct arq_t arq_t;
+struct arq_t;
 typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
-typedef void (*arq_state_cb_t)(arq_t *arq, arq_state_t old_state, arq_state_t new_state);
+typedef void (*arq_state_cb_t)(struct arq_t *arq, arq_state_t old_state, arq_state_t new_state);
 
 typedef struct arq_cfg_t
 {
@@ -35,6 +37,21 @@ typedef struct arq_cfg_t
     arq_assert_cb_t assert_cb;
     arq_state_cb_t state_cb;
 } arq_cfg_t;
+
+typedef struct arq_stats_t
+{
+    int bytes_sent;
+    int bytes_recvd;
+    int corrupted_frames_recvd;
+    int retransmitted_frames_sent;
+} arq_stats_t;
+
+typedef struct arq_t
+{
+    arq_cfg_t cfg;
+    arq_stats_t stats;
+    arq_state_t state;
+} arq_t;
 
 // initialization / connection
 arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size);
@@ -51,11 +68,12 @@ arq_err_t arq_poll(arq_t *arq, unsigned int now, arq_time_t *out_poll);
 arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
 arq_err_t arq_backend_fill_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
 
-typedef struct arq_t
-{
-    arq_cfg_t cfg;
-    arq_state_t state;
-} arq_t;
+///////////// Internal API
+
+int arq__cobs_encode(void const *src, int src_size, void *dst, int dst_max);
+int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
+
+uint32_t arq__crc32(uint32_t crc, void const *buf, int size);
 
 #ifdef __cplusplus
 }
