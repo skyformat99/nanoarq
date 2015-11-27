@@ -5,7 +5,9 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
+#ifndef NANOARQ_UINT32_BASE_TYPE
+    #define NANOARQ_UINT32_BASE_TYPE unsigned int
+#endif
 
 typedef enum
 {
@@ -24,6 +26,7 @@ typedef enum
 
 struct arq_t;
 typedef unsigned int arq_time_t;
+typedef NANOARQ_UINT32_BASE_TYPE arq_uint32_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 typedef void (*arq_state_cb_t)(struct arq_t *arq, arq_state_t old_state, arq_state_t new_state);
 
@@ -73,7 +76,7 @@ arq_err_t arq_backend_fill_recv(arq_t *arq, void *recv, int recv_max, int *out_r
 int arq__cobs_encode(void const *src, int src_size, void *dst, int dst_max);
 int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
 
-uint32_t arq__crc32(uint32_t crc, void const *buf, int size);
+arq_uint32_t arq__crc32(arq_uint32_t crc, void const *buf, int size);
 
 #ifdef __cplusplus
 }
