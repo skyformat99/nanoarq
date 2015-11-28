@@ -36,6 +36,8 @@ typedef struct arq_cfg_t
     int send_window_count;
     int recv_frame_size;
     int recv_window_count;
+    int tinygram_frame_size;
+    arq_time_t tinygram_send_delay;
     arq_time_t retransmission_timeout;
     arq_assert_cb_t assert_cb;
     arq_state_cb_t state_cb;
@@ -62,10 +64,10 @@ arq_err_t arq_init(arq_t **out_arq, void *arq_seat, int arq_seat_size, arq_cfg_t
 arq_err_t arq_connect(arq_t *arq);
 arq_err_t arq_close(arq_t *arq);
 
-// primary API. non-blocking, all calls return ARQ_COMPLETED or ARQ_MORE.
+// primary API. non-blocking, all successful calls return ARQ_COMPLETED or ARQ_MORE.
 arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size, arq_time_t now, arq_time_t *out_poll);
 arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size, arq_time_t now, arq_time_t *out_poll);
-arq_err_t arq_poll(arq_t *arq, unsigned int now, arq_time_t *out_poll);
+arq_err_t arq_poll(arq_t *arq, int *out_drain_send_size, int *out_recv_size, arq_time_t now, arq_time_t *out_poll);
 
 // glue API for connecting to data source / sink (UART, pipe, etc)
 arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
