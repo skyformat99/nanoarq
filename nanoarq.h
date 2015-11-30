@@ -25,8 +25,8 @@ typedef enum
 } arq_state_t;
 
 struct arq_t;
-typedef unsigned int arq_time_t;
 typedef NANOARQ_UINT32_BASE_TYPE arq_uint32_t;
+typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 typedef void (*arq_state_cb_t)(struct arq_t *arq, arq_state_t old_state, arq_state_t new_state);
 
@@ -65,9 +65,13 @@ arq_err_t arq_connect(arq_t *arq);
 arq_err_t arq_close(arq_t *arq);
 
 // primary API. non-blocking, all successful calls return ARQ_COMPLETED or ARQ_MORE.
-arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size, arq_time_t now, arq_time_t *out_poll);
-arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size, arq_time_t now, arq_time_t *out_poll);
-arq_err_t arq_poll(arq_t *arq, int *out_drain_send_size, int *out_recv_size, arq_time_t now, arq_time_t *out_poll);
+arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
+arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size);
+arq_err_t arq_flush_tinygrams(arq_t *arq);
+
+// update API. arq_send doesn't push any bytes down to be drained, and doesn't update any timers.
+// call arq_poll after some number of arq_send calls, and after 'out_poll' time units.
+arq_err_t arq_poll(arq_t *arq, arq_time_t dt, int *out_drain_send_size, int *out_recv_size, arq_time_t *out_poll);
 
 // glue API for connecting to data source / sink (UART, pipe, etc)
 arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
