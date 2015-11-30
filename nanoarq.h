@@ -41,6 +41,7 @@ typedef struct arq_cfg_t
     arq_time_t retransmission_timeout;
     arq_assert_cb_t assert_cb;
     arq_state_cb_t state_cb;
+    void *user;
 } arq_cfg_t;
 
 typedef struct arq_stats_t
