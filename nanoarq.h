@@ -60,7 +60,7 @@ typedef struct arq_t
 
 // initialization / connection
 arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size);
-arq_err_t arq_init(arq_t **out_arq, void *arq_seat, int arq_seat_size, arq_cfg_t const *cfg);
+arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, int arq_seat_size, arq_t **out_arq);
 arq_err_t arq_connect(arq_t *arq);
 arq_err_t arq_close(arq_t *arq);
 
