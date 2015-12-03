@@ -18,5 +18,5 @@ addons:
             description: "Embedded-friendly Selective Repeat ARQ Implementation"
         notification_email: charles.nicholson@gmail.com
         build_command: "./b"
-        branch_pattern: coverity_scan
+        branch_pattern: coverity
 
