@@ -39,6 +39,8 @@ typedef struct arq_cfg_t
     int tinygram_frame_size;
     arq_time_t tinygram_send_delay;
     arq_time_t retransmission_timeout;
+    arq_time_t keepalive_period;
+    arq_time_t disconnect_timeout;
     arq_assert_cb_t assert_cb;
     arq_state_cb_t state_cb;
     void *user;
