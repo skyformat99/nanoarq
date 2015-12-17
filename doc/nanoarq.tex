@@ -1,25 +1,56 @@
-\documentclass{article}
+\documentclass[11pt]{article}
+
 \usepackage{bytefield}
+\usepackage{hyperref}
+\usepackage{csquotes}
+\usepackage{url}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
+
+\urlstyle{same}
 
 \begin{document}
 \title{nanoarq}
 \author{Charles Nicholson}
 \maketitle
 
-\section{Introduction}
-Oh hi
+\begin{abstract}
+This document introduces \texttt{nanoarq}, a single-file C library that provides reliability over an unreliable communications channel. \texttt{nanoarq} implements the \href{https://en.wikipedia.org/wiki/Selective_Repeat_ARQ}{Selective Repeat ARQ}  algorithm and provides basic functionality for establishing and gracefully destroying connections. \texttt{nanoarq} is meant to be suitable for embedded systems, with a design focus on simplicity, flexibility, and ease of integration. The \texttt{nanoarq} implementation is released into the public domain.
+\end{abstract}
 
-\section{Motivation}
+\section{Introduction}
+    Many communications channels in embedded systems, such as UARTs between multiple CPUs, or between a target and host system, provide an unreliable transport for transmitting and receiving data. Bits can be altered in flight on the wire, in isolation or in bursts. Crosstalk and signal degradation can occur when the routing of critical signals is too long, or the signals are transmitted over cables. Even bytes that are transmitted without errors can be lost due to infrequent servicing of the transport layer, overwritten in a hardware register by the arrival of the next byte. Finally, application backpressure can cause valid incoming bytes to be discarded, since the system can run out of space to store them. \par
+    All of these problems speak to the necessity of a reliability layer in software. Sliding window protocols are the ubiquitous solution, and are used as the foundation for more complex protocols like TCP. Fundamentally, sliding window protocols guarantee that the application layer will be presented with all data that was sent to it, in order, with integrity and without duplicates. \par
+    \texttt{nanoarq} is an implementation of the \enquote{Selective Repeat ARQ} protocol, and uses an explicit ACK mechanism to retransmit lost or corrupted frames. Additionally, \texttt{nanoarq} provides connectivity services; a standard 3-way handshake and FIN/ACK disconnect strategy can be optionally used to establish and statefully manage a connection.
+\subsection{Goals}
 fdas
 
-\section{Frame Layout}
+\subsection{Non-goals}
 
 I love stuff. \\
 
+\section{Protocol}
+
 \begin{bytefield}[bitwidth=1.1em]{32}
 	\bitheader{0-31} \\
-	\begin{rightwordgroup}{RTP \\ Header}
-		\bitbox{2}{V=2} & \bitbox{1}{P} & \bitbox{1}{X} & \bitbox{4}{CC} & \bitbox{1}{M} & \bitbox{7}{PT} & \bitbox{16}{sequence number} \\
+	\begin{rightwordgroup}{Header}
+		\bitbox{5}{Version} & \bitbox{3}{Type} & \bitbox{16}{sequence number}
+	\end{rightwordgroup} \\
+
+	\begin{rightwordgroup}{Footer}
+        \bitbox{32}{Checksum}
+	\end{rightwordgroup}
+\end{bytefield}
+
+\begin{bytefield}[bitwidth=1.1em]{32}
+	\bitheader{0-31} \\
+	\begin{rightwordgroup}{Header}
+		\bitbox{5}{Version} & \bitbox{1}{P} & \bitbox{1}{X} & \bitbox{4}{CC} & \bitbox{1}{M} & \bitbox{7}{PT} & \bitbox{16}{sequence number} \\
 		\bitbox{32}{timestamp}
 	\end{rightwordgroup} \\
 
