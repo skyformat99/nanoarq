@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+pdflatex nanoarq.tex
+mpost nanoarq.mp
+pdflatex nanoarq.tex > /dev/null

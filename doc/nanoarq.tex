@@ -4,6 +4,10 @@
 \usepackage{hyperref}
 \usepackage{csquotes}
 \usepackage{url}
+\usepackage{emp}
+
+\usepackage{graphicx}
+\DeclareGraphicsRule{*}{mps}{*}{}
 
 \hypersetup{
     colorlinks=true,
@@ -53,6 +57,8 @@ Finally, the \nanoarq{} implementation and tests are released into the public do
 \nanoarq{} does not aim to be a full TCP/IP implementation, or an implementation of POSIX-compatible sockets. \nanoarq{} has no concept of routing, endpoints, ports, addresses, sockets, or names.
 \item[Security] \hfill \\
 \nanoarq{} provides no encryption or authentication methods. If security is required, it is up to the user to ensure that all data transmitted via \nanoarq{} is properly secured.
+\item[Dynamic Configuration] \hfill \\
+\nanoarq{} assumes that both endpoints are compatibly configured. \nanoarq{} provides no services for communicating connection options during connection establishment.
 \item[Congestion Control] \hfill \\
 \nanoarq{} is oblivious to the concept of congestive collapse, and performs no dynamic throttling of data in response to data loss. \nanoarq{} relies on the application to address the problems of congestion and backpressure.
 \item[Physical Link Management] \hfill \\
@@ -61,6 +67,20 @@ Finally, the \nanoarq{} implementation and tests are released into the public do
 
 \section{Protocol}
 
+\begin{empfile}
+\begin{empcmds}
+input metauml;
+\end{empcmds}
+\begin{emp}[classdiag](20, 20)
+Class.A("A")()();
+Class.B("B")()();
+B.e = A.w + (-20, 0);
+drawObjects(A, B);
+link(inheritance)(B.e -- A.w);
+\end{emp}
+\end{empfile}
+
+\section{fancy graphs}
 \begin{bytefield}[bitwidth=1.1em]{32}
 	\bitheader{0-31} \\
 	\begin{rightwordgroup}{Header}
