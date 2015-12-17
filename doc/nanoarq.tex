@@ -12,6 +12,9 @@
     urlcolor=cyan,
 }
 
+\setlength{\parindent}{4em}
+\setlength{\parskip}{1em}
+
 \urlstyle{same}
 
 \begin{document}
@@ -24,12 +27,23 @@ This document introduces \texttt{nanoarq}, a single-file C library that provides
 \end{abstract}
 
 \section{Introduction}
-    Many communications channels in embedded systems, such as UARTs between multiple CPUs, or between a target and host system, provide an unreliable transport for transmitting and receiving data. Bits can be altered in flight on the wire, in isolation or in bursts. Crosstalk and signal degradation can occur when the routing of critical signals is too long, or the signals are transmitted over cables. Even bytes that are transmitted without errors can be lost due to infrequent servicing of the transport layer, overwritten in a hardware register by the arrival of the next byte. Finally, application backpressure can cause valid incoming bytes to be discarded, since the system can run out of space to store them. \par
-    All of these problems speak to the necessity of a reliability layer in software. Sliding window protocols are the ubiquitous solution, and are used as the foundation for more complex protocols like TCP. Fundamentally, sliding window protocols guarantee that the application layer will be presented with all data that was sent to it, in order, with integrity and without duplicates. \par
-    \texttt{nanoarq} is an implementation of the \enquote{Selective Repeat ARQ} protocol, and uses an explicit ACK mechanism to retransmit lost or corrupted frames. Additionally, \texttt{nanoarq} provides connectivity services; a standard 3-way handshake and FIN/ACK disconnect strategy can be optionally used to establish and statefully manage a connection.
-\subsection{Goals}
-fdas
+Many communications channels in embedded systems, such as UART lines between multiple CPUs, or between a target and host system, provide an unreliable transport for transmitting and receiving data. Bits can be altered in flight on the wire, in isolation or in bursts. Crosstalk and signal degradation can occur when the routing of critical signals is too long, or the signals are transmitted over cables. Even bytes that are transmitted without errors can be lost due to infrequent servicing of the transport layer, overwritten in a hardware register by the arrival of the next byte. Finally, application backpressure can cause valid incoming bytes to be discarded, since the system can run out of space to store them. \par
+All of these problems speak to the necessity of a reliability layer in software. Sliding window protocols are the ubiquitous solution, and are used as the foundation for more complex protocols like TCP. Fundamentally, sliding window protocols guarantee that the application layer will be presented with all data that was sent to it, in order, with integrity and without duplicates. \par
+\texttt{nanoarq} is an implementation of the \enquote{Selective Repeat ARQ} protocol, and uses an explicit ACK mechanism to retransmit lost or corrupted frames. Additionally, \texttt{nanoarq} provides connectivity services; a standard 3-way handshake and FIN/ACK disconnect strategy can be optionally used to establish and statefully manage a connection.
 
+\subsection{Goals}
+\begin{description}
+    \item[Reliability] \hfill \\
+        First and foremost, \texttt{nanoarq} provides reliability to unreliable communications. As long as the physical link still exists between the two endpoints, \texttt{nanoarq} ensures that data will be transmitted in-order, without corruption, and without duplication of data.
+    \item[Simplicity] \hfill \\
+        \texttt{nanoarq} does as little work as possible to achieve its functionality, intentionally eschewing complex and powerful behavior that is present in TCP. \texttt{nanoarq} is not a general-purpose networking toolkit; it exists only to provide reliability over a predictable link with reasonable performance between two endpoints.
+    \item[Transparency] \hfill \\
+        \texttt{nanoarq} does not hide implementation details from the user, or enforce encapsulation. \texttt{nanoarq} is not object-oriented; all internal data structures are accessible to users. In the case the provided API does not offer sufficient functionality, it should be as easy as possible to access, manipulate, and extend \texttt{nanoarq}'s state.
+    \item[Ease of Integration] \hfill \\
+        It can be difficult to integrate third-party C libraries into a user application. The C language does not have a unified build system, which can have a \enquote{Tower of Babel} effect on attempts to reuse code. While packages like \texttt{CMake} and \texttt{Ninja} are growing in popularity, assuming their presence puts a significant burden on a would-be user. Additionally, deploying libraries on Windows with Visual Studio has the extra complexity of having to provide support for the static (\texttt{/MT}) and dynamic (\texttt{/MD}) versions of the Microsoft C Runtime. While some C libraries prefer to provide support for as many build systems as possible, \texttt{nanoarq} aims to be as easy to integrate by providing no build system, instead existing in a single header file. This approach is prevalent and proven in Sean Barrett's \texttt{stb\_*} libraries. \par
+        A similar challenge exists at runtime. \texttt{nanoarq} is intended to be used in embedded systems, which have no standard operating system. Some systems run on so-called \enquote{bare metal} with a static task scheduling algorithm, while others may use sophisticated pre-emptive RTOS's that provide concurrency primitives, conditional waits, and work queues. \texttt{nanoarq}'s API is designed to work in any environment, as long as the user can provide the amount of time that has elapsed since the last polling call was made. \par
+        Finally, the \texttt{nanoarq} implementation and tests are released into the public domain, which means there are no licesnses or fees for use.
+\end{description}
 \subsection{Non-goals}
 
 I love stuff. \\
