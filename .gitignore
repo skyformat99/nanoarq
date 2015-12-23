@@ -35,3 +35,10 @@
 build
 external
 
+# latex intermediates / unused artifacts
+doc/*.aux
+doc/*.log
+doc/*.mp
+doc/*.out
+doc/*.1
+
