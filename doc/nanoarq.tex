@@ -5,8 +5,10 @@
 \usepackage{csquotes}
 \usepackage{url}
 \usepackage{emp}
-
+\usepackage{array,tabularx}
 \usepackage{graphicx}
+\usepackage{todonotes}
+
 \DeclareGraphicsRule{*}{mps}{*}{}
 
 \hypersetup{
@@ -23,13 +25,19 @@
 
 \newcommand{\nanoarq}{\texttt{nanoarq}}
 
+\newenvironment{field_explanations*}
+  {\par\vspace{\abovedisplayskip}\noindent
+   \tabularx{\columnwidth}{>{$}l<{$} @{\ : } >{\raggedright\arraybackslash}X}}
+  {\endtabularx\par\vspace{\belowdisplayskip}}
+
 \begin{document}
+
 \title{\nanoarq{}}
 \author{Charles Nicholson}
 \maketitle
 
 \begin{abstract}
-This document introduces \nanoarq{}, a single-file C library that provides reliability over an unreliable communications channel. \nanoarq{} implements the \href{https://en.wikipedia.org/wiki/Selective_Repeat_ARQ}{Selective Repeat ARQ}  algorithm and provides basic functionality for establishing and gracefully destroying connections. \nanoarq{} is meant to be suitable for embedded systems, with a design focus on simplicity, flexibility, and ease of integration. The \nanoarq{} implementation is released into the public domain.
+    This document introduces \nanoarq{}, a single-file C library that provides reliability over an unreliable communications channel. \nanoarq{} implements the \href{https://en.wikipedia.org/wiki/Selective_Repeat_ARQ}{Selective Repeat ARQ} \todo{Cite ARQ}  algorithm and provides basic functionality for establishing and gracefully destroying connections. \nanoarq{} is meant to be suitable for embedded systems, with a design focus on simplicity, flexibility, and ease of integration. The \nanoarq{} implementation is released into the public domain.
 \end{abstract}
 
 \section{Introduction}
@@ -40,32 +48,57 @@ All of these problems speak to the necessity of a reliability layer in software.
 \subsection{Goals}
 \begin{description}
 \item[Reliability] \hfill \\
-First and foremost, \nanoarq{} provides reliability to unreliable communications. As long as the physical link still exists between the two endpoints, \nanoarq{} ensures that data will be transmitted in-order, without corruption, and without duplication of data.
+    First and foremost, \nanoarq{} provides reliability to unreliable communications. As long as the physical link still exists between the two endpoints, \nanoarq{} ensures that data will be transmitted in-order, without corruption, and without duplication of data.
 \item[Simplicity] \hfill \\
-\nanoarq{} does as little work as possible to achieve its functionality, intentionally eschewing complex and powerful behavior that is present in TCP. \nanoarq{} is not a general-purpose networking toolkit; it exists only to provide reliability over a predictable link with reasonable performance between two endpoints.
+    \nanoarq{} does as little work as possible to achieve its functionality, intentionally eschewing complex and powerful behavior that is present in TCP. \nanoarq{} is not a general-purpose networking toolkit; it exists only to provide reliability over a predictable link with reasonable performance between two endpoints.
 \item[Transparency] \hfill \\
-\nanoarq{} does not hide implementation details from the user, or enforce a notion of encapsulation. \nanoarq{} is not object-oriented; all internal data structures are accessible to users. In the case the provided API does not offer sufficient functionality, it should be as easy as possible to access, manipulate, and extend \nanoarq{}'s state.
+    \nanoarq{} does not hide implementation details from the user, or enforce a notion of encapsulation. \nanoarq{} is not object-oriented; all internal data structures are accessible to users. In the case the provided API does not offer sufficient functionality, it should be as easy as possible to access, manipulate, and extend \nanoarq{}'s state.
 \item[Ease of Integration] \hfill \\
-It can be difficult to integrate third-party C libraries into a user application. The C language does not have a unified build system, which can have a \enquote{Tower of Babel} effect on attempts to reuse code. While packages like \texttt{CMake} and \texttt{Ninja} are growing in popularity, assuming their presence puts a significant burden on a would-be user. Additionally, deploying libraries on Windows with Visual Studio has the extra complexity of having to provide support for the static (\texttt{/MT}) and dynamic (\texttt{/MD}) versions of the Microsoft C Runtime. While some C libraries prefer to provide support for as many build systems as possible, \nanoarq{} aims to be as easy to integrate by providing no build system, instead existing in a single header file. This approach is prevalent and proven in Sean Barrett's \texttt{stb\_*} libraries. \par
-A similar challenge exists at runtime. \nanoarq{} is intended to be used in embedded systems, which have no standard operating system. Some systems run on so-called \enquote{bare metal} with a static task scheduling algorithm, while others may use sophisticated pre-emptive RTOS's that provide concurrency primitives, conditional waits, and work queues. \nanoarq{} is designed to work in any environment, as long as the user can provide the amount of time that has elapsed since the last polling call was made. \par
-Finally, the \nanoarq{} implementation and tests are released into the public domain, which means there are no licesnses or fees for use.
+    \todo{shorten here, break details out into motivation / implementation section}
+    It can be difficult to integrate third-party C libraries into a user application. The C language does not have a unified build system, which can have a \enquote{Tower of Babel} effect on attempts to reuse code. While packages like \texttt{CMake} and \texttt{Ninja} are growing in popularity, assuming their presence puts a significant burden on a would-be user. Additionally, deploying libraries on Windows with Visual Studio has the extra complexity of having to provide support for the static (\texttt{/MT}) and dynamic (\texttt{/MD}) versions of the Microsoft C Runtime. While some C libraries prefer to provide support for as many build systems as possible, \nanoarq{} aims to be as easy to integrate by providing no build system, instead existing in a single header file. This approach is prevalent and proven in Sean Barrett's \texttt{stb\_*} libraries. \par
+    A similar challenge exists at runtime. \nanoarq{} is intended to be used in embedded systems, which have no standard operating system. Some systems run on so-called \enquote{bare metal} with a static task scheduling algorithm, while others may use sophisticated pre-emptive RTOS's that provide concurrency primitives, conditional waits, and work queues. \nanoarq{} is designed to work in any environment, as long as the user can provide the amount of time that has elapsed since the last polling call was made. \par
+    Finally, the \nanoarq{} implementation and tests are released into the public domain, which means there are no licesnses or fees for use.
 \end{description}
 
 \subsection{Non-goals}
 \begin{description}
-\item[TCP/IP] \hfill \\
-\nanoarq{} does not aim to be a full TCP/IP implementation, or an implementation of POSIX-compatible sockets. \nanoarq{} has no concept of routing, endpoints, ports, addresses, sockets, or names.
+\item[Implementing a Large Standard] \hfill \\
+    \nanoarq{} does not aim to be a full TCP, IP, PPP, or POSIX-compatible sockets implementation. \nanoarq{} has no concept of routing, endpoints, ports, addresses, sockets, or names. \nanoarq{} clients do not statefully listen for connections; if a connection request arrives, it is serviced.
 \item[Security] \hfill \\
-\nanoarq{} provides no encryption or authentication methods. If security is required, it is up to the user to ensure that all data transmitted via \nanoarq{} is properly secured.
+    \nanoarq{} provides no encryption or authentication methods. If security is required, it is up to the user to ensure that all data transmitted via \nanoarq{} is properly secured.
 \item[Dynamic Configuration] \hfill \\
-\nanoarq{} assumes that both endpoints are compatibly configured. \nanoarq{} provides no services for communicating connection options during connection establishment.
+    \nanoarq{} assumes that both endpoints are compatibly configured. \nanoarq{} provides no services for communicating connection options during connection establishment.
 \item[Congestion Control] \hfill \\
-\nanoarq{} is oblivious to the concept of congestive collapse, and performs no dynamic throttling of data in response to data loss. \nanoarq{} relies on the application to address the problems of congestion and backpressure.
+    \nanoarq{} is oblivious to the concept of congestive collapse, and performs no dynamic throttling of data in response to data loss. \nanoarq{} relies on the application to address the problems of congestion and backpressure.
 \item[Physical Link Management] \hfill \\
-\nanoarq{} does not assume control over any specific communications hardware or OS resources. The user is responsible for the actual low-level transmission of bytes into and out of \nanoarq{}. This allows \nanoarq{} to function on embedded systems without requiring intimate knowledge of a given communication peripheral block, as well as on larger systems like desktop computers, across multiple operating systems, etc.
+    \nanoarq{} does not assume control over any specific communications hardware or OS resources. The user is responsible for the actual low-level transmission of bytes into and out of \nanoarq{}. This allows \nanoarq{} to function on embedded systems without requiring intimate knowledge of a given communication peripheral block, as well as on larger systems like desktop computers, across multiple operating systems, etc.
 \end{description}
 
 \section{Protocol}
+
+\subsection{State Machine}
+
+\subsection{Frame Layout}
+
+\begin{bytefield}[bitwidth=1.1em]{32}
+	\bitheader{0-31} \\
+	\begin{rightwordgroup}{Header}
+		\bitbox{5}{Version} & \bitbox{3}{Type} & \bitbox{16}{sequence number}
+	\end{rightwordgroup} \\
+
+	\begin{rightwordgroup}{Footer}
+        \bitbox{32}{Checksum}
+	\end{rightwordgroup}
+\end{bytefield}
+where
+\begin{field_explanations*}
+    Version & \nanoarq{} protocol version number \\
+    Type & Frame type (RST / ACK) \\
+    Sequence Number & Sequence number of current payload
+\end{field_explanations*}
+
+All frames, including header and footer contents, are encoded using \todo{Explain and cite COBS}COBS.
+\subsection{Flow Control}
 
 \begin{empfile}
 \begin{empcmds}
@@ -80,17 +113,6 @@ link(inheritance)(B.e -- A.w);
 \end{emp}
 \end{empfile}
 
-\section{fancy graphs}
-\begin{bytefield}[bitwidth=1.1em]{32}
-	\bitheader{0-31} \\
-	\begin{rightwordgroup}{Header}
-		\bitbox{5}{Version} & \bitbox{3}{Type} & \bitbox{16}{sequence number}
-	\end{rightwordgroup} \\
-
-	\begin{rightwordgroup}{Footer}
-        \bitbox{32}{Checksum}
-	\end{rightwordgroup}
-\end{bytefield}
 
 \begin{bytefield}[bitwidth=1.1em]{32}
 	\bitheader{0-31} \\
