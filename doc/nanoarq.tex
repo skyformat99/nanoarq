@@ -4,12 +4,12 @@
 \usepackage{hyperref}
 \usepackage{csquotes}
 \usepackage{url}
-\usepackage{emp}
 \usepackage{array,tabularx}
-\usepackage{graphicx}
 \usepackage{todonotes}
+\usepackage{float}
+\usepackage{tikz}
 
-\DeclareGraphicsRule{*}{mps}{*}{}
+\usetikzlibrary{arrows,positioning,automata,calc,backgrounds}
 
 \hypersetup{
     colorlinks=true,
@@ -32,6 +32,7 @@
 
 \begin{document}
 
+%\input{nanoarq-state-machine.tex}
 \title{\nanoarq{}}
 \author{Charles Nicholson}
 \maketitle
@@ -72,20 +73,37 @@ All of these problems speak to the necessity of a reliability layer in software.
     \nanoarq{} is oblivious to the concept of congestive collapse, and performs no dynamic throttling of data in response to data loss. \nanoarq{} relies on the application to address the problems of congestion and backpressure.
 \item[Physical Link Management] \hfill \\
     \nanoarq{} does not assume control over any specific communications hardware or OS resources. The user is responsible for the actual low-level transmission of bytes into and out of \nanoarq{}. This allows \nanoarq{} to function on embedded systems without requiring intimate knowledge of a given communication peripheral block, as well as on larger systems like desktop computers, across multiple operating systems, etc.
+\item[Error Correction] \hfill \\
+    \nanoarq{} does not currently support any form of forward error correction (e.g. Reed-Solomon, Turbocodes, etc.). A FEC encoding and reconstruction phase would be an interesting future addition to support environments that have an extremely high retransmission cost.
 \end{description}
 
 \section{Protocol}
 
-\subsection{State Machine}
-
+\subsection{Connection State Machine}
+\begin{figure}
+\input{nanoarq-state-machine.tex}
+\caption{\nanoarq{} state machine}
+\label{fig:state-machine}
+\end{figure}
+\nanoarq{} optionally provides stateful connection services for establishing, maintaining, and closing a connection to the peer endpoint. The state machine, detailed in figure~\ref{fig:state-machine}, is similar to TCP but differs slightly. \nanoarq{} has no concept of a client or a server, so the \texttt{LISTEN} state present in TCP does not exist. There is also no distinction between connecting and resetting, so the difference between \texttt{RST} and \texttt{SYN} is uninteresting.
 \subsection{Frame Layout}
 
-\begin{bytefield}[bitwidth=1.1em]{32}
+\begin{bytefield}[bitwidth=1.1em,bitheight=2em]{32}
 	\bitheader{0-31} \\
 	\begin{rightwordgroup}{Header}
-		\bitbox{5}{Version} & \bitbox{3}{Type} & \bitbox{16}{sequence number}
+		\bitbox{8}{Version} &
+        \bitbox{5}{Reserved} &
+        \bitbox{1}{\tiny R\\S\\T} &
+        \bitbox{1}{\tiny A\\C\\K} &
+        \bitbox{1}{\tiny F\\I\\N} &
+        \bitbox{8}{Size}
+        \bitbox{8}{Window} \\
+        \bitbox{20}{sequence number} &
+        \bitbox{12}{sub-frame id}
 	\end{rightwordgroup} \\
-
+    \wordbox[lrt]{1}{Data octets} \\
+    \skippedwords \\
+    \wordbox[lrb]{1}{} \\
 	\begin{rightwordgroup}{Footer}
         \bitbox{32}{Checksum}
 	\end{rightwordgroup}
@@ -100,37 +118,5 @@ where
 All frames, including header and footer contents, are encoded using \todo{Explain and cite COBS}COBS.
 \subsection{Flow Control}
 
-\begin{empfile}
-\begin{empcmds}
-input metauml;
-\end{empcmds}
-\begin{emp}[classdiag](20, 20)
-Class.A("A")()();
-Class.B("B")()();
-B.e = A.w + (-20, 0);
-drawObjects(A, B);
-link(inheritance)(B.e -- A.w);
-\end{emp}
-\end{empfile}
-
-
-\begin{bytefield}[bitwidth=1.1em]{32}
-	\bitheader{0-31} \\
-	\begin{rightwordgroup}{Header}
-		\bitbox{5}{Version} & \bitbox{1}{P} & \bitbox{1}{X} & \bitbox{4}{CC} & \bitbox{1}{M} & \bitbox{7}{PT} & \bitbox{16}{sequence number} \\
-		\bitbox{32}{timestamp}
-	\end{rightwordgroup} \\
-
-	\bitbox{32}{synchronization source (SSRC) identifier} \\
-	\wordbox[tlr]{1}{contributing source (CSRC) identifiers} \\
-	\wordbox[blr]{1}{$\cdots$} \\
-
-	\begin{rightwordgroup}{RTP \\ Payload}
-		\wordbox[tlr]{3}{MPEG-4 Visual stream (byte aligned)} \\
-		\bitbox[blr]{16}{} & \bitbox{16}{\dots\emph{optional} RTP padding}
-	\end{rightwordgroup}
-\end{bytefield}
-
 \section{Physical Organization}
-
 \end{document}

@@ -41,4 +41,4 @@ doc/*.log
 doc/*.mp
 doc/*.out
 doc/*.1
-
+doc/*.mps

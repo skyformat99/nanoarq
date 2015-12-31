@@ -1,0 +1,52 @@
+\begin{tikzpicture}[auto]
+
+\tikzset{every node/.style = {font=\tiny,fill=white,above,anchor=base}}
+\tikzset{every edge/.append style = {>=latex}}
+
+\tikzstyle{state} = [rectangle, minimum height=3em, minimum width=7em, node distance=4em, font=\small]
+
+\node[state, draw] (closed)                      {CLOSED};
+\node[state]       (anchor)  [below= of closed]  {};
+\node[state, draw] (rst_s)   [right= of anchor]  {RST\_SENT};
+\node[state, draw] (rst_r)   [left= of anchor]   {RST\_RCVD};
+\node[state, draw] (est)     [below= of anchor]  {ESTABLISHED};
+\node[state, draw] (closing) [below= of est]     {CLOSING};
+\node[state, draw] (fin_w1)  [left= of closing]  {FIN\_WAIT\_1};
+\node[state, draw] (fin_w2)  [below= of fin_w1]  {FIN\_WAIT\_2};
+\node[state, draw] (close_w) [right= of closing] {CLOSE\_WAIT};
+\node[state, draw] (last_a)  [below= of close_w] {LAST\_ACK};
+\node[state, draw] (time_w)  [below= of closing] {TIME\_WAIT};
+
+\draw (closed)                      edge[->] node[pos=0.75,xshift=1.3em] {RST/RST+ACK}      (rst_r);
+\draw (closed)                      edge[->] node                        {RST}              (rst_s);
+\draw ($(rst_r.south) - (1.5em,0)$) edge[->] node                        {\emph{Close}/FIN} ($(fin_w1.north) - (1.5em,0)$);
+\draw (rst_r)                       edge[->] node                        {ACK}              (est);
+\draw ($(rst_r.north) - (1.5em,0)$) edge[->] node                        {\emph{Timeout}}   ($(closed.west) + (0,0.5em)$);
+\draw (rst_s)                       edge[->] node                        {RST+ACK/ACK}      (est);
+\draw (rst_s.west)                  edge[->] node                        {RST/RST+ACK}      (rst_r.east);
+\draw ($(rst_s.north) + (2.5em,0)$) edge[->] node                        {\emph{Close}}     ($(closed.east) + (0,0.5em)$);
+\draw (est)                         edge[->] node                        {\emph{Close}/FIN} (fin_w1);
+\draw (est)                         edge[->] node                        {FIN/ACK}          (close_w);
+\draw (est.east)                    edge[->] node[pos=0.25]              {RST}              ($(rst_s.south) + (0.75em,0)$);
+\draw (est.west)                    edge[->] node[pos=0.35,xshift=-.5em] {RST/RST+ACK}      ($(rst_r.south) - (1em,0)$);
+\draw (fin_w1.south)                edge[->] node                        {ACK}              (fin_w2.north);
+\draw (fin_w1.east)                 edge[->] node                        {ACK}              (closing);
+\draw (fin_w1)                      edge[->] node                        {FIN+ACK/ACK}      (time_w);
+\draw (fin_w2)                      edge[->] node[yshift=0.3em,fill=none]{FIN/ACK}          (time_w);
+\draw (closing)                     edge[->] node                        {ACK}              (time_w);
+\draw (close_w)                     edge[->] node                        {\emph{Close}/FIN} (last_a);
+
+\coordinate (south_east) at ($(last_a.east |- last_a.south) + (2.5em,-1em)$);
+\coordinate (north_east) at ($(closed.north -| south_east) + (0,1em)$);
+\coordinate (above_closed) at ($(closed.north) + (0,1em)$);
+\coordinate (last_a_closed_1) at ($(last_a.east) + (2.5em,0)$);
+\coordinate (time_w_closed_1) at ($(time_w.south) + (0,-1em)$);
+
+\draw (last_a.east)                 edge     node[yshift=0.3em,fill=none]{ACK}              (last_a_closed_1);
+\draw (south_east)                  edge                                                    (north_east);
+\draw (north_east)                  edge                                                    (above_closed);
+\draw (above_closed)                edge[->]                                                (closed);
+\draw (time_w.south)                edge                                                    (time_w_closed_1);
+\draw (time_w_closed_1)             edge     node                        {\emph{Timeout}}   (south_east);
+
+\end{tikzpicture}
