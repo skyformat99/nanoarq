@@ -8,6 +8,7 @@
 \usepackage{todonotes}
 \usepackage{float}
 \usepackage{tikz}
+\usepackage{comment}
 
 \usetikzlibrary{arrows,positioning,automata,calc,backgrounds}
 
@@ -25,16 +26,10 @@
 
 \newcommand{\nanoarq}{\texttt{nanoarq}}
 
-\newenvironment{field_explanations*}
-  {\par\vspace{\abovedisplayskip}\noindent
-   \tabularx{\columnwidth}{>{$}l<{$} @{\ : } >{\raggedright\arraybackslash}X}}
-  {\endtabularx\par\vspace{\belowdisplayskip}}
-
 \begin{document}
 
-%\input{nanoarq-state-machine.tex}
 \title{\nanoarq{}}
-\author{Charles Nicholson}
+\author{Charles Nicholson \texttt{<\href{mailto:charles.nicholson@gmail.com}{charles.nicholson@gmail.com}>}}
 \maketitle
 
 \begin{abstract}
@@ -88,6 +83,7 @@ All of these problems speak to the necessity of a reliability layer in software.
 \nanoarq{} optionally provides stateful connection services for establishing, maintaining, and closing a connection to the peer endpoint. The state machine, detailed in figure~\ref{fig:state-machine}, is similar to TCP but differs slightly. \nanoarq{} has no concept of a client or a server, so the \texttt{LISTEN} state present in TCP does not exist. There is also no distinction between connecting and resetting, so the difference between \texttt{RST} and \texttt{SYN} is uninteresting.
 \subsection{Frame Layout}
 
+\begin{figure}
 \begin{bytefield}[bitwidth=1.1em,bitheight=2em]{32}
 	\bitheader{0-31} \\
 	\begin{rightwordgroup}{Header}
@@ -96,24 +92,38 @@ All of these problems speak to the necessity of a reliability layer in software.
         \bitbox{1}{\tiny R\\S\\T} &
         \bitbox{1}{\tiny A\\C\\K} &
         \bitbox{1}{\tiny F\\I\\N} &
-        \bitbox{8}{Size}
-        \bitbox{8}{Window} \\
-        \bitbox{20}{sequence number} &
-        \bitbox{12}{sub-frame id}
+        \bitbox{8}{Payload Size}
+        \bitbox{8}{Window Size} \\
+        \bitbox{20}{Sequence Number} &
+        \bitbox{12}{Segment ID} \\
+        \bitbox{20}{ACK Number} &
+        \bitbox{12}{ACK Segment ID}
 	\end{rightwordgroup} \\
-    \wordbox[lrt]{1}{Data octets} \\
+    \wordbox[lrt]{1}{Payload Octets} \\
     \skippedwords \\
     \wordbox[lrb]{1}{} \\
 	\begin{rightwordgroup}{Footer}
         \bitbox{32}{Checksum}
 	\end{rightwordgroup}
 \end{bytefield}
-where
-\begin{field_explanations*}
-    Version & \nanoarq{} protocol version number \\
-    Type & Frame type (RST / ACK) \\
-    Sequence Number & Sequence number of current payload
-\end{field_explanations*}
+\caption{\nanoarq{} frame layout}
+\label{fig:frame-layout}
+\end{figure}
+
+\begin{comment}
+    Version & \nanoarq{} protocol version \\
+    Reserved & Unused, must be zero-filled. \\
+    RST & Reset flag \\
+    ACK & Acknowledgement flag \\
+    FIN & Close flag \\
+    Payload Size & Size, in bytes, of current frame's data \\
+    Window Size & Available size, in segments, of sender's receive window \\
+    Sequence Number & Sequence number, in bytes, of this segment \\
+    Segment ID & Bitfield indicating which sub-segment frame the current payload contains \\
+    ACK Number & Sequence number, in bytes, of the last fully- or partially-received segment \\
+    ACK Segment ID & Bitfield indicating which frames in the ACK segment have been successfully received \\
+    Checksum & Sender-computed value for validating frame integrity \\
+\end{comment}
 
 All frames, including header and footer contents, are encoded using \todo{Explain and cite COBS}COBS.
 \subsection{Flow Control}

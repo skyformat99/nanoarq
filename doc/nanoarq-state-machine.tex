@@ -24,7 +24,7 @@
 \draw ($(rst_r.north) - (1.5em,0)$) edge[->] node                        {\emph{Timeout}}   ($(closed.west) + (0,0.5em)$);
 \draw (rst_s)                       edge[->] node                        {RST+ACK/ACK}      (est);
 \draw (rst_s.west)                  edge[->] node                        {RST/RST+ACK}      (rst_r.east);
-\draw ($(rst_s.north) + (2.5em,0)$) edge[->] node                        {\emph{Close}}     ($(closed.east) + (0,0.5em)$);
+\draw ($(rst_s.north) + (2em,0)$)   edge[->] node                        {\emph{Close}}     ($(closed.east) + (0,0.5em)$);
 \draw (est)                         edge[->] node                        {\emph{Close}/FIN} (fin_w1);
 \draw (est)                         edge[->] node                        {FIN/ACK}          (close_w);
 \draw (est.east)                    edge[->] node[pos=0.25]              {RST}              ($(rst_s.south) + (0.75em,0)$);
