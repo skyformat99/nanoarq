@@ -30,6 +30,7 @@
 
 \title{\nanoarq{}}
 \author{Charles Nicholson \texttt{<\href{mailto:charles.nicholson@gmail.com}{charles.nicholson@gmail.com}>}}
+\date{}
 \maketitle
 
 \begin{abstract}
@@ -86,25 +87,13 @@ All of these problems speak to the necessity of a reliability layer in software.
 \begin{figure}
 \begin{bytefield}[bitwidth=1.1em,bitheight=2em]{32}
 	\bitheader{0-31} \\
-	\begin{rightwordgroup}{Header}
-		\bitbox{8}{Version} &
-        \bitbox{5}{Reserved} &
-        \bitbox{1}{\tiny R\\S\\T} &
-        \bitbox{1}{\tiny A\\C\\K} &
-        \bitbox{1}{\tiny F\\I\\N} &
-        \bitbox{8}{Payload Size}
-        \bitbox{8}{Window Size} \\
-        \bitbox{20}{Sequence Number} &
-        \bitbox{12}{Segment ID} \\
-        \bitbox{20}{ACK Number} &
-        \bitbox{12}{ACK Segment ID}
-	\end{rightwordgroup} \\
+    \bitbox{8}{Version} & \bitbox{5}{Reserved} & \bitbox{1}{\tiny R\\S\\T} & \bitbox{1}{\tiny A\\C\\K} & \bitbox{1}{\tiny F\\I\\N} & \bitbox{8}{Payload Size} & \bitbox{8}{Window Size} \\
+    \bitbox{12}{Sequence Number} & \bitbox{8}{Segment Size} & \bitbox{12}{Segment ID} \\
+    \bitbox{12}{ACK Number} & \bitbox{8}{Reserved} & \bitbox{12}{ACK Segment ID} \\
     \wordbox[lrt]{1}{Payload Octets} \\
     \skippedwords \\
     \wordbox[lrb]{1}{} \\
-	\begin{rightwordgroup}{Footer}
-        \bitbox{32}{Checksum}
-	\end{rightwordgroup}
+    \bitbox{32}{Checksum}
 \end{bytefield}
 \caption{\nanoarq{} frame layout}
 \label{fig:frame-layout}
