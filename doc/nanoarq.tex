@@ -9,8 +9,9 @@
 \usepackage{float}
 \usepackage{tikz}
 \usepackage{comment}
+\usepackage{pgf-umlsd}
 
-\usetikzlibrary{arrows,positioning,automata,calc,backgrounds}
+\usetikzlibrary{arrows,positioning,automata,calc}
 
 \hypersetup{
     colorlinks=true,
@@ -38,7 +39,7 @@
 \end{abstract}
 
 \section{Introduction}
-Many communications channels in embedded systems, such as UART lines between multiple CPUs, or between a target and host system, provide an unreliable transport for transmitting and receiving data. Bits can be altered in flight on the wire, in isolation or in bursts. Crosstalk and signal degradation can occur when the routing of critical signals is too long, or the signals are transmitted over cables. Even bytes that are transmitted without errors can be lost due to infrequent servicing of the transport layer, overwritten in a hardware register by the arrival of the next byte. Finally, application backpressure can cause valid incoming bytes to be discarded, since the system can run out of space to store them. \par
+Many communications channels in embedded systems, such as UART lines between multiple CPUs, or between a target and host system, provide an unreliable transport for transmitting and receiving data. Bits can be altered in flight on the wire, in isolation or in bursts. Crosstalk and signal degradation can occur when the routing of critical signals is too long, or the signals are transmitted over cables. Even bytes that are transmitted without errors can be lost due to infrequent servicing of the transport layer, overwritten in a hardware register by the arrival of the next byte. Finally, application backpressure can cause valid incoming bytes to be discarded, as the system runs out of space to store them. \par
 All of these problems speak to the necessity of a reliability layer in software. Sliding window protocols are the ubiquitous solution, and are used as the foundation for more complex protocols like TCP. Fundamentally, sliding window protocols guarantee that the application layer will be presented with all data that was sent to it, in order, with integrity and without duplicates. \par
 \nanoarq{} is an implementation of the \enquote{Selective Repeat ARQ} protocol, and uses an explicit ACK mechanism to retransmit lost or corrupted frames. Additionally, \nanoarq{} provides connectivity services; a standard 3-way handshake and FIN/ACK disconnect strategy can be optionally used to establish and statefully manage a connection.
 
@@ -62,7 +63,7 @@ All of these problems speak to the necessity of a reliability layer in software.
 \item[Implementing a Large Standard] \hfill \\
     \nanoarq{} does not aim to be a full TCP, IP, PPP, or POSIX-compatible sockets implementation. \nanoarq{} has no concept of routing, endpoints, ports, addresses, sockets, or names. \nanoarq{} clients do not statefully listen for connections; if a connection request arrives, it is serviced.
 \item[Security] \hfill \\
-    \nanoarq{} provides no encryption or authentication methods. If security is required, it is up to the user to ensure that all data transmitted via \nanoarq{} is properly secured.
+    \nanoarq{} strives to be resilient against malformed input, but provides no encryption or authentication services. If security is required, it is up to the user to ensure that all data transmitted via \nanoarq{} is properly secured.
 \item[Dynamic Configuration] \hfill \\
     \nanoarq{} assumes that both endpoints are compatibly configured. \nanoarq{} provides no services for communicating connection options during connection establishment.
 \item[Congestion Control] \hfill \\
@@ -74,7 +75,43 @@ All of these problems speak to the necessity of a reliability layer in software.
 \end{description}
 
 \section{Protocol}
+\nanoarq{} implements a stream-based protocol, meaning that the internal delimiting and segmenting of data is not exposed to the application layer. As with the POSIX sockets API, users simply call functions similar to \texttt{send()} and \texttt{recv()}. There is no parity guarantee between the transmitter's \texttt{send()} calls and receiver's \texttt{recv()} calls. \par
+Internally, \nanoarq{} breaks up transmissions into fixed-size blocks so that they can be selectively acknowledged. The atomic unit of transmitted data is the \texttt{frame}. The portion of the frame that carries the user data is called the \texttt{segment}. A \texttt{message} is an aggregation of frames, and the unit of acknowledgement. It is the user's responsibility to configure \nanoarq{} to find a balance between message size and window size to maximize bandwidth and minimize unnecessary acknowledgement traffic. \par
 
+\subsection{Frames}
+Frames contain a header, a segment, and an optional checksum footer. The frame header carries enough information to uniquely identify which message it belongs to. It also carries the sender's receive window size for flow control purposes. The frame layout is visible in figure~\ref{fig:frame-layout}. Frames are encoded using the COBS algorithm to ensure that frame delimiting is unambiguous, but does impose a maximum frame size of 254 bytes. Frame headers and footers consume a maximum of 16 bytes, so the maximum payload size per segment is 238 bytes. Accordingly, \nanoarq{} introduces a 6.7\% overhead on transmission size. \\ \par
+
+\begin{figure}[H]
+\begin{bytefield}[bitwidth=1.1em,bitheight=2em]{32}
+	\bitheader{0-31} \\
+    \bitbox{8}{Version} & \bitbox{8}{Payload Size} & \bitbox{5}{Reserved} & \bitbox{1}{\tiny R\\S\\T} & \bitbox{1}{\tiny A\\C\\K} & \bitbox{1}{\tiny F\\I\\N} & \bitbox{8}{Window Size} \\
+    \bitbox{12}{Sequence Number} & \bitbox{8}{Segment Count} & \bitbox{12}{Segment ID} \\
+    \bitbox{12}{ACK Number} & \bitbox{8}{Reserved} & \bitbox{12}{ACK Segment Mask} \\
+    \wordbox[lrt]{1}{Payload Octets} \\
+    \skippedwords \\
+    \wordbox[lrb]{1}{} \\
+    \bitbox{32}{Checksum (optional)}
+\end{bytefield}
+\caption{\nanoarq{} frame layout}
+\label{fig:frame-layout}
+\end{figure}
+
+A description of each field follows.
+\begin{description}
+\item[Version] \hfill \\
+\item[Payload Size] \hfill \\
+\item[Flags] \hfill \\
+\item[Window Size] \hfill \\
+\item[Sequence Number] \hfill \\
+\item[Segment Count] \hfill \\
+\item[Segment ID] \hfill \\
+\item[ACK Number] \hfill \\
+\item[ACK Segment Mask] \hfill \\
+\item[Payload Octets] \hfill \\
+\item[Checksum] \hfill \\
+\end{description}
+
+\subsection{Messages}
 \subsection{Connection State Machine}
 \begin{figure}
 \input{nanoarq-state-machine.tex}
@@ -82,39 +119,7 @@ All of these problems speak to the necessity of a reliability layer in software.
 \label{fig:state-machine}
 \end{figure}
 \nanoarq{} optionally provides stateful connection services for establishing, maintaining, and closing a connection to the peer endpoint. The state machine, detailed in figure~\ref{fig:state-machine}, is similar to TCP but differs slightly. \nanoarq{} has no concept of a client or a server, so the \texttt{LISTEN} state present in TCP does not exist. There is also no distinction between connecting and resetting, so the difference between \texttt{RST} and \texttt{SYN} is uninteresting.
-\subsection{Frame Layout}
 
-\begin{figure}
-\begin{bytefield}[bitwidth=1.1em,bitheight=2em]{32}
-	\bitheader{0-31} \\
-    \bitbox{8}{Version} & \bitbox{5}{Reserved} & \bitbox{1}{\tiny R\\S\\T} & \bitbox{1}{\tiny A\\C\\K} & \bitbox{1}{\tiny F\\I\\N} & \bitbox{8}{Payload Size} & \bitbox{8}{Window Size} \\
-    \bitbox{12}{Sequence Number} & \bitbox{8}{Segment Size} & \bitbox{12}{Segment ID} \\
-    \bitbox{12}{ACK Number} & \bitbox{8}{Reserved} & \bitbox{12}{ACK Segment ID} \\
-    \wordbox[lrt]{1}{Payload Octets} \\
-    \skippedwords \\
-    \wordbox[lrb]{1}{} \\
-    \bitbox{32}{Checksum}
-\end{bytefield}
-\caption{\nanoarq{} frame layout}
-\label{fig:frame-layout}
-\end{figure}
-
-\begin{comment}
-    Version & \nanoarq{} protocol version \\
-    Reserved & Unused, must be zero-filled. \\
-    RST & Reset flag \\
-    ACK & Acknowledgement flag \\
-    FIN & Close flag \\
-    Payload Size & Size, in bytes, of current frame's data \\
-    Window Size & Available size, in segments, of sender's receive window \\
-    Sequence Number & Sequence number, in bytes, of this segment \\
-    Segment ID & Bitfield indicating which sub-segment frame the current payload contains \\
-    ACK Number & Sequence number, in bytes, of the last fully- or partially-received segment \\
-    ACK Segment ID & Bitfield indicating which frames in the ACK segment have been successfully received \\
-    Checksum & Sender-computed value for validating frame integrity \\
-\end{comment}
-
-All frames, including header and footer contents, are encoded using \todo{Explain and cite COBS}COBS.
 \subsection{Flow Control}
 
 \section{Physical Organization}
