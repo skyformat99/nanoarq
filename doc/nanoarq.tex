@@ -82,6 +82,7 @@ All of these problems speak to the necessity of a reliability layer in software.
 \end{description}
 
 \section{Protocol}
+\todo{ladder diagram}
 \nanoarq{} implements a stream-based protocol, meaning that the internal delimiting and segmenting of data is not exposed to the application layer. As with the POSIX sockets API, clients simply call functions similar to \texttt{send()} and \texttt{recv()}. There is no parity guarantee between the transmitter's \texttt{send()} calls and receiver's \texttt{recv()} calls. \par
 Internally, \nanoarq{} breaks up transmissions into fixed-size blocks so that they can be selectively acknowledged. The atomic unit of transmitted data is the \texttt{frame}. The portion of the frame that carries the user data is called the \texttt{segment}. A \texttt{message} is an aggregation of frames, and the unit of acknowledgement (\texttt{ACK}). \par
 
@@ -92,8 +93,9 @@ An entire message worth of frames is transmitted before the receiver sends an AC
 It is the user's responsibility to configure \nanoarq{} to find a balance between message size and window size to maximize bandwidth, minimize unnecessary ACK traffic, and make aggressive forward progress in poor environments. \par
 
 \subsection{Frames}
-Frames contain a header, a segment, and an optional checksum footer. The frame header carries enough information to uniquely identify which message it belongs to. It also carries the sender's receive window size for flow control purposes. The frame layout is visible in figure~\ref{fig:frame-layout}. Frames are encoded using the COBS algorithm to ensure that frame delimiting is unambiguous, but does impose a maximum frame size of 254 bytes. Frame headers and footers consume a maximum of 16 bytes, so the maximum payload size per segment is 238 bytes. Accordingly, \nanoarq{} imposes a constant 6.7\% overhead on transmission size.\par
+Frames contain a header, a segment, and an optional checksum footer. The frame header carries enough information to uniquely identify which message it belongs to. It also carries the sender's receive window size for flow control purposes. The frame layout is visible in figure~\ref{fig:frame-layout}. Frames are encoded using the COBS algorithm to ensure that frame delimiting is unambiguous, but COBS does impose a maximum frame size of 254 bytes. Frame headers and footers consume a maximum of 16 bytes, so the maximum payload size per segment is 238 bytes. Accordingly, \nanoarq{} imposes a constant 6.7\% overhead on transmission size.\par
 
+\todo{since seq + ack \#'s are on messages, maybe they can be smaller}
 \begin{figure}[H]
 \centering
 \begin{bytefield}[bitwidth=1.02em,bitheight=2em]{32}
@@ -152,7 +154,11 @@ A description of each field follows.
 
 \subsection{Messages}
 \subsection{Flow Control}
+\nanoarq{} supports basic flow control by using window advertisements and message-level acknowledgement. All flow control is static; \nanoarq{} does not dynamically throttle data based on sampling round-trip times. \par
 
+Silly Window Syndrome \todo{cite SWS} is avoided during transmission through a user-configurable \enquote{tinygram} transmission delay, which specifies the amount of time to wait before sending less than one message worth of data. This delay can be explicitly overridden via the \nanoarq{} public API, in the case where there are high-priority small messages to send. \par
+
+Receive-side Silly Window Syndrome manifests when the application receives very few bytes at a time from the network stack, causing the network layer to transmit a large number of ACK messages, driving the link efficiency towards zero. \nanoarq{} only ACKs messages and not bytes, so it is naturally immune to receive-side SWS. Unfortunately, this immunity does not come for free! The tradeoff is that \nanoarq{} is not maximally efficient with respect to flow control: if all but the final segment in a message has been received up to the application layer, \nanoarq{} will not advertise the empty space in its receive window as available.
 \subsection{Connection State Machine}
 \nanoarq{} optionally provides stateful connection services for establishing, maintaining, and closing a connection to the peer endpoint. The state machine, detailed in figure~\ref{fig:state-machine}, is similar to TCP but differs slightly. \nanoarq{} has no concept of a client or a server, so the \texttt{LISTEN} state present in TCP does not exist. There is also no distinction between connecting and resetting, so the difference between \texttt{RST} and \texttt{SYN} is uninteresting. \par
 \begin{figure}[H]
