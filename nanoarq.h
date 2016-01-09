@@ -79,6 +79,7 @@ arq_err_t arq_set_assert_handler(arq_assert_cb_t assert_cb);
 arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size);
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, int arq_seat_size, arq_t **out_arq);
 arq_err_t arq_connect(arq_t *arq);
+arq_err_t arq_reset(arq_t *arq);
 arq_err_t arq_close(arq_t *arq);
 
 // primary API. non-blocking, all successful calls return ARQ_COMPLETED or ARQ_MORE.
