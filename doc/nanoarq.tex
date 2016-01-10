@@ -8,23 +8,34 @@
 \usepackage{todonotes}
 \usepackage{float}
 \usepackage{tikz}
-\usepackage{pgf-umlsd}
+\usepackage[underline=false]{pgf-umlsd}
 \usepackage{titling}
 \usepackage{setspace}
+\usepackage{xparse}
 \usepackage{hyperref}
 
 \usetikzlibrary{arrows,positioning,automata,calc}
-
+\usepgflibrary{arrows}
 \hypersetup{colorlinks=true, linkcolor=blue, filecolor=magenta, urlcolor=cyan}
-
-\setlength{\parindent}{4em}
-\setlength{\parskip}{1em}
-
 \urlstyle{same}
+
+\RenewDocumentCommand{\mess}{O{0}mmmO{>=angle 60}}{
+    \stepcounter{seqlevel}
+    \path (#2) + (0, -\theseqlevel * \unitfactor - 0.7 * \unitfactor) node (mess from) {};
+    \addtocounter{seqlevel}{#1}
+    \path (#4) + (0, -\theseqlevel * \unitfactor - 0.7 * \unitfactor) node (mess to) {};
+    \draw[->,#5] (mess from) -- (mess to) node[midway, above]
+    {#3};
+
+    \node (#3 from) at (mess from) {};
+    \node (#3 to) at (mess to) {};
+}
 
 \newcommand{\nanoarq}{\texttt{nanoarq}}
 \newtheorem{example}{Example}
 
+\setlength{\parindent}{4em}
+\setlength{\parskip}{1em}
 \setlength{\droptitle}{-10em}
 
 \begin{document}
@@ -158,10 +169,12 @@ A description of each field follows.
 \end{description}
 
 \subsection{Messages}
-Messages are aggregations of segments. \nanoarq{} acknowledgements can be both positive (ACK) or negative (NAK), depending on the contents of the ACK Segment Mask field in the frame header. When a message is acknowledged, the ACK Segment Mask bitfield will contain 1's for all successfully received segments, and 0's for segments that were not received.
+Messages are aggregations of segments. \nanoarq{} acknowledgements can be both positive (ACK) or negative (NAK), depending on the contents of the ACK Segment Mask field in the frame header. When a message is acknowledged, the ACK Segment Mask bitfield will contain 1's for all successfully received segments, and 0's for segments that were not received. This allows \nanoarq{} to make progress over faulty channels, since only failed frames are retransmitted. \par
+
+The following examples display how various scenarios are handled in \nanoarq{}. \par
 
 \newenvironment{arqladder}
-{ \normalfont \begin{sequencediagram} \newthread{t}{Transmitter} \newinst[16em]{r}{Receiver} }
+{ \normalfont \begin{sequencediagram} \newinst{t}{Transmitter} \newinst[14em]{r}{Receiver} }
 { \end{sequencediagram} }
 
 \begin{example} Message is one frame, successfully received
@@ -170,16 +183,32 @@ Messages are aggregations of segments. \nanoarq{} acknowledgements can be both p
         \mess[1]{r}{ACK 0 Mask 1}{t}
     \end{arqladder}
 \end{example}
-\begin{example} Message is three frames, successfully received
+\begin{example} Message is two frames, successfully received
     \begin{arqladder}
         \mess[1]{t}{SEQ 0 Frame 0}{r}
         \mess[1]{t}{SEQ 0 Frame 1}{r}
-        \mess[1]{t}{SEQ 0 Frame 2}{r}
-        \mess[1]{r}{ACK 1 Mask 111}{t}
+        \mess[1]{r}{ACK 0 Mask 11}{t}
     \end{arqladder}
 \end{example}
-\begin{example} Message is one frame, failed, NAK'd, and retransmitted
+\begin{example} Message is three frames, middle frame fails, retransmitted
     \begin{arqladder}
+        \mess[1]{t}{SEQ 0 Frame 0}{r}
+        \mess[1]{t}{SEQ 0 Frame 1}{r}[{-]}, shorten >= 4em]
+        \mess[1]{t}{SEQ 0 Frame 2}{r}
+        \mess[1]{r}{ACK 0 Mask 101}{t}
+        \mess[1]{t}{SEQ 0 Frame 1}{r}
+        \mess[1]{r}{ACK 0 Mask 111}{t}
+    \end{arqladder}
+\end{example}
+\begin{example} Message is one frame, two messages sent, window size of two
+    \begin{arqladder}
+        \mess[1]{t}{SEQ 0 Frame 0}{r}
+        \mess[1]{t}{SEQ 1 Frame 0}{r}
+        \mess[1]{r}{ACK 0 Mask 1 Win 1}{t}
+        \mess[1]{r}{ACK 1 Mask 1 Win 0}{t}
+        \begin{call}{r}{\texttt{arq\_recv()}}{r}{}
+        \end{call}
+        \mess[1]{r}{ACK 1 Mask 1 Win 2}{t}
     \end{arqladder}
 \end{example}
 
