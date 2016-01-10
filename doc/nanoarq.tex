@@ -115,6 +115,8 @@ It is the user's responsibility to configure \nanoarq{} to find a balance betwee
 \subsection{Frames}
 Frames contain a header, a segment, and an optional checksum footer. The frame header carries enough information to uniquely identify which message it belongs to. It also carries the sender's receive window size for flow control purposes. The frame layout is visible in figure~\ref{fig:frame-layout}. Frames are encoded using the COBS algorithm to ensure that frame delimiting is unambiguous, but COBS does impose a maximum frame size of 254 bytes. Frame headers and footers consume a maximum of 16 bytes, so the maximum payload size per segment is 238 bytes. Accordingly, \nanoarq{} imposes a constant 6.7\% overhead on transmission size.\par
 
+COBS ensures that framing is unambiguous, but \nanoarq{} also uses intra-frame and inter-frame timeouts to recover from scenarios where the transmitter suffers from internal delays, or prolonged burst corruption errors where entire frames are lost. Intra-frame timeouts are used to detect when no part of an expected frame has arrived, and the receiver should send a NAK. Inter-frame timeouts are used to restore internal parser state after an unacceptably long delay, in the hopes that if the frame delimiter at the end of the current frame is lost, the next frame will be correctly received.
+
 \todo{since seq + ack \#'s are on messages, maybe they can be smaller}
 \begin{figure}[H]
 \centering
@@ -210,7 +212,7 @@ The following examples display how various scenarios are handled in \nanoarq{}. 
         \mess[1]{r}{ACK 0 Mask 1 Win 1}{t}
         \mess[1]{t}{SEQ 1 Frame 0}{r}
         \mess[1]{r}{ACK 1 Mask 1 Win 0}{t}
-        \begin{call}{r}{\texttt{arq\_recv()}}{r}{}
+        \begin{call}{r}{\texttt{arq\_recv()}}{r}{drained}
         \end{call}
         \mess[1]{r}{ACK 1 Mask 1 Win 2}{t}
     \end{arqladder}
@@ -288,4 +290,5 @@ Receive-side Silly Window Syndrome manifests when the application receives very 
 \section{Integration}
 \subsection{Architecture}
 \subsection{Physical Organization}
+\section{Acknowledgements}
 \end{document}
