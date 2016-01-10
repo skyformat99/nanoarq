@@ -1,3 +1,4 @@
 #!/bin/sh
 set -e
 pdflatex nanoarq.tex
+pdflatex nanoarq.tex

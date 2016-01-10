@@ -3,21 +3,19 @@
 \usepackage{bytefield}
 \usepackage{csquotes}
 \usepackage{url}
-\usepackage{array,tabularx}
+\usepackage{array}
+\usepackage{tabularx}
 \usepackage{todonotes}
 \usepackage{float}
 \usepackage{tikz}
 \usepackage{pgf-umlsd}
+\usepackage{titling}
+\usepackage{setspace}
 \usepackage{hyperref}
 
 \usetikzlibrary{arrows,positioning,automata,calc}
 
-\hypersetup{
-    colorlinks=true,
-    linkcolor=blue,
-    filecolor=magenta,
-    urlcolor=cyan,
-}
+\hypersetup{colorlinks=true, linkcolor=blue, filecolor=magenta, urlcolor=cyan}
 
 \setlength{\parindent}{4em}
 \setlength{\parskip}{1em}
@@ -25,6 +23,9 @@
 \urlstyle{same}
 
 \newcommand{\nanoarq}{\texttt{nanoarq}}
+\newtheorem{example}{Example}
+
+\setlength{\droptitle}{-10em}
 
 \begin{document}
 
@@ -37,10 +38,14 @@
     This document introduces \nanoarq{}, a single-file C library that provides reliability over an unreliable communications channel. \nanoarq{} implements the \href{https://en.wikipedia.org/wiki/Selective_Repeat_ARQ}{Selective Repeat ARQ} \todo{Cite ARQ}  algorithm and provides basic functionality for establishing and gracefully destroying connections. \nanoarq{} is meant to be suitable for embedded systems, with a design focus on simplicity, flexibility, and ease of integration. The \nanoarq{} implementation is released into the public domain.
 \end{abstract}
 
+\begin{spacing}{0.0}
+\tableofcontents
+\end{spacing}
+
 \section{Introduction}
 Many communications channels in embedded systems, such as UART lines between multiple CPUs, or between a target and host system, provide an unreliable transport for transmitting and receiving data. Bits can be altered in flight on the wire, in isolation or in bursts. Crosstalk and signal degradation can occur when the routing of critical signals is too long, or the signals are transmitted over cables. Even bytes that are transmitted without errors can be lost due to infrequent servicing of the transport layer, overwritten in a hardware register by the arrival of the next byte. Finally, application backpressure can cause valid incoming bytes to be discarded, as the system runs out of space to store them. \par
 All of these problems speak to the necessity of a reliability layer in software. Sliding window protocols are the ubiquitous solution, and are used as the foundation for more complex protocols like TCP. Fundamentally, sliding window protocols guarantee that the application layer will be presented with all data that was sent to it, in order, with integrity and without duplicates. \par
-\nanoarq{} is an implementation of the \enquote{Selective Repeat ARQ} protocol, and uses an explicit ACK mechanism to retransmit lost or corrupted data. Additionally, \nanoarq{} provides connectivity services; a standard 3-way handshake and FIN/ACK disconnect strategy can be optionally used to establish and statefully manage a connection.
+\nanoarq{} is an implementation of the \enquote{Selective Repeat ARQ} protocol, and uses an explicit ACK mechanism to retransmit lost or corrupted data. Additionally, \nanoarq{} provides connectivity services; a standard handshake and FIN/ACK disconnect strategy can be optionally used to establish and statefully manage a connection.
 
 \subsection{Goals}
 \begin{description}
@@ -82,7 +87,6 @@ All of these problems speak to the necessity of a reliability layer in software.
 \end{description}
 
 \section{Protocol}
-\todo{ladder diagram}
 \nanoarq{} implements a connection-oriented stream-based protocol; both endpoints maintain connection state and the internal delimiting and segmenting of data is not exposed to the application layer. As with the POSIX sockets API, clients call high-level functions similar to \texttt{send()} and \texttt{recv()}. There is no parity guarantee between the number of send and receive calls between the transmitter and receiver. \par
 
 Internally, \nanoarq{} breaks up transmissions into fixed-size blocks so that they can be selectively acknowledged. The atomic unit of transmitted data is the \texttt{frame}. The portion of the frame that carries the user data is called the \texttt{segment}. A \texttt{message} is an aggregation of frames, and the unit of acknowledgement (\texttt{ACK}). \par
@@ -154,15 +158,43 @@ A description of each field follows.
 \end{description}
 
 \subsection{Messages}
+Messages are aggregations of segments. \nanoarq{} acknowledgements can be both positive (ACK) or negative (NAK), depending on the contents of the ACK Segment Mask field in the frame header. When a message is acknowledged, the ACK Segment Mask bitfield will contain 1's for all successfully received segments, and 0's for segments that were not received.
+
+\newenvironment{arqladder}
+{ \normalfont \begin{sequencediagram} \newthread{t}{Transmitter} \newinst[16em]{r}{Receiver} }
+{ \end{sequencediagram} }
+
+\begin{example} Message is one frame, successfully received
+    \begin{arqladder}
+        \mess[1]{t}{SEQ 0 Frame 0}{r}
+        \mess[1]{r}{ACK 0 Mask 1}{t}
+    \end{arqladder}
+\end{example}
+\begin{example} Message is three frames, successfully received
+    \begin{arqladder}
+        \mess[1]{t}{SEQ 0 Frame 0}{r}
+        \mess[1]{t}{SEQ 0 Frame 1}{r}
+        \mess[1]{t}{SEQ 0 Frame 2}{r}
+        \mess[1]{r}{ACK 1 Mask 111}{t}
+    \end{arqladder}
+\end{example}
+\begin{example} Message is one frame, failed, NAK'd, and retransmitted
+    \begin{arqladder}
+    \end{arqladder}
+\end{example}
+
 \subsection{Flow Control}
-\nanoarq{} supports basic flow control by using window advertisements and message-level acknowledgement. All flow control is static; \nanoarq{} does not dynamically throttle data based on sampling round-trip times. \par
+\nanoarq{} supports basic flow control by using window advertisements and message-level acknowledgement. All flow control is static; \nanoarq{} does not dynamically throttle data based on sampling round-trip times. \nanoarq{} does attempt to avoid Silly Window Syndrome, but these mechanisms can be overridden. \par
+
+Each frame carries a window advertisement. This field contains the number of messages the sender has capacity for and is willing to receive. Since fully-received and acknowledged messages remain in the receiver's window until the application has retrieved them via the public API, it's necessary to communicate the window size explicitly to avoid transmitting data that has no hope of being received. \par
 
 Silly Window Syndrome \todo{cite SWS} is avoided during transmission through a user-configurable \enquote{tinygram} transmission delay, which specifies the amount of time to wait before sending less than one message worth of data. This delay can be explicitly overridden via the \nanoarq{} public API, in the case where there are high-priority small messages to send. \par
 
 Receive-side Silly Window Syndrome manifests when the application receives very few bytes at a time from the network stack, causing the network layer to transmit a large number of ACK messages, driving the link efficiency towards zero. \nanoarq{} only ACKs messages and not bytes, so it is naturally immune to receive-side SWS. Unfortunately, this immunity does not come for free! The tradeoff is that \nanoarq{} is not maximally efficient with respect to flow control: if all but the final segment in a message has been received up to the application layer, \nanoarq{} will not advertise the empty space in its receive window as available. \par
 
 \subsection{Connection State Machine}
-\nanoarq{} optionally provides stateful connection services for establishing, maintaining, and closing a connection to the peer endpoint. The state machine, detailed in figure~\ref{fig:state-machine}, is similar to TCP but differs slightly. \nanoarq{} has no concept of a client or a server, so the \texttt{LISTEN} state present in TCP does not exist. There is also no distinction between connecting and resetting, so the difference between \texttt{RST} and \texttt{SYN} is uninteresting. \par
+\nanoarq{} optionally provides stateful connection services for establishing, maintaining, and closing a connection to the peer endpoint. The state machine, detailed in figure~\ref{fig:state-machine}, is similar to TCP but differs slightly. \nanoarq{} has no concept of a client or a server, so the \texttt{LISTEN} state present in TCP does not exist. There is also no distinction between connecting and resetting, so the difference between \texttt{RST} and \texttt{SYN} is uninteresting. Additionally, \nanoarq{} sequence numbers start at zero, so the standard TCP 3-way handshake can be simplified to a 2-way handshake. \par
+\todo{fix diagram to be 2-way}
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[auto]

@@ -42,3 +42,4 @@ doc/*.mp
 doc/*.out
 doc/*.1
 doc/*.mps
+doc/*.toc
