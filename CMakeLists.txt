@@ -76,10 +76,11 @@ add_dependencies(plthook plthook_external)
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR} ${PLTHOOK_INCLUDE_DIR})
 
 add_library(nanoarq SHARED nanoarq.h
-                           unit_tests/nanoarq.c)
+                           unit_tests/nanoarq_in_test_project.c)
 
 add_executable(nanoarq_tests unit_tests/main.cpp
-                             unit_tests/test_nanoarq.cpp)
+                             unit_tests/test_nanoarq.cpp
+                             unit_tests/test_asserts.cpp)
 
 target_link_libraries(nanoarq_tests nanoarq libCppUTest libCppUTestExt plthook dl)
 
