@@ -7,16 +7,3 @@ compiler:
     - gcc
 script: ./b
 
-env:
-    global:
-        - secure: "La6XiK5/oo/oIVnc6kCCBOfs1tMNHOAgVadXUQtwsKtbCvmWbSDZBkPG7JtjrgaDbYwmjeEWbIWXvcCsAU1KU58H5Xg+I/g2wdIw8zg9esEDRnk1zZ2/Q1fWRl79QTMneZWoGhCBS8wAOQAxEMMY7711Qd5YkpZmh4uXEpGTMji/UumPHwtM10Q7sv8BSXvxZAfztjkBLXuc0KnYEYeiKiWxX0jv3Go8Md7JLqcrjyOKGM+oxcmcoUjQZrlu/YGR5Q7nbTZJIuHMnWPASU8yBvAWQH9RoaR7qmMKOGprj4g1R/TnCNq4bi+v+4b1KjBQCzJxNjIadxQGr6fDuXbI9hCleOdHwiDFJsUXf4ZZgnijYiY9Zgww21wCJ6ot0oX0w+K0SPubrWdOjSLII80vcVCADIOMXpmceDSqXaPm+D9y2Lf1dwPmetI3NEDoWyRy2gNQ/jfimPa9Vf7/ZRJFzsnUBEcqpmBffjD+5ynAp2ulTRooC9BcekBo6tIG2WjDUmocigMJjOM9UdOXqiXqEk1XqxzJpeZo8zaM1neOA18o5ovpvC+3KmEMgRe1hESAkC+fuW1BE0t73kgqH7tLfJZV0Tp8X9i/ARxJ4k94iTClpHXY0qvUEPxcd1qc5UcYBwpuunA2qwu8TVZGTmI3Xh9ztGjTobNzb2Q4gZfY7EQ="
-
-#addons:
-#    coverity_scan:
-#        project:
-#            name: "charlesnicholson/nanoarq"
-#            description: "Embedded-friendly Selective Repeat ARQ Implementation"
-#        notification_email: charles.nicholson@gmail.com
-#        build_command: "./b"
-#        branch_pattern: .*
-
