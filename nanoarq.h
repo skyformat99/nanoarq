@@ -9,6 +9,10 @@ extern "C" {
 #error You must define NANOARQ_UINT32_BASE_TYPE before including nanoarq.h
 #endif
 
+#ifndef NANOARQ_UINTPTR_BASE_TYPE
+#error You must define NANOARQ_UINTPTR_BASE_TYPE before including nanoarq.h
+#endif
+
 #ifndef NANOARQ_NULL_PTR
 #error You must define NANOARQ_NULL_PTR before including nanoarq.h
 #endif
@@ -33,8 +37,8 @@ typedef enum
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
 } arq_event_t;
 
-struct arq_t;
 typedef NANOARQ_UINT32_BASE_TYPE arq_uint32_t;
+typedef NANOARQ_UINTPTR_BASE_TYPE arq_uintptr_t;
 typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 
@@ -110,10 +114,20 @@ arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *
 arq_err_t arq_backend_fill_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
 
 #if NANOARQ_COMPILE_CRC32 == 1
-arq_uint32_t arq_crc32(arq_uint32_t crc, void const *buf, int size);
+arq_uint32_t arq_util_crc32(arq_uint32_t crc, void const *buf, int size);
 #endif
 
 ///////////// Internal API
+
+typedef struct arq__lin_alloc_t
+{
+    char *base;
+    char *top;
+    int capacity;
+} arq__lin_alloc_t;
+
+void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity);
+void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align);
 
 int arq__cobs_encode(void const *src, int src_size, void *dst, int dst_max);
 int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
@@ -152,7 +166,6 @@ arq_err_t arq_set_assert_handler(arq_assert_cb_t assert_cb)
     if (!assert_cb) {
         return ARQ_ERR_INVALID_PARAM;
     }
-
     s_assert_cb = assert_cb;
     return ARQ_OK_COMPLETED;
 }
@@ -162,7 +175,6 @@ arq_err_t arq_get_assert_handler(arq_assert_cb_t *out_assert_cb)
     if (!out_assert_cb) {
         return ARQ_ERR_INVALID_PARAM;
     }
-
     *out_assert_cb = s_assert_cb;
     return ARQ_OK_COMPLETED;
 }
@@ -172,6 +184,27 @@ arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
     (void)cfg;
     *out_required_size = 0;
     return ARQ_OK_COMPLETED;
+}
+
+void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
+{
+    ARQ_ASSERT(a && base && (capacity > 0));
+    a->base = (char *)base;
+    a->top = (char *)base;
+    a->capacity = capacity;
+}
+
+void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
+{
+    ARQ_ASSERT(a && (size > 0) && (align <= 32) && (align > 0) && ((align & (align - 1)) == 0));
+    void *p = (void *)(((arq_uintptr_t)a->top + (align - 1)) & ~(align - 1));
+    a->top = p + size;
+    int new_size = a->top - a->base;
+    ARQ_ASSERT(new_size <= a->capacity);
+    if (new_size > a->capacity) {
+        p = NANOARQ_NULL_PTR;
+    }
+    return p;
 }
 
 #endif
