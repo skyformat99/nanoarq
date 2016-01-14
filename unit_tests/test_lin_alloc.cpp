@@ -43,6 +43,7 @@ TEST(lin_alloc, second_alloc_align_1_returns_top)
 TEST(lin_alloc, pads_for_alignment)
 {
     Fixture f;
+    f.a.base = (char *)(0);
     f.a.top = (char *)(1);
     void *p = arq__lin_alloc_alloc(&f.a, 1, 4);
     CHECK_EQUAL((void *)4, p);
