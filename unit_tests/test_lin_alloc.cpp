@@ -62,6 +62,7 @@ TEST(lin_alloc, doesnt_assert_when_perfectly_full)
     CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(&Local::assert_cb));
 
     Fixture f;
+    Local::called() = false;
     arq__lin_alloc_alloc(&f.a, f.a.capacity, 1);
     CHECK(Local::called() == false);
 
@@ -81,6 +82,7 @@ TEST(lin_alloc, asserts_when_capacity_exhausted)
     CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(&Local::assert_cb));
 
     Fixture f;
+    Local::called() = false;
     arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1);
     CHECK(Local::called());
 
