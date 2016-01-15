@@ -41,7 +41,7 @@
 \begin{document}
 
 \title{\nanoarq{}}
-\author{Charles Nicholson \texttt{<\href{mailto:charles.nicholson@gmail.com}{charles.nicholson@gmail.com}>}}
+\author{Charles Nicholson \texttt{<\href{mailto:charles.nicholson+nanoarq@gmail.com}{charles.nicholson+nanoarq@gmail.com}>}}
 \date{}
 \maketitle
 
@@ -121,8 +121,8 @@ COBS ensures that framing is unambiguous, but \nanoarq{} also uses intra-frame a
 \begin{figure}[H]
 \centering
 \begin{bytefield}[bitwidth=1.02em,bitheight=2em]{32}
-	\bitheader{0-31} \\
-    \bitbox{8}{Version} & \bitbox{8}{Segment Size} & \bitbox{6}{Reserved} & \bitbox{1}{\tiny R\\S\\T} & \bitbox{1}{\tiny F\\I\\N} & \bitbox{8}{Window Size} \\
+    \bitheader{0-31} \\
+    \bitbox{8}{Version} & \bitbox{8}{Segment Size} & \bitbox{1}{\tiny F\\I\\N} & \bitbox{1}{\tiny R\\S\\T} & \bitbox{6}{Reserved} & \bitbox{8}{Window Size} \\
     \bitbox{12}{Sequence Number} & \bitbox{8}{Message Size} & \bitbox{12}{Segment ID} \\
     \bitbox{12}{ACK Number} & \bitbox{8}{Reserved} & \bitbox{12}{ACK Segment Mask} \\
     \wordbox[lrt]{1}{Segment Octets} \\
