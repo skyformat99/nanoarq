@@ -203,7 +203,7 @@ void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
 {
     ARQ_ASSERT(a && (size > 0) && (align <= 32) && (align > 0) && ((align & (align - 1)) == 0));
-    char *p = (char *)(((arq_uintptr_t)a->top + (align - 1)) & ~(align - 1));
+    char *p = (char *)(((arq_uintptr_t)a->top + ((arq_uintptr_t)align - 1)) & ~((arq_uintptr_t)align - 1));
     char *new_top = p + size;
     int new_size = new_top - a->base;
     ARQ_ASSERT(new_size <= a->capacity);

@@ -73,13 +73,13 @@ add_dependencies(plthook plthook_external)
 
 ################ tests
 
-set(NANOARQ_FLAGS -Wall -Wextra -Os)
+set(NANOARQ_FLAGS -Wall -Wextra -Wshadow -Wsign-conversion -Wcast-align -Wcast-qual -Os)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR} ${PLTHOOK_INCLUDE_DIR})
 
 add_library(nanoarq SHARED nanoarq.h unit_tests/nanoarq_in_test_project.c)
-
 target_compile_options(nanoarq PRIVATE ${NANOARQ_FLAGS})
+target_compile_options(nanoarq PRIVATE -pedantic)
 
 add_executable(nanoarq_tests unit_tests/main.cpp
                              unit_tests/test_nanoarq.cpp
