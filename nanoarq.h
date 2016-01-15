@@ -203,7 +203,7 @@ void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
 {
     ARQ_ASSERT(a && (size > 0) && (align <= 32) && (align > 0) && ((align & (align - 1)) == 0));
-    void *p = (void *)(((arq_uintptr_t)a->top + (align - 1)) & ~(align - 1));
+    char *p = (char *)(((arq_uintptr_t)a->top + (align - 1)) & ~(align - 1));
     char *new_top = p + size;
     int new_size = new_top - a->base;
     ARQ_ASSERT(new_size <= a->capacity);
@@ -216,6 +216,7 @@ void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
 
 int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
+    ARQ_ASSERT(buf && out_frame_hdr);
     unsigned char const *src = (unsigned char const *)buf;
     out_frame_hdr->version = *src++;
     out_frame_hdr->seg_len = *src++;
@@ -228,6 +229,8 @@ int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 
 int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
 {
+    (void)frame_hdr;
+    (void)out_buf;
     return 0;
 }
 
