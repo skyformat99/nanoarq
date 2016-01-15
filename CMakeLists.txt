@@ -81,7 +81,8 @@ add_library(nanoarq SHARED nanoarq.h
 add_executable(nanoarq_tests unit_tests/main.cpp
                              unit_tests/test_nanoarq.cpp
                              unit_tests/test_asserts.cpp
-                             unit_tests/test_lin_alloc.cpp)
+                             unit_tests/test_lin_alloc.cpp
+                             unit_tests/test_frame_hdr.cpp)
 
 target_link_libraries(nanoarq_tests nanoarq libCppUTest libCppUTestExt plthook dl)
 
