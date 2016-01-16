@@ -4,9 +4,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define NANOARQ_UINT32_BASE_TYPE uint32_t
-#define NANOARQ_UINTPTR_BASE_TYPE uintptr_t
+#define NANOARQ_UINT16_TYPE uint16_t
+#define NANOARQ_UINT32_TYPE uint32_t
+#define NANOARQ_UINTPTR_TYPE uintptr_t
 #define NANOARQ_NULL_PTR NULL
+#define NANOARQ_LITTLE_ENDIAN 1
 #define NANOARQ_COMPILE_CRC32 1
 
 #include "nanoarq.h"

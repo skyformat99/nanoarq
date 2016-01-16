@@ -1,24 +1,36 @@
 #ifndef NANOARQ_H_INCLUDED
 #define NANOARQ_H_INCLUDED
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef NANOARQ_UINT16_TYPE
+#error You must define NANOARQ_UINT16_TYPE before including nanoarq.h
 #endif
 
-#ifndef NANOARQ_UINT32_BASE_TYPE
-#error You must define NANOARQ_UINT32_BASE_TYPE before including nanoarq.h
+#ifndef NANOARQ_UINT32_TYPE
+#error You must define NANOARQ_UINT32_TYPE before including nanoarq.h
 #endif
 
-#ifndef NANOARQ_UINTPTR_BASE_TYPE
-#error You must define NANOARQ_UINTPTR_BASE_TYPE before including nanoarq.h
+#ifndef NANOARQ_UINTPTR_TYPE
+#error You must define NANOARQ_UINTPTR_TYPE before including nanoarq.h
 #endif
 
 #ifndef NANOARQ_NULL_PTR
 #error You must define NANOARQ_NULL_PTR before including nanoarq.h
 #endif
 
+#ifndef NANOARQ_LITTLE_ENDIAN
+#error You must define NANOARQ_LITTLE_ENDIAN to 0 or 1 before including nanoarq.h
+#endif
+
 #ifndef NANOARQ_COMPILE_CRC32
 #error You must define NANOARQ_COMPILE_CRC32 to 0 or 1 before including nanoarq.h
+#endif
+
+#ifndef NANOARQ_COMPILE_AS_CPP
+#error You must define NANOARQ_COMPILE_AS_CPP to 0 or 1 before including nanoarq.h
+#endif
+
+#if defined(__cplusplus) && (NANOARQ_COMPILE_AS_CPP == 0)
+extern "C" {
 #endif
 
 typedef enum
@@ -37,8 +49,9 @@ typedef enum
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
 } arq_event_t;
 
-typedef NANOARQ_UINT32_BASE_TYPE arq_uint32_t;
-typedef NANOARQ_UINTPTR_BASE_TYPE arq_uintptr_t;
+typedef NANOARQ_UINT16_TYPE arq_uint16_t;
+typedef NANOARQ_UINT32_TYPE arq_uint32_t;
+typedef NANOARQ_UINTPTR_TYPE arq_uintptr_t;
 typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 
@@ -99,8 +112,6 @@ arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
 arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size);
 arq_err_t arq_flush_tinygrams(arq_t *arq);
 
-// update API. arq_send doesn't push any bytes down to be drained, and doesn't update any timers.
-// call arq_poll after some number of arq_send calls, and after 'out_next_poll' time units.
 arq_err_t arq_backend_poll(arq_t *arq,
                            arq_time_t dt,
                            int *out_drain_send_size,
@@ -108,7 +119,6 @@ arq_err_t arq_backend_poll(arq_t *arq,
                            arq_event_t *out_event,
                            arq_time_t *out_next_poll);
 
-// glue API for connecting to data source / sink (UART, pipe, etc)
 arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
 arq_err_t arq_backend_fill_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
 
@@ -145,10 +155,15 @@ typedef struct arq__frame_hdr_t
 int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
 int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf);
 
+arq_uint16_t arq__hton16(arq_uint16_t x);
+arq_uint16_t arq__ntoh16(arq_uint16_t x);
+arq_uint32_t arq__hton32(arq_uint32_t x);
+arq_uint32_t arq__ntoh32(arq_uint32_t x);
+
 int arq__cobs_encode(void const *src, int src_size, void *dst, int dst_max);
 int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && (NANOARQ_COMPILE_AS_CPP == 0)
 }
 #endif
 #endif
@@ -156,7 +171,7 @@ int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
 #ifdef NANOARQ_IMPLEMENTATION
 
 #ifdef NANOARQ_IMPLEMENTATION_INCLUDED
-    #error nanoarq.h already #included with NANOARQ_IMPLEMENTATION_INCLUDED #defined
+#error nanoarq.h already #included with NANOARQ_IMPLEMENTATION_INCLUDED #defined
 #endif
 
 #define NANOARQ_IMPLEMENTATION_INCLUDED
@@ -212,6 +227,34 @@ void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
     }
     a->top = new_top;
     return p;
+}
+
+arq_uint16_t arq__hton16(arq_uint16_t x)
+{
+#if NANOARQ_LITTLE_ENDIAN == 1
+    return (x << 8) | (x >> 8);
+#else
+    return x;
+#endif
+}
+
+arq_uint16_t arq__ntoh16(arq_uint16_t x)
+{
+    return arq__hton16(x);
+}
+
+arq_uint32_t arq__hton32(arq_uint32_t x)
+{
+#if NANOARQ_LITTLE_ENDIAN == 1
+    return (x >> 24) | ((x & 0x00FF0000) >> 8) | ((x & 0x0000FF00) << 8) | (x << 24);
+#else
+    return x;
+#endif
+}
+
+arq_uint32_t arq__ntoh32(arq_uint32_t x)
+{
+    return arq__hton32(x);
 }
 
 int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
