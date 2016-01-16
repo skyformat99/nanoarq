@@ -16,6 +16,8 @@ struct Fixture
         SequenceNumber = 0x5AF, // 0101 1010 1111
         MessageLen = 0xC3,      // 1100 0011
         SegmentID = 0xA71,      // 1010 0111 0001
+        AckNumber = 0x814,      // 1000 0001 0100
+        AckSegmentMask = 0x235  // 0010 0011 0101
     };
 
     Fixture()
@@ -23,14 +25,17 @@ struct Fixture
         uint8_t *src = buf;
         *src++ = (uint8_t)Version;
         *src++ = (uint8_t)SegmentLen;
-        src++; // flags
+        *src++ = 0; // flags
         *src++ = (uint8_t)WindowSize;
         *src++ = 0x5A;
         *src++ = 0xFC;
         *src++ = 0x3A;
         *src++ = 0x71;
-
-         arq__frame_hdr_read(&buf, &h);
+        *src++ = 0x81;
+        *src++ = 0x40;
+        *src++ = 0x02; // reserved;
+        *src++ = 0x35;
+        arq__frame_hdr_read(&buf, &h);
     }
 
     arq__frame_hdr_t h;
@@ -95,6 +100,25 @@ TEST(frame_hdr, read_segment_id)
 {
     Fixture f;
     CHECK_EQUAL(Fixture::SegmentID, f.h.seg_id);
+}
+
+TEST(frame_hdr, read_ack_number)
+{
+    Fixture f;
+    CHECK_EQUAL(Fixture::AckNumber, f.h.ack_num);
+}
+
+TEST(frame_hdr, read_ack_segment_mask)
+{
+    Fixture f;
+    CHECK_EQUAL(Fixture::AckSegmentMask, f.h.ack_seg_mask);
+}
+
+TEST(frame_hdr, returns_header_size_in_bytes)
+{
+    Fixture f;
+    int const n = arq__frame_hdr_read(&f.buf, &f.h);
+    CHECK_EQUAL(12, n);
 }
 
 }

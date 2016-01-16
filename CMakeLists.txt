@@ -120,6 +120,7 @@ target_link_libraries(nanoarq_tests nanoarq libCppUTest libCppUTestExt plthook d
 add_unit_tests(nanoarq nanoarq_tests)
 
 add_executable(nanoarq_tests_cpp ${NANOARQ_UNIT_TEST_SOURCES})
+add_dependencies(nanoarq_tests_cpp nanoarq_tests)
 target_compile_options(nanoarq_tests_cpp PRIVATE -DNANOARQ_COMPILE_AS_CPP=1 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
 target_link_libraries(nanoarq_tests_cpp nanoarq_cpp libCppUTest libCppUTestExt plthook dl)
 add_unit_tests(nanoarq_cpp nanoarq_tests_cpp)
