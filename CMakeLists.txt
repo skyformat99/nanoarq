@@ -73,7 +73,15 @@ add_dependencies(plthook plthook_external)
 
 ################ tests
 
-set(NANOARQ_FLAGS -Wall -Wextra -Wshadow -Wsign-conversion -Wcast-align -Wcast-qual -Os)
+set(NANOARQ_FLAGS -Wall
+                  -Wextra
+                  -Wshadow
+                  -Wsign-conversion
+                  -Wcast-align
+                  -Wcast-qual
+                  -Wstrict-aliasing=2
+                  -Wlogical-op-parentheses
+                  -Os)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR} ${PLTHOOK_INCLUDE_DIR})
 
