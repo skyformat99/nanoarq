@@ -17,8 +17,8 @@
 #error You must define NANOARQ_NULL_PTR before including nanoarq.h
 #endif
 
-#ifndef NANOARQ_LITTLE_ENDIAN
-#error You must define NANOARQ_LITTLE_ENDIAN to 0 or 1 before including nanoarq.h
+#ifndef NANOARQ_LITTLE_ENDIAN_CPU
+#error You must define NANOARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including nanoarq.h
 #endif
 
 #ifndef NANOARQ_COMPILE_CRC32
@@ -231,7 +231,7 @@ void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
 
 arq_uint16_t arq__hton16(arq_uint16_t x)
 {
-#if NANOARQ_LITTLE_ENDIAN == 1
+#if NANOARQ_LITTLE_ENDIAN_CPU == 1
     return (x << 8) | (x >> 8);
 #else
     return x;
@@ -245,7 +245,7 @@ arq_uint16_t arq__ntoh16(arq_uint16_t x)
 
 arq_uint32_t arq__hton32(arq_uint32_t x)
 {
-#if NANOARQ_LITTLE_ENDIAN == 1
+#if NANOARQ_LITTLE_ENDIAN_CPU == 1
     return (x >> 24) | ((x & 0x00FF0000) >> 8) | ((x & 0x0000FF00) << 8) | (x << 24);
 #else
     return x;

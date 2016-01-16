@@ -10,7 +10,7 @@ namespace { namespace be
 #define NANOARQ_UINT32_TYPE uint32_t
 #define NANOARQ_UINTPTR_TYPE uintptr_t
 #define NANOARQ_NULL_PTR nullptr
-#define NANOARQ_LITTLE_ENDIAN 0
+#define NANOARQ_LITTLE_ENDIAN_CPU 0
 #define NANOARQ_COMPILE_CRC32 0
 
 #undef NANOARQ_COMPILE_AS_CPP

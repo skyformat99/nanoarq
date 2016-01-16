@@ -113,7 +113,6 @@ add_library(nanoarq_cpp SHARED nanoarq.h
 add_flags_to_target(nanoarq_cpp -DNANOARQ_COMPILE_AS_CPP=1 ${NANOARQ_FLAGS} -pedantic)
 
 set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
-
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_nanoarq.cpp
                               unit_tests/test_asserts.cpp
@@ -121,7 +120,6 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_frame_hdr.cpp
                               unit_tests/test_ntoh_hton_le.cpp
                               unit_tests/test_ntoh_hton_be.cpp)
-
 
 add_executable(nanoarq_tests ${NANOARQ_UNIT_TEST_SOURCES})
 add_flags_to_target(nanoarq_tests -DNANOARQ_COMPILE_AS_CPP=0 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
