@@ -6,6 +6,7 @@ TEST_GROUP(ntoh_hton_be) {};
 
 namespace { namespace be
 {
+#define NANOARQ_UINT8_TYPE uint8_t
 #define NANOARQ_UINT16_TYPE uint16_t
 #define NANOARQ_UINT32_TYPE uint32_t
 #define NANOARQ_UINTPTR_TYPE uintptr_t

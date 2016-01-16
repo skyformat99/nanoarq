@@ -1,6 +1,10 @@
 #ifndef NANOARQ_H_INCLUDED
 #define NANOARQ_H_INCLUDED
 
+#ifndef NANOARQ_UINT8_TYPE
+#error You must define NANOARQ_UINT8_TYPE before including nanoarq.h
+#endif
+
 #ifndef NANOARQ_UINT16_TYPE
 #error You must define NANOARQ_UINT16_TYPE before including nanoarq.h
 #endif
@@ -49,9 +53,11 @@ typedef enum
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
 } arq_event_t;
 
+typedef NANOARQ_UINT8_TYPE arq_uint8_t;
 typedef NANOARQ_UINT16_TYPE arq_uint16_t;
 typedef NANOARQ_UINT32_TYPE arq_uint32_t;
 typedef NANOARQ_UINTPTR_TYPE arq_uintptr_t;
+
 typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 
@@ -144,7 +150,7 @@ typedef struct arq__frame_hdr_t
     int seg_len;
     int win_size;
     int seq_num;
-    int msg_size;
+    int msg_len;
     int seg_id;
     int ack_num;
     unsigned int ack_seg_mask;
@@ -260,13 +266,29 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x)
 int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
     ARQ_ASSERT(buf && out_frame_hdr);
-    unsigned char const *src = (unsigned char const *)buf;
+    arq_uint8_t const *src = (arq_uint8_t const *)buf;
+
     out_frame_hdr->version = *src++;
     out_frame_hdr->seg_len = *src++;
-    unsigned char flags = *src++;
+
+    arq_uint8_t flags = *src++;
     out_frame_hdr->fin = !!(flags & (1 << 0));
     out_frame_hdr->rst = !!(flags & (1 << 1));
+
     out_frame_hdr->win_size = *src++;
+
+    arq_uint16_t seq_num_h = (*src >> 4);
+    seq_num_h |= (*src++ << 4) << 8;
+    seq_num_h |= (*src >> 4) << 8;
+    out_frame_hdr->seq_num = arq__ntoh16(seq_num_h);
+
+    arq_uint8_t msg_len = *src++ << 4;
+    msg_len |= *src >> 4;
+    out_frame_hdr->msg_len = msg_len;
+
+    arq_uint16_t seg_id_h = (*src++ & 0x0F);
+    seg_id_h |= *src++ << 8;
+    out_frame_hdr->seg_id = arq__ntoh16(seg_id_h);
     return 0;
 }
 
