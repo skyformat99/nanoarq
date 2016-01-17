@@ -267,33 +267,28 @@ int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
     ARQ_ASSERT(buf && out_frame_hdr);
     arq_uint8_t const *src = (arq_uint8_t const *)buf;
-    arq_uint8_t *dst;
     arq_uint16_t tmp_n;
+    arq_uint8_t *dst = (arq_uint8_t *)&tmp_n;
     out_frame_hdr->version = *src++;                    // version
     out_frame_hdr->seg_len = *src++;                    // seg_len
-    arq_uint8_t flags = *src++;                         // flags
-    out_frame_hdr->fin = !!(flags & (1 << 0));
-    out_frame_hdr->rst = !!(flags & (1 << 1));
+    out_frame_hdr->fin = !!(*src & (1 << 0));           // flags
+    out_frame_hdr->rst = !!(*src++ & (1 << 1));
     out_frame_hdr->win_size = *src++;                   // win_size
-    dst = (arq_uint8_t *)&tmp_n;
     dst[0] = src[0] >> 4;
     dst[1] = (src[0] << 4) | (src[1] >> 4);
     out_frame_hdr->seq_num = arq__ntoh16(tmp_n);        // seq_num
     ++src;
     out_frame_hdr->msg_len = (arq_uint8_t)((src[0] << 4) | (src[1] >> 4)); // msg_len
     ++src;
-    dst = (arq_uint8_t *)&tmp_n;                        // seg_id
-    dst[0] = src[0] & 0x0F;
+    dst[0] = src[0] & 0x0F;                             // seg_id
     dst[1] = src[1];
     out_frame_hdr->seg_id = arq__ntoh16(tmp_n);
     src += 2;
-    dst = (arq_uint8_t *)&tmp_n;                        // ack_num
-    dst[0] = src[0] >> 4;
+    dst[0] = src[0] >> 4;                               // ack_num
     dst[1] = (src[0] << 4) | (src[1] >> 4);
     out_frame_hdr->ack_num = arq__ntoh16(tmp_n);
     src += 2;
-    dst = (arq_uint8_t *)&tmp_n;                        // ack_seg_mask
-    dst[0] = src[0] & 0x0F;
+    dst[0] = src[0] & 0x0F;                             // ack_seg_mask
     dst[1] = src[1];
     out_frame_hdr->ack_seg_mask = arq__ntoh16(tmp_n);
     src += 2;
@@ -305,17 +300,24 @@ int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     ARQ_ASSERT(frame_hdr && out_buf);
     arq_uint8_t *dst = (arq_uint8_t *)out_buf;
     arq_uint16_t tmp_n;
-    arq_uint8_t const *src;
-    *dst++ = (arq_uint8_t)frame_hdr->version;                 // version
-    *dst++ = (arq_uint8_t)frame_hdr->seg_len;                 // seg_len
-    *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);  // flags
-    *dst++ = (arq_uint8_t)frame_hdr->win_size;                // win_size
-    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seq_num);    // seq_num
-    src = (arq_uint8_t const *)&tmp_n;
+    arq_uint8_t const *src = (arq_uint8_t const *)&tmp_n;
+    *dst++ = (arq_uint8_t)frame_hdr->version;                          // version
+    *dst++ = (arq_uint8_t)frame_hdr->seg_len;                          // seg_len
+    *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);           // flags
+    *dst++ = (arq_uint8_t)frame_hdr->win_size;                         // win_size
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seq_num);             // seq_num + msg_len
     *dst++ = (src[0] << 4) | (src[1] >> 4);
     *dst++ = (src[1] << 4) | (arq_uint8_t)(frame_hdr->msg_len >> 4);
-    *dst = (arq_uint8_t)(frame_hdr->msg_len << 4);
-    return 0;
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seg_id);              // msg_len + seg_id
+    *dst++ = (arq_uint8_t)(frame_hdr->msg_len << 4) | (src[0] & 0x0F);
+    *dst++ = src[1];
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_num);             // ack_num
+    *dst++ = (src[0] << 4) | (src[1] >> 4);
+    *dst++ = src[1] << 4;
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_seg_mask);        // ack_seg_mask
+    *dst++ = src[0] & 0x0F;
+    *dst++ = src[1];
+    return (int)(dst - (arq_uint8_t const *)out_buf);
 }
 
 #endif

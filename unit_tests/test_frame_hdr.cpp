@@ -29,7 +29,7 @@ struct ReadFixture
         *src++ = (uint8_t)WindowSize;
         *src++ = 0x5A; *src++ = 0xFC; *src++ = 0x3A; *src++ = 0x71;
         *src++ = 0x81; *src++ = 0x40; *src++ = 0x02; *src++ = 0x35;
-        arq__frame_hdr_read(&buf, &h);
+        arq__frame_hdr_read(buf, &h);
     }
 
     arq__frame_hdr_t h;
@@ -52,10 +52,10 @@ TEST(frame_hdr, read_rst_flag)
 {
     ReadFixture f;
     f.buf[2] = 1 << 1;
-    arq__frame_hdr_read(&f.buf, &f.h);
+    arq__frame_hdr_read(f.buf, &f.h);
     CHECK_EQUAL(1, (int)f.h.rst);
     f.buf[2] = 0;
-    arq__frame_hdr_read(&f.buf, &f.h);
+    arq__frame_hdr_read(f.buf, &f.h);
     CHECK_EQUAL(0, (int)f.h.rst);
 }
 
@@ -63,10 +63,10 @@ TEST(frame_hdr, read_fin_flag)
 {
     ReadFixture f;
     f.buf[2] = 1;
-    arq__frame_hdr_read(&f.buf, &f.h);
+    arq__frame_hdr_read(f.buf, &f.h);
     CHECK_EQUAL(1, (int)f.h.fin);
     f.buf[2] = 0;
-    arq__frame_hdr_read(&f.buf, &f.h);
+    arq__frame_hdr_read(f.buf, &f.h);
     CHECK_EQUAL(0, (int)f.h.fin);
 }
 
@@ -106,10 +106,10 @@ TEST(frame_hdr, read_ack_segment_mask)
     CHECK_EQUAL(AckSegmentMask, f.h.ack_seg_mask);
 }
 
-TEST(frame_hdr, returns_header_size_in_bytes)
+TEST(frame_hdr, read_returns_header_size_in_bytes)
 {
     ReadFixture f;
-    int const n = arq__frame_hdr_read(&f.buf, &f.h);
+    int const n = arq__frame_hdr_read(f.buf, &f.h);
     CHECK_EQUAL(12, n);
 }
 
@@ -191,16 +191,63 @@ TEST(frame_hdr, write_message_length)
 TEST(frame_hdr, write_segment_id)
 {
     WriteFixture f;
+    CHECK_EQUAL((uint8_t)0x0A, (uint8_t)f.buf[6] & 0x0F);
+    CHECK_EQUAL((uint8_t)0x71, (uint8_t)f.buf[7]);
 }
 
 TEST(frame_hdr, write_ack_number)
 {
     WriteFixture f;
+    CHECK_EQUAL((uint8_t)0x81, (uint8_t)f.buf[8]);
+    CHECK_EQUAL((uint8_t)0x40, (uint8_t)f.buf[9] & 0xF0);
 }
 
 TEST(frame_hdr, write_ack_segment_mask)
 {
     WriteFixture f;
+    CHECK_EQUAL((uint8_t)0x02, (uint8_t)f.buf[10] & 0x0F);
+    CHECK_EQUAL((uint8_t)0x35, (uint8_t)f.buf[11]);
+}
+
+TEST(frame_hdr, write_returns_header_size_in_bytes)
+{
+    WriteFixture f;
+    int const n = arq__frame_hdr_write(&f.h, f.buf);
+    CHECK_EQUAL(12, n);
+}
+
+TEST(frame_hdr, headers_identical)
+{
+    arq__frame_hdr_t orig;
+    orig.version = Version;
+    orig.seg_len = SegmentLength;
+    orig.rst = 1;
+    orig.fin = 0;
+    orig.win_size = WindowSize;
+    orig.seq_num = SequenceNumber;
+    orig.msg_len = MessageLength;
+    orig.seg_id = SegmentID;
+    orig.ack_num = AckNumber;
+    orig.ack_seg_mask = AckSegmentMask;
+
+    char buf[12];
+    int const written = arq__frame_hdr_write(&orig, buf);
+    CHECK_EQUAL(sizeof(buf), written);
+
+    arq__frame_hdr_t actual;
+    int const read = arq__frame_hdr_read(buf, &actual);
+    CHECK_EQUAL(sizeof(buf), read);
+
+    CHECK_EQUAL(orig.version, actual.version);
+    CHECK_EQUAL(orig.seg_len, actual.seg_len);
+    CHECK_EQUAL(orig.rst, actual.rst);
+    CHECK_EQUAL(orig.fin, actual.fin);
+    CHECK_EQUAL(orig.win_size, actual.win_size);
+    CHECK_EQUAL(orig.seq_num, actual.seq_num);
+    CHECK_EQUAL(orig.msg_len, actual.msg_len);
+    CHECK_EQUAL(orig.seg_id, actual.seg_id);
+    CHECK_EQUAL(orig.ack_num, actual.ack_num);
+    CHECK_EQUAL(orig.ack_seg_mask, actual.ack_seg_mask);
 }
 
 }
