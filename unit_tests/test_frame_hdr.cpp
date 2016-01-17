@@ -25,16 +25,10 @@ struct Fixture
         uint8_t *src = buf;
         *src++ = (uint8_t)Version;
         *src++ = (uint8_t)SegmentLen;
-        *src++ = 0; // flags
+        *src++ = 0;
         *src++ = (uint8_t)WindowSize;
-        *src++ = 0x5A;
-        *src++ = 0xFC;
-        *src++ = 0x3A;
-        *src++ = 0x71;
-        *src++ = 0x81;
-        *src++ = 0x40;
-        *src++ = 0x02; // reserved;
-        *src++ = 0x35;
+        *src++ = 0x5A; *src++ = 0xFC; *src++ = 0x3A; *src++ = 0x71;
+        *src++ = 0x81; *src++ = 0x40; *src++ = 0x02; *src++ = 0x35;
         arq__frame_hdr_read(&buf, &h);
     }
 
