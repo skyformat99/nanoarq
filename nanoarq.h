@@ -267,27 +267,27 @@ int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
     ARQ_ASSERT(buf && out_frame_hdr);
     arq_uint8_t const *src = (arq_uint8_t const *)buf;
-    out_frame_hdr->version = *src++;
-    out_frame_hdr->seg_len = *src++;
-    arq_uint8_t flags = *src++;
+    out_frame_hdr->version = *src++;                    // version
+    out_frame_hdr->seg_len = *src++;                    // seg_len
+    arq_uint8_t flags = *src++;                         // flags
     out_frame_hdr->fin = !!(flags & (1 << 0));
     out_frame_hdr->rst = !!(flags & (1 << 1));
-    out_frame_hdr->win_size = *src++;
-    arq_uint16_t seq_num_h = *src >> 4;
+    out_frame_hdr->win_size = *src++;                   // win_size
+    arq_uint16_t seq_num_h = *src >> 4;                 // seq_num
     seq_num_h |= (*src++ << 4) << 8;
     seq_num_h |= (*src >> 4) << 8;
     out_frame_hdr->seq_num = arq__ntoh16(seq_num_h);
-    arq_uint8_t msg_len = *src++ << 4;
+    arq_uint8_t msg_len = *src++ << 4;                  // msg_len
     msg_len |= *src >> 4;
     out_frame_hdr->msg_len = msg_len;
-    arq_uint16_t seg_id_h = *src++ & 0x0F;
+    arq_uint16_t seg_id_h = *src++ & 0x0F;              // seg_id
     seg_id_h |= *src++ << 8;
     out_frame_hdr->seg_id = arq__ntoh16(seg_id_h);
-    arq_uint16_t ack_num_h = *src >> 4;
+    arq_uint16_t ack_num_h = *src >> 4;                 // ack_num
     ack_num_h |= (*src++ << 4) << 8;
     ack_num_h |= (*src++ >> 4) << 8;
     out_frame_hdr->ack_num = arq__ntoh16(ack_num_h);
-    arq_uint16_t ack_seg_mask_h = *src++ & 0x0F;
+    arq_uint16_t ack_seg_mask_h = *src++ & 0x0F;        // ack_seg_mask
     ack_seg_mask_h |= *src++ << 8;
     out_frame_hdr->ack_seg_mask = arq__ntoh16(ack_seg_mask_h);
     return (int)(src - (arq_uint8_t const *)buf);
@@ -295,8 +295,12 @@ int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 
 int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
 {
-    (void)frame_hdr;
-    (void)out_buf;
+    ARQ_ASSERT(frame_hdr && out_buf);
+    arq_uint8_t *dst = (arq_uint8_t *)out_buf;
+    *dst++ = (arq_uint8_t)frame_hdr->version;                 // version
+    *dst++ = (arq_uint8_t)frame_hdr->seg_len;                 // seg_len
+    *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);  // flags
+    *dst++ = (arq_uint8_t)frame_hdr->win_size;                // win_size
     return 0;
 }
 
