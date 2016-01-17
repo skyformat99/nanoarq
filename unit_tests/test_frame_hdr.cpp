@@ -12,7 +12,7 @@ enum
     SegmentLength = 44,
     WindowSize = 19,
     SequenceNumber = 0x5AF, // 0101 1010 1111
-    MessageLength = 0xC3,      // 1100 0011
+    MessageLength = 0xC3,   // 1100 0011
     SegmentID = 0xA71,      // 1010 0111 0001
     AckNumber = 0x814,      // 1000 0001 0100
     AckSegmentMask = 0x235  // 0010 0011 0101
@@ -172,6 +172,35 @@ TEST(frame_hdr, write_window_size)
 {
     WriteFixture f;
     CHECK_EQUAL((uint8_t)WindowSize, (uint8_t)f.buf[3]);
+}
+
+TEST(frame_hdr, write_sequence_number)
+{
+    WriteFixture f;
+    CHECK_EQUAL((uint8_t)0x5A, (uint8_t)f.buf[4]);
+    CHECK_EQUAL((uint8_t)0xF0, (uint8_t)f.buf[5] & 0xF0);
+}
+
+TEST(frame_hdr, write_message_length)
+{
+    WriteFixture f;
+    CHECK_EQUAL((uint8_t)0x0C, (uint8_t)f.buf[5] & 0x0F);
+    CHECK_EQUAL((uint8_t)0x30, (uint8_t)f.buf[6] & 0xF0);
+}
+
+TEST(frame_hdr, write_segment_id)
+{
+    WriteFixture f;
+}
+
+TEST(frame_hdr, write_ack_number)
+{
+    WriteFixture f;
+}
+
+TEST(frame_hdr, write_ack_segment_mask)
+{
+    WriteFixture f;
 }
 
 }
