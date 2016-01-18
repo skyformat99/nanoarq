@@ -28,7 +28,7 @@ TEST(arq_assert, set_and_get_assert)
     arq_assert_cb_t actual;
     ok = arq_assert_handler_get(&actual);
     CHECK_EQUAL(ARQ_OK_COMPLETED, ok);
-    CHECK_EQUAL(&Local::a, actual);
+    CHECK_EQUAL((void *)&Local::a, (void *)actual);
     ok = arq_assert_handler_set(orig);
     CHECK_EQUAL(ARQ_OK_COMPLETED, ok);
 }
