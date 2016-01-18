@@ -73,22 +73,55 @@ add_dependencies(plthook plthook_external)
 
 ################ tests
 
+function(add_unit_tests TARGET_NAME UNIT_TEST_EXECUTABLE)
+    set(UNIT_TEST_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_unit_tests.timestamp)
+    add_custom_target(RUN_${TARGET_NAME}_UNIT_TESTS ALL DEPENDS ${UNIT_TEST_TIMESTAMP_FILE})
+    add_custom_command(OUTPUT ${UNIT_TEST_TIMESTAMP_FILE}
+                       COMMAND ${UNIT_TEST_EXECUTABLE} && touch ${UNIT_TEST_TIMESTAMP_FILE}
+                       DEPENDS ${UNIT_TEST_EXECUTABLE}
+                       COMMENT "Running ${UNIT_TEST_EXECUTABLE}")
+endfunction()
+
+set(NANOARQ_FLAGS -Wall
+                  -Wextra
+                  -Wshadow
+                  -Wsign-conversion
+                  -Wcast-align
+                  -Wcast-qual
+                  -Wstrict-aliasing=2
+                  --save-temps
+                  -g
+                  -Os)
+
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR} ${PLTHOOK_INCLUDE_DIR})
 
 add_library(nanoarq SHARED nanoarq.h
-                           unit_tests/nanoarq_in_test_project.c)
+                           unit_tests/nanoarq_in_test_project.h
+                           unit_tests/nanoarq_in_c_test_project.c)
+target_compile_options(nanoarq PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=0 -pedantic)
 
-add_executable(nanoarq_tests unit_tests/main.cpp
-                             unit_tests/test_nanoarq.cpp
-                             unit_tests/test_asserts.cpp
-                             unit_tests/test_lin_alloc.cpp)
+add_library(nanoarq_cpp SHARED nanoarq.h
+                               unit_tests/nanoarq_in_test_project.h
+                               unit_tests/nanoarq_in_cpp_test_project.cpp)
+target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=1 -pedantic)
 
+set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
+set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
+                              unit_tests/test_nanoarq.cpp
+                              unit_tests/test_asserts.cpp
+                              unit_tests/test_lin_alloc.cpp
+                              unit_tests/test_frame_hdr.cpp
+                              unit_tests/test_ntoh_hton_le.cpp
+                              unit_tests/test_ntoh_hton_be.cpp)
+
+add_executable(nanoarq_tests ${NANOARQ_UNIT_TEST_SOURCES})
+target_compile_options(nanoarq_tests PRIVATE -DNANOARQ_COMPILE_AS_CPP=0 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
 target_link_libraries(nanoarq_tests nanoarq libCppUTest libCppUTestExt plthook dl)
+add_unit_tests(nanoarq nanoarq_tests)
 
-set(NANOARQ_TESTS_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/nanoarq_tests.timestamp)
-add_custom_target(RUN_NANOARQ_TESTS ALL DEPENDS ${NANOARQ_TESTS_TIMESTAMP_FILE})
-add_custom_command(OUTPUT ${NANOARQ_TESTS_TIMESTAMP_FILE}
-                   COMMAND nanoarq_tests && touch ${NANOARQ_TESTS_TIMESTAMP_FILE}
-                   DEPENDS nanoarq_tests
-                   COMMENT "Running nanoarq_tests")
+add_executable(nanoarq_tests_cpp ${NANOARQ_UNIT_TEST_SOURCES})
+add_dependencies(nanoarq_tests_cpp nanoarq_tests)
+target_compile_options(nanoarq_tests_cpp PRIVATE -DNANOARQ_COMPILE_AS_CPP=1 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
+target_link_libraries(nanoarq_tests_cpp nanoarq_cpp libCppUTest libCppUTestExt plthook dl)
+add_unit_tests(nanoarq_cpp nanoarq_tests_cpp)
 

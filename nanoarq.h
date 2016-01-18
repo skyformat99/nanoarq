@@ -1,24 +1,40 @@
 #ifndef NANOARQ_H_INCLUDED
 #define NANOARQ_H_INCLUDED
 
-#ifdef __cplusplus
-extern "C" {
+#ifndef NANOARQ_UINT8_TYPE
+#error You must define NANOARQ_UINT8_TYPE before including nanoarq.h
 #endif
 
-#ifndef NANOARQ_UINT32_BASE_TYPE
-#error You must define NANOARQ_UINT32_BASE_TYPE before including nanoarq.h
+#ifndef NANOARQ_UINT16_TYPE
+#error You must define NANOARQ_UINT16_TYPE before including nanoarq.h
 #endif
 
-#ifndef NANOARQ_UINTPTR_BASE_TYPE
-#error You must define NANOARQ_UINTPTR_BASE_TYPE before including nanoarq.h
+#ifndef NANOARQ_UINT32_TYPE
+#error You must define NANOARQ_UINT32_TYPE before including nanoarq.h
+#endif
+
+#ifndef NANOARQ_UINTPTR_TYPE
+#error You must define NANOARQ_UINTPTR_TYPE before including nanoarq.h
 #endif
 
 #ifndef NANOARQ_NULL_PTR
 #error You must define NANOARQ_NULL_PTR before including nanoarq.h
 #endif
 
+#ifndef NANOARQ_LITTLE_ENDIAN_CPU
+#error You must define NANOARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including nanoarq.h
+#endif
+
 #ifndef NANOARQ_COMPILE_CRC32
 #error You must define NANOARQ_COMPILE_CRC32 to 0 or 1 before including nanoarq.h
+#endif
+
+#ifndef NANOARQ_COMPILE_AS_CPP
+#error You must define NANOARQ_COMPILE_AS_CPP to 0 or 1 before including nanoarq.h
+#endif
+
+#if defined(__cplusplus) && (NANOARQ_COMPILE_AS_CPP == 0)
+extern "C" {
 #endif
 
 typedef enum
@@ -37,8 +53,11 @@ typedef enum
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
 } arq_event_t;
 
-typedef NANOARQ_UINT32_BASE_TYPE arq_uint32_t;
-typedef NANOARQ_UINTPTR_BASE_TYPE arq_uintptr_t;
+typedef NANOARQ_UINT8_TYPE arq_uint8_t;
+typedef NANOARQ_UINT16_TYPE arq_uint16_t;
+typedef NANOARQ_UINT32_TYPE arq_uint32_t;
+typedef NANOARQ_UINTPTR_TYPE arq_uintptr_t;
+
 typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 
@@ -52,7 +71,6 @@ typedef struct arq_cfg_t
     arq_time_t retransmission_timeout;
     arq_time_t keepalive_period;
     arq_time_t disconnect_timeout;
-    void *user;
 } arq_cfg_t;
 
 typedef struct arq_stats_t
@@ -100,8 +118,6 @@ arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
 arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size);
 arq_err_t arq_flush_tinygrams(arq_t *arq);
 
-// update API. arq_send doesn't push any bytes down to be drained, and doesn't update any timers.
-// call arq_poll after some number of arq_send calls, and after 'out_next_poll' time units.
 arq_err_t arq_backend_poll(arq_t *arq,
                            arq_time_t dt,
                            int *out_drain_send_size,
@@ -109,7 +125,6 @@ arq_err_t arq_backend_poll(arq_t *arq,
                            arq_event_t *out_event,
                            arq_time_t *out_next_poll);
 
-// glue API for connecting to data source / sink (UART, pipe, etc)
 arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
 arq_err_t arq_backend_fill_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
 
@@ -129,10 +144,32 @@ typedef struct arq__lin_alloc_t
 void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity);
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align);
 
+typedef struct arq__frame_hdr_t
+{
+    int version;
+    int seg_len;
+    int win_size;
+    int seq_num;
+    int msg_len;
+    int seg_id;
+    int ack_num;
+    unsigned int ack_seg_mask;
+    char rst;
+    char fin;
+} arq__frame_hdr_t;
+
+int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
+int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf);
+
+arq_uint16_t arq__hton16(arq_uint16_t x);
+arq_uint16_t arq__ntoh16(arq_uint16_t x);
+arq_uint32_t arq__hton32(arq_uint32_t x);
+arq_uint32_t arq__ntoh32(arq_uint32_t x);
+
 int arq__cobs_encode(void const *src, int src_size, void *dst, int dst_max);
 int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && (NANOARQ_COMPILE_AS_CPP == 0)
 }
 #endif
 #endif
@@ -140,26 +177,16 @@ int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
 #ifdef NANOARQ_IMPLEMENTATION
 
 #ifdef NANOARQ_IMPLEMENTATION_INCLUDED
-    #error nanoarq.h already #included with NANOARQ_IMPLEMENTATION_INCLUDED #defined
+#error nanoarq.h already #included with NANOARQ_IMPLEMENTATION_INCLUDED #defined
 #endif
 
 #define NANOARQ_IMPLEMENTATION_INCLUDED
 
+#define ARQ_ASSERT(COND)          do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
+#define ARQ_ASSERT_MSG(COND, MSG) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, MSG); } } while (0)
+#define ARQ_ASSERT_FAIL()         s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
+
 static arq_assert_cb_t s_assert_cb = NANOARQ_NULL_PTR;
-
-#define ARQ_ASSERT(COND) do { \
-        if (!(COND)) { \
-            s_assert_cb(__FILE__, __LINE__, #COND, ""); \
-        } \
-    } while (0)
-
-#define ARQ_ASSERT_MSG(COND, MSG) do { \
-        if (!(COND)) { \
-            s_assert_cb(__FILE__, __LINE__, #COND, MSG); \
-        } \
-    } while (0)
-
-#define ARQ_ASSERT_FAIL() s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
 
 arq_err_t arq_set_assert_handler(arq_assert_cb_t assert_cb)
 {
@@ -197,14 +224,100 @@ void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
 {
     ARQ_ASSERT(a && (size > 0) && (align <= 32) && (align > 0) && ((align & (align - 1)) == 0));
-    void *p = (void *)(((arq_uintptr_t)a->top + (align - 1)) & ~(align - 1));
-    a->top = p + size;
-    int new_size = a->top - a->base;
+    char *p = (char *)(((arq_uintptr_t)a->top + ((arq_uintptr_t)align - 1)) & ~((arq_uintptr_t)align - 1));
+    char *new_top = p + size;
+    int new_size = new_top - a->base;
     ARQ_ASSERT(new_size <= a->capacity);
     if (new_size > a->capacity) {
-        p = NANOARQ_NULL_PTR;
+        return NANOARQ_NULL_PTR;
     }
+    a->top = new_top;
     return p;
+}
+
+arq_uint16_t arq__hton16(arq_uint16_t x)
+{
+#if NANOARQ_LITTLE_ENDIAN_CPU == 1
+    return (x << 8) | (x >> 8);
+#else
+    return x;
+#endif
+}
+
+arq_uint16_t arq__ntoh16(arq_uint16_t x)
+{
+    return arq__hton16(x);
+}
+
+arq_uint32_t arq__hton32(arq_uint32_t x)
+{
+#if NANOARQ_LITTLE_ENDIAN_CPU == 1
+    return (x >> 24) | ((x & 0x00FF0000) >> 8) | ((x & 0x0000FF00) << 8) | (x << 24);
+#else
+    return x;
+#endif
+}
+
+arq_uint32_t arq__ntoh32(arq_uint32_t x)
+{
+    return arq__hton32(x);
+}
+
+int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
+{
+    ARQ_ASSERT(buf && out_frame_hdr);
+    arq_uint8_t const *src = (arq_uint8_t const *)buf;
+    arq_uint16_t tmp_n;
+    arq_uint8_t *dst = (arq_uint8_t *)&tmp_n;
+    out_frame_hdr->version = *src++;                    // version
+    out_frame_hdr->seg_len = *src++;                    // seg_len
+    out_frame_hdr->fin = !!(*src & (1 << 0));           // flags
+    out_frame_hdr->rst = !!(*src++ & (1 << 1));
+    out_frame_hdr->win_size = *src++;                   // win_size
+    dst[0] = src[0] >> 4;
+    dst[1] = (src[0] << 4) | (src[1] >> 4);
+    out_frame_hdr->seq_num = arq__ntoh16(tmp_n);        // seq_num
+    ++src;
+    out_frame_hdr->msg_len = (arq_uint8_t)((src[0] << 4) | (src[1] >> 4)); // msg_len
+    ++src;
+    dst[0] = src[0] & 0x0F;                             // seg_id
+    dst[1] = src[1];
+    out_frame_hdr->seg_id = arq__ntoh16(tmp_n);
+    src += 2;
+    dst[0] = src[0] >> 4;                               // ack_num
+    dst[1] = (src[0] << 4) | (src[1] >> 4);
+    out_frame_hdr->ack_num = arq__ntoh16(tmp_n);
+    src += 2;
+    dst[0] = src[0] & 0x0F;                             // ack_seg_mask
+    dst[1] = src[1];
+    out_frame_hdr->ack_seg_mask = arq__ntoh16(tmp_n);
+    src += 2;
+    return (int)(src - (arq_uint8_t const *)buf);
+}
+
+int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
+{
+    ARQ_ASSERT(frame_hdr && out_buf);
+    arq_uint8_t *dst = (arq_uint8_t *)out_buf;
+    arq_uint16_t tmp_n;
+    arq_uint8_t const *src = (arq_uint8_t const *)&tmp_n;
+    *dst++ = (arq_uint8_t)frame_hdr->version;                          // version
+    *dst++ = (arq_uint8_t)frame_hdr->seg_len;                          // seg_len
+    *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);           // flags
+    *dst++ = (arq_uint8_t)frame_hdr->win_size;                         // win_size
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seq_num);             // seq_num + msg_len
+    *dst++ = (src[0] << 4) | (src[1] >> 4);
+    *dst++ = (src[1] << 4) | (arq_uint8_t)(frame_hdr->msg_len >> 4);
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seg_id);              // msg_len + seg_id
+    *dst++ = (arq_uint8_t)(frame_hdr->msg_len << 4) | (src[0] & 0x0F);
+    *dst++ = src[1];
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_num);             // ack_num
+    *dst++ = (src[0] << 4) | (src[1] >> 4);
+    *dst++ = src[1] << 4;
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_seg_mask);        // ack_seg_mask
+    *dst++ = src[0] & 0x0F;
+    *dst++ = src[1];
+    return (int)(dst - (arq_uint8_t const *)out_buf);
 }
 
 #endif
