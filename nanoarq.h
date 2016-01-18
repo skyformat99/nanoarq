@@ -106,8 +106,8 @@ typedef struct arq_t
     arq_state_t state;
 } arq_t;
 
-arq_err_t arq_set_assert_handler(arq_assert_cb_t assert_cb);
-arq_err_t arq_get_assert_handler(arq_assert_cb_t *out_assert_cb);
+arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb);
+arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb);
 
 arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size);
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, int arq_seat_size, arq_t **out_arq);
@@ -188,7 +188,7 @@ int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
 
 static arq_assert_cb_t s_assert_cb = NANOARQ_NULL_PTR;
 
-arq_err_t arq_set_assert_handler(arq_assert_cb_t assert_cb)
+arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb)
 {
     if (!assert_cb) {
         return ARQ_ERR_INVALID_PARAM;
@@ -197,7 +197,7 @@ arq_err_t arq_set_assert_handler(arq_assert_cb_t assert_cb)
     return ARQ_OK_COMPLETED;
 }
 
-arq_err_t arq_get_assert_handler(arq_assert_cb_t *out_assert_cb)
+arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb)
 {
     if (!out_assert_cb) {
         return ARQ_ERR_INVALID_PARAM;

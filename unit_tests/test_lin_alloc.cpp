@@ -58,15 +58,15 @@ TEST(lin_alloc, doesnt_assert_when_perfectly_full)
     };
 
     arq_assert_cb_t orig;
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_get_assert_handler(&orig));
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(&Local::assert_cb));
+    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_get(&orig));
+    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_set(&Local::assert_cb));
 
     Fixture f;
     Local::called() = false;
     arq__lin_alloc_alloc(&f.a, f.a.capacity, 1);
     CHECK(Local::called() == false);
 
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(orig));
+    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_set(orig));
 }
 
 TEST(lin_alloc, asserts_when_capacity_exhausted)
@@ -78,26 +78,26 @@ TEST(lin_alloc, asserts_when_capacity_exhausted)
     };
 
     arq_assert_cb_t orig;
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_get_assert_handler(&orig));
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(&Local::assert_cb));
+    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_get(&orig));
+    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_set(&Local::assert_cb));
 
     Fixture f;
     Local::called() = false;
     arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1);
     CHECK(Local::called());
 
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(orig));
+    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_set(orig));
 }
 
 struct DisableAssertFixture : Fixture
 {
     DisableAssertFixture()
     {
-        CHECK_EQUAL(ARQ_OK_COMPLETED, arq_get_assert_handler(&orig_));
-        CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(assert_cb));
+        CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_get(&orig_));
+        CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_set(assert_cb));
     }
 
-    ~DisableAssertFixture() { arq_set_assert_handler(orig_); }
+    ~DisableAssertFixture() { arq_assert_handler_set(orig_); }
 
     static void assert_cb(char const *, int, char const *, char const *) {}
     arq_assert_cb_t orig_;
@@ -106,13 +106,15 @@ struct DisableAssertFixture : Fixture
 TEST(lin_alloc, alloc_returns_null_when_asserts_disabled)
 {
     DisableAssertFixture f;
-    CHECK_EQUAL(NULL, arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1));
+    void *p = arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1);
+    CHECK_EQUAL((void *)NULL, p);
 }
 
 TEST(lin_alloc, top_remains_unchanged_when_exhausted)
 {
     DisableAssertFixture f;
-    CHECK_EQUAL(NULL, arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1));
+    void *p = arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1);
+    CHECK_EQUAL((void *)NULL, p);
     CHECK_EQUAL((void *)f.a.base, (void *)f.a.top);
 }
 

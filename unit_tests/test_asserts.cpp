@@ -20,15 +20,17 @@ TEST(arq_assert, set_and_get_assert)
     };
 
     arq_assert_cb_t orig;
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_get_assert_handler(&orig));
+    arq_err_t ok = arq_assert_handler_get(&orig);
+    CHECK_EQUAL(ARQ_OK_COMPLETED, ok);
     CHECK(orig != &Local::a);
-
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(&Local::a));
+    ok = arq_assert_handler_set(&Local::a);
+    CHECK_EQUAL(ARQ_OK_COMPLETED, ok);
     arq_assert_cb_t actual;
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_get_assert_handler(&actual));
+    ok = arq_assert_handler_get(&actual);
+    CHECK_EQUAL(ARQ_OK_COMPLETED, ok);
     CHECK_EQUAL(&Local::a, actual);
-
-    CHECK_EQUAL(ARQ_OK_COMPLETED, arq_set_assert_handler(orig));
+    ok = arq_assert_handler_set(orig);
+    CHECK_EQUAL(ARQ_OK_COMPLETED, ok);
 }
 
 }

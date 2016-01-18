@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
     plthook_t *plthook = nullptr;
 
-    arq_err_t const e = arq_set_assert_handler(&test_assert_handler);
+    arq_err_t const e = arq_assert_handler_set(&test_assert_handler);
     if (e != ARQ_OK_COMPLETED) {
         return 1;
     }
