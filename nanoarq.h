@@ -194,9 +194,9 @@ void arq__cobs_decode(void *p, int len);
 
 #define NANOARQ_IMPLEMENTATION_INCLUDED
 
-#define ARQ_ASSERT(COND)          do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
-#define ARQ_ASSERT_MSG(COND, MSG) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, MSG); } } while (0)
-#define ARQ_ASSERT_FAIL()         s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
+#define NANOARQ_ASSERT(COND)          do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
+#define NANOARQ_ASSERT_MSG(COND, MSG) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, MSG); } } while (0)
+#define NANOARQ_ASSERT_FAIL()         s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
 
 static arq_assert_cb_t s_assert_cb = NANOARQ_NULL_PTR;
 
@@ -227,7 +227,7 @@ arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
 
 void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
 {
-    ARQ_ASSERT(a && base && (capacity > 0));
+    NANOARQ_ASSERT(a && base && (capacity > 0));
     a->base = (char *)base;
     a->top = (char *)base;
     a->capacity = capacity;
@@ -235,11 +235,11 @@ void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
 
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
 {
-    ARQ_ASSERT(a && (size > 0) && (align <= 32) && (align > 0) && ((align & (align - 1)) == 0));
+    NANOARQ_ASSERT(a && (size > 0) && (align <= 32) && (align > 0) && ((align & (align - 1)) == 0));
     char *p = (char *)(((arq_uintptr_t)a->top + ((arq_uintptr_t)align - 1)) & ~((arq_uintptr_t)align - 1));
     char *new_top = p + size;
     int new_size = new_top - a->base;
-    ARQ_ASSERT(new_size <= a->capacity);
+    NANOARQ_ASSERT(new_size <= a->capacity);
     if (new_size > a->capacity) {
         return NANOARQ_NULL_PTR;
     }
@@ -277,7 +277,7 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x)
 
 void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
-    ARQ_ASSERT(buf && out_frame_hdr);
+    NANOARQ_ASSERT(buf && out_frame_hdr);
     arq_uint8_t const *src = (arq_uint8_t const *)buf;
     arq_uint16_t tmp_n;
     arq_uint8_t *dst = (arq_uint8_t *)&tmp_n;
@@ -304,12 +304,12 @@ void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
     dst[1] = src[1];
     out_frame_hdr->ack_seg_mask = arq__ntoh16(tmp_n);
     src += 2;
-    ARQ_ASSERT((src - (arq_uint8_t const *)buf) == NANOARQ_FRAME_HEADER_SIZE);
+    NANOARQ_ASSERT((src - (arq_uint8_t const *)buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
 void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
 {
-    ARQ_ASSERT(frame_hdr && out_buf);
+    NANOARQ_ASSERT(frame_hdr && out_buf);
     arq_uint8_t *dst = (arq_uint8_t *)out_buf;
     arq_uint16_t tmp_n;
     arq_uint8_t const *src = (arq_uint8_t const *)&tmp_n;
@@ -329,7 +329,7 @@ void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     tmp_n = arq__hton16(frame_hdr->ack_seg_mask);        // ack_seg_mask
     *dst++ = src[0] & 0x0F;
     *dst++ = src[1];
-    ARQ_ASSERT((dst - (arq_uint8_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
+    NANOARQ_ASSERT((dst - (arq_uint8_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
 int arq__frame_required_size(int segment_size)
@@ -364,6 +364,7 @@ void arq__frame_decode(void *f, int len)
 
 void arq__cobs_encode(void *p, int len)
 {
+    NANOARQ_ASSERT(p && (len >= 3));
     char *patch = (char *)p;
     char *c = (char *)p + 1;
     char const *e = patch + (len - 1);
@@ -380,6 +381,7 @@ void arq__cobs_encode(void *p, int len)
 
 void arq__cobs_decode(void *p, int len)
 {
+    NANOARQ_ASSERT(p && (len >= 3));
     char *c = (char *)p;
     char const *e = c + (len - 1);
     while (c < e) {
