@@ -165,8 +165,8 @@ typedef struct arq__frame_hdr_t
     char fin;
 } arq__frame_hdr_t;
 
-int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
-int arq__frame_hdr_write(arq__frame_hdr_t const *h, void *out_buf);
+void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
+void arq__frame_hdr_write(arq__frame_hdr_t const *h, void *out_buf);
 
 int arq__frame_required_size(int max_seg_len);
 int arq__frame_write(arq__frame_hdr_t const *h, void const *seg, void *out_frame, int frame_max);
@@ -275,7 +275,7 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x)
     return arq__hton32(x);
 }
 
-int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
+void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
     ARQ_ASSERT(buf && out_frame_hdr);
     arq_uint8_t const *src = (arq_uint8_t const *)buf;
@@ -304,12 +304,10 @@ int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
     dst[1] = src[1];
     out_frame_hdr->ack_seg_mask = arq__ntoh16(tmp_n);
     src += 2;
-    int bytes_read = (int)(src - (arq_uint8_t const *)buf);
-    ARQ_ASSERT(bytes_read == NANOARQ_FRAME_HEADER_SIZE);
-    return bytes_read;
+    ARQ_ASSERT((src - (arq_uint8_t const *)buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
-int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
+void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
 {
     ARQ_ASSERT(frame_hdr && out_buf);
     arq_uint8_t *dst = (arq_uint8_t *)out_buf;
@@ -331,9 +329,7 @@ int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     tmp_n = arq__hton16(frame_hdr->ack_seg_mask);        // ack_seg_mask
     *dst++ = src[0] & 0x0F;
     *dst++ = src[1];
-    int bytes_written = (int)(dst - (arq_uint8_t const *)out_buf);
-    ARQ_ASSERT(bytes_written == NANOARQ_FRAME_HEADER_SIZE);
-    return bytes_written;
+    ARQ_ASSERT((dst - (arq_uint8_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
 int arq__frame_required_size(int segment_size)
@@ -348,7 +344,8 @@ int arq__frame_write(arq__frame_hdr_t const *h, void const *seg, void *out_frame
     char *dst = (char *)out_frame;
     char const *src = (char const *)seg;
     ++dst;
-    dst += arq__frame_hdr_write(h, out_frame);
+    arq__frame_hdr_write(h, out_frame);
+    dst += NANOARQ_FRAME_HEADER_SIZE;
     for (i = 0; i < h->seg_len; ++i) {
         *dst++ = *src++;
     }
