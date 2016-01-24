@@ -366,11 +366,9 @@ void arq__frame_decode(void *f, int len)
 
 void arq__cobs_encode(void *p, int len)
 {
-    char *c = (char *)p;
-    char *patch = c;
-    char const *e = patch + len;
-    ++c;
-
+    char *patch = (char *)p;
+    char *c = (char *)p + 1;
+    char const *e = patch + (len - 1);
     while (c < e) {
         if (*c == 0) {
             *patch = (char)(c - patch);
@@ -378,16 +376,19 @@ void arq__cobs_encode(void *p, int len)
         }
         ++c;
     }
-
-    --c;
     *patch = (char)(c - patch);
     *c = 0;
 }
 
 void arq__cobs_decode(void *p, int len)
 {
-    (void)p;
-    (void)len;
+    char *c = (char *)p;
+    char const *e = c + (len - 1);
+    while (c < e) {
+        char *next = c + *c;
+        *c = 0;
+        c = next;
+    }
 }
 
 #endif
