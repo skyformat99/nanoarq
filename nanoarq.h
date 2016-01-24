@@ -344,11 +344,12 @@ int arq__frame_required_size(int segment_size)
 int arq__frame_write(arq__frame_hdr_t const *h, void const *seg, void *out_frame, int frame_max)
 {
     (void)frame_max;
+    int i;
     char *dst = (char *)out_frame;
     char const *src = (char const *)seg;
     ++dst;
     dst += arq__frame_hdr_write(h, out_frame);
-    for (int i = 0; i < h->seg_len; ++i) {
+    for (i = 0; i < h->seg_len; ++i) {
         *dst++ = *src++;
     }
     return 0;
