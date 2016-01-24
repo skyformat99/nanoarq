@@ -112,7 +112,10 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_lin_alloc.cpp
                               unit_tests/test_frame_hdr.cpp
                               unit_tests/test_ntoh_hton_le.cpp
-                              unit_tests/test_ntoh_hton_be.cpp)
+                              unit_tests/test_ntoh_hton_be.cpp
+                              unit_tests/test_backend_recv.cpp
+                              unit_tests/test_frame.cpp
+                              unit_tests/test_cobs.cpp)
 
 add_executable(nanoarq_tests ${NANOARQ_UNIT_TEST_SOURCES})
 target_compile_options(nanoarq_tests PRIVATE -DNANOARQ_COMPILE_AS_CPP=0 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})

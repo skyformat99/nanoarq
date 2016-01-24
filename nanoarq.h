@@ -37,6 +37,11 @@
 extern "C" {
 #endif
 
+typedef NANOARQ_UINT8_TYPE arq_uint8_t;
+typedef NANOARQ_UINT16_TYPE arq_uint16_t;
+typedef NANOARQ_UINT32_TYPE arq_uint32_t;
+typedef NANOARQ_UINTPTR_TYPE arq_uintptr_t;
+
 typedef enum
 {
     ARQ_OK_COMPLETED = 0,
@@ -47,16 +52,12 @@ typedef enum
 
 typedef enum
 {
+    ARQ_EVENT_NONE,
     ARQ_EVENT_CONN_ESTABLISHED,
     ARQ_EVENT_CONN_CLOSED,
     ARQ_EVENT_CONN_RESET_BY_PEER,
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
 } arq_event_t;
-
-typedef NANOARQ_UINT8_TYPE arq_uint8_t;
-typedef NANOARQ_UINT16_TYPE arq_uint16_t;
-typedef NANOARQ_UINT32_TYPE arq_uint32_t;
-typedef NANOARQ_UINTPTR_TYPE arq_uintptr_t;
 
 typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
@@ -99,40 +100,41 @@ typedef enum
     ARQ_STATE_TIME_WAIT
 } arq_state_t;
 
-typedef struct arq_t
-{
-    arq_cfg_t cfg;
-    arq_stats_t stats;
-    arq_state_t state;
-} arq_t;
+struct arq_t;
 
 arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb);
 arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb);
-
 arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size);
-arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, int arq_seat_size, arq_t **out_arq);
-arq_err_t arq_connect(arq_t *arq);
-arq_err_t arq_reset(arq_t *arq);
-arq_err_t arq_close(arq_t *arq);
-arq_err_t arq_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
-arq_err_t arq_send(arq_t *arq, void *send, int send_max, int *out_sent_size);
-arq_err_t arq_flush_tinygrams(arq_t *arq);
+arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, int arq_seat_size, struct arq_t **out_arq);
+arq_err_t arq_connect(struct arq_t *arq);
+arq_err_t arq_reset(struct arq_t *arq);
+arq_err_t arq_close(struct arq_t *arq);
+arq_err_t arq_recv(struct arq_t *arq, void *recv, int recv_max, int *out_recv_size);
+arq_err_t arq_send(struct arq_t *arq, void *const send, int send_max, int *out_sent_size);
+arq_err_t arq_flush_tinygrams(struct arq_t *arq);
 
-arq_err_t arq_backend_poll(arq_t *arq,
+arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_time_t dt,
                            int *out_drain_send_size,
                            int *out_recv_size,
                            arq_event_t *out_event,
                            arq_time_t *out_next_poll);
 
-arq_err_t arq_backend_drain_send(arq_t *arq, void *out_send, int send_max, int *out_send_size);
-arq_err_t arq_backend_fill_recv(arq_t *arq, void *recv, int recv_max, int *out_recv_size);
+arq_err_t arq_backend_drain_send(struct arq_t *arq, void *out_send, int send_max, int *out_send_size);
+arq_err_t arq_backend_fill_recv(struct arq_t *arq, void const *recv, int recv_max, int *out_recv_size);
 
 #if NANOARQ_COMPILE_CRC32 == 1
 arq_uint32_t arq_util_crc32(arq_uint32_t crc, void const *buf, int size);
 #endif
 
 ///////////// Internal API
+
+typedef struct arq_t
+{
+    arq_cfg_t cfg;
+    arq_stats_t stats;
+    arq_state_t state;
+} arq_t;
 
 typedef struct arq__lin_alloc_t
 {
@@ -144,6 +146,11 @@ typedef struct arq__lin_alloc_t
 void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity);
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align);
 
+enum
+{
+    NANOARQ_FRAME_HEADER_SIZE = 12
+};
+
 typedef struct arq__frame_hdr_t
 {
     int version;
@@ -153,21 +160,26 @@ typedef struct arq__frame_hdr_t
     int msg_len;
     int seg_id;
     int ack_num;
-    unsigned int ack_seg_mask;
+    arq_uint16_t ack_seg_mask;
     char rst;
     char fin;
 } arq__frame_hdr_t;
 
 int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
-int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf);
+int arq__frame_hdr_write(arq__frame_hdr_t const *h, void *out_buf);
+
+int arq__frame_required_size(int max_seg_len);
+int arq__frame_write(arq__frame_hdr_t const *h, void const *seg, void *out_frame, int frame_max);
+void arq__frame_encode(void *f, int len);
+void arq__frame_decode(void *f, int len);
 
 arq_uint16_t arq__hton16(arq_uint16_t x);
 arq_uint16_t arq__ntoh16(arq_uint16_t x);
 arq_uint32_t arq__hton32(arq_uint32_t x);
 arq_uint32_t arq__ntoh32(arq_uint32_t x);
 
-int arq__cobs_encode(void const *src, int src_size, void *dst, int dst_max);
-int arq__cobs_decode(void const *src, int src_size, void *dst, int dst_max);
+void arq__cobs_encode(void *p, int len);
+void arq__cobs_decode(void *p, int len);
 
 #if defined(__cplusplus) && (NANOARQ_COMPILE_AS_CPP == 0)
 }
@@ -292,7 +304,9 @@ int arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
     dst[1] = src[1];
     out_frame_hdr->ack_seg_mask = arq__ntoh16(tmp_n);
     src += 2;
-    return (int)(src - (arq_uint8_t const *)buf);
+    int bytes_read = (int)(src - (arq_uint8_t const *)buf);
+    ARQ_ASSERT(bytes_read == NANOARQ_FRAME_HEADER_SIZE);
+    return bytes_read;
 }
 
 int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
@@ -314,10 +328,66 @@ int arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_num);             // ack_num
     *dst++ = (src[0] << 4) | (src[1] >> 4);
     *dst++ = src[1] << 4;
-    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_seg_mask);        // ack_seg_mask
+    tmp_n = arq__hton16(frame_hdr->ack_seg_mask);        // ack_seg_mask
     *dst++ = src[0] & 0x0F;
     *dst++ = src[1];
-    return (int)(dst - (arq_uint8_t const *)out_buf);
+    int bytes_written = (int)(dst - (arq_uint8_t const *)out_buf);
+    ARQ_ASSERT(bytes_written == NANOARQ_FRAME_HEADER_SIZE);
+    return bytes_written;
+}
+
+int arq__frame_required_size(int segment_size)
+{
+    return 2 + NANOARQ_FRAME_HEADER_SIZE + segment_size;
+}
+
+int arq__frame_write(arq__frame_hdr_t const *h, void const *seg, void *out_frame, int frame_max)
+{
+    (void)frame_max;
+    char *dst = (char *)out_frame;
+    char const *src = (char const *)seg;
+    ++dst;
+    dst += arq__frame_hdr_write(h, out_frame);
+    for (int i = 0; i < h->seg_len; ++i) {
+        *dst++ = *src++;
+    }
+    return 0;
+}
+
+void arq__frame_encode(void *f, int len)
+{
+    arq__cobs_encode(f, len);
+}
+
+void arq__frame_decode(void *f, int len)
+{
+    arq__cobs_decode(f, len);
+}
+
+void arq__cobs_encode(void *p, int len)
+{
+    char *c = (char *)p;
+    char *patch = c;
+    char const *e = patch + len;
+    ++c;
+
+    while (c < e) {
+        if (*c == 0) {
+            *patch = (char)(c - patch);
+            patch = c;
+        }
+        ++c;
+    }
+
+    --c;
+    *patch = (char)(c - patch);
+    *c = 0;
+}
+
+void arq__cobs_decode(void *p, int len)
+{
+    (void)p;
+    (void)len;
 }
 
 #endif
