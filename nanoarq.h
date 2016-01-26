@@ -1,10 +1,6 @@
 #ifndef NANOARQ_H_INCLUDED
 #define NANOARQ_H_INCLUDED
 
-#ifndef NANOARQ_UINT8_TYPE
-#error You must define NANOARQ_UINT8_TYPE before including nanoarq.h
-#endif
-
 #ifndef NANOARQ_UINT16_TYPE
 #error You must define NANOARQ_UINT16_TYPE before including nanoarq.h
 #endif
@@ -37,7 +33,6 @@
 extern "C" {
 #endif
 
-typedef NANOARQ_UINT8_TYPE arq_uint8_t;
 typedef NANOARQ_UINT16_TYPE arq_uint16_t;
 typedef NANOARQ_UINT32_TYPE arq_uint32_t;
 typedef NANOARQ_UINTPTR_TYPE arq_uintptr_t;
@@ -280,9 +275,9 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x)
 void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
     NANOARQ_ASSERT(buf && out_frame_hdr);
-    arq_uint8_t const *src = (arq_uint8_t const *)buf;
+    arq_uchar_t const *src = (arq_uchar_t const *)buf;
     arq_uint16_t tmp_n;
-    arq_uint8_t *dst = (arq_uint8_t *)&tmp_n;
+    arq_uchar_t *dst = (arq_uchar_t *)&tmp_n;
     out_frame_hdr->version = *src++;                    // version
     out_frame_hdr->seg_len = *src++;                    // seg_len
     out_frame_hdr->fin = !!(*src & (1 << 0));           // flags
@@ -292,7 +287,7 @@ void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
     dst[1] = (src[0] << 4) | (src[1] >> 4);
     out_frame_hdr->seq_num = arq__ntoh16(tmp_n);        // seq_num
     ++src;
-    out_frame_hdr->msg_len = (arq_uint8_t)((src[0] << 4) | (src[1] >> 4)); // msg_len
+    out_frame_hdr->msg_len = (arq_uchar_t)((src[0] << 4) | (src[1] >> 4)); // msg_len
     ++src;
     dst[0] = src[0] & 0x0F;                             // seg_id
     dst[1] = src[1];
@@ -306,24 +301,24 @@ void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
     dst[1] = src[1];
     out_frame_hdr->ack_seg_mask = arq__ntoh16(tmp_n);
     src += 2;
-    NANOARQ_ASSERT((src - (arq_uint8_t const *)buf) == NANOARQ_FRAME_HEADER_SIZE);
+    NANOARQ_ASSERT((src - (arq_uchar_t const *)buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
 void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
 {
     NANOARQ_ASSERT(frame_hdr && out_buf);
-    arq_uint8_t *dst = (arq_uint8_t *)out_buf;
+    arq_uchar_t *dst = (arq_uchar_t *)out_buf;
     arq_uint16_t tmp_n;
-    arq_uint8_t const *src = (arq_uint8_t const *)&tmp_n;
-    *dst++ = (arq_uint8_t)frame_hdr->version;                          // version
-    *dst++ = (arq_uint8_t)frame_hdr->seg_len;                          // seg_len
+    arq_uchar_t const *src = (arq_uchar_t const *)&tmp_n;
+    *dst++ = (arq_uchar_t)frame_hdr->version;                          // version
+    *dst++ = (arq_uchar_t)frame_hdr->seg_len;                          // seg_len
     *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);           // flags
-    *dst++ = (arq_uint8_t)frame_hdr->win_size;                         // win_size
+    *dst++ = (arq_uchar_t)frame_hdr->win_size;                         // win_size
     tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seq_num);             // seq_num + msg_len
     *dst++ = (src[0] << 4) | (src[1] >> 4);
-    *dst++ = (src[1] << 4) | (arq_uint8_t)(frame_hdr->msg_len >> 4);
+    *dst++ = (src[1] << 4) | (arq_uchar_t)(frame_hdr->msg_len >> 4);
     tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seg_id);              // msg_len + seg_id
-    *dst++ = (arq_uint8_t)(frame_hdr->msg_len << 4) | (src[0] & 0x0F);
+    *dst++ = (arq_uchar_t)(frame_hdr->msg_len << 4) | (src[0] & 0x0F);
     *dst++ = src[1];
     tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_num);             // ack_num
     *dst++ = (src[0] << 4) | (src[1] >> 4);
@@ -331,7 +326,7 @@ void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     tmp_n = arq__hton16(frame_hdr->ack_seg_mask);        // ack_seg_mask
     *dst++ = src[0] & 0x0F;
     *dst++ = src[1];
-    NANOARQ_ASSERT((dst - (arq_uint8_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
+    NANOARQ_ASSERT((dst - (arq_uchar_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
 int arq__frame_required_size(int segment_size)
