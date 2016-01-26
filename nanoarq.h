@@ -134,8 +134,8 @@ typedef struct arq_t
 
 typedef struct arq__lin_alloc_t
 {
-    char *base;
-    char *top;
+    arq_uchar_t *base;
+    arq_uchar_t *top;
     int capacity;
 } arq__lin_alloc_t;
 
@@ -225,16 +225,17 @@ arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
 void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
 {
     NANOARQ_ASSERT(a && base && (capacity > 0));
-    a->base = (char *)base;
-    a->top = (char *)base;
+    a->base = (arq_uchar_t *)base;
+    a->top = (arq_uchar_t *)base;
     a->capacity = capacity;
 }
 
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, int size, int align)
 {
     NANOARQ_ASSERT(a && (size > 0) && (align <= 32) && (align > 0) && ((align & (align - 1)) == 0));
-    char *p = (char *)(((arq_uintptr_t)a->top + ((arq_uintptr_t)align - 1)) & ~((arq_uintptr_t)align - 1));
-    char *new_top = p + size;
+    arq_uchar_t *p =
+        (arq_uchar_t *)(((arq_uintptr_t)a->top + ((arq_uintptr_t)align - 1)) & ~((arq_uintptr_t)align - 1));
+    arq_uchar_t *new_top = p + size;
     int new_size = new_top - a->base;
     NANOARQ_ASSERT(new_size <= a->capacity);
     if (new_size > a->capacity) {
