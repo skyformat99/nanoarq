@@ -41,6 +41,7 @@ typedef NANOARQ_UINT8_TYPE arq_uint8_t;
 typedef NANOARQ_UINT16_TYPE arq_uint16_t;
 typedef NANOARQ_UINT32_TYPE arq_uint32_t;
 typedef NANOARQ_UINTPTR_TYPE arq_uintptr_t;
+typedef unsigned char arq_uchar_t;
 
 typedef enum
 {
@@ -341,23 +342,23 @@ int arq__frame_required_size(int segment_size)
 
 int arq__frame_write(arq__frame_hdr_t const *hdr, void const *seg, void *out_frame, int frame_max)
 {
-    NANOARQ_ASSERT(hdr && seg && out_frame && (frame_max > NANOARQ_FRAME_HEADER_SIZE));
+    NANOARQ_ASSERT(hdr && seg && out_frame && (frame_max >= arq__frame_required_size(hdr->seg_len)));
     (void)frame_max;
     int i;
-    char *dst = (char *)out_frame + 1;
-    char const *src = (char const *)seg;
+    arq_uchar_t *dst = (arq_uchar_t *)out_frame + 1;
+    arq_uchar_t const *src = (arq_uchar_t const *)seg;
     arq__frame_hdr_write(hdr, out_frame);
     dst += NANOARQ_FRAME_HEADER_SIZE;
     for (i = 0; i < hdr->seg_len; ++i) {
         *dst++ = *src++;
     }
-    return 0;
+    return (int)(dst - (arq_uchar_t const *)out_frame);
 }
 
 void arq__frame_read(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg)
 {
     NANOARQ_ASSERT(frame && out_hdr && out_seg);
-    char const *h = (char const *)frame + 1;
+    arq_uchar_t const *h = (arq_uchar_t const *)frame + 1;
     arq__frame_hdr_read(h, out_hdr);
     *out_seg = (void const *)(h + NANOARQ_FRAME_HEADER_SIZE);
 }
@@ -374,28 +375,28 @@ void arq__frame_decode(void *frame, int len)
 
 void arq__cobs_encode(void *p, int len)
 {
-    NANOARQ_ASSERT(p && (len >= 3));
-    char *patch = (char *)p;
-    char *c = (char *)p + 1;
-    char const *e = patch + (len - 1);
+    NANOARQ_ASSERT(p && (len >= 3) && (len <= 256));
+    arq_uchar_t *patch = (arq_uchar_t *)p;
+    arq_uchar_t *c = (arq_uchar_t *)p + 1;
+    arq_uchar_t const *e = (arq_uchar_t const *)p + (len - 1);
     while (c < e) {
         if (*c == 0) {
-            *patch = (char)(c - patch);
+            *patch = (arq_uchar_t)(c - patch);
             patch = c;
         }
         ++c;
     }
-    *patch = (char)(c - patch);
+    *patch = (arq_uchar_t)(c - patch);
     *c = 0;
 }
 
 void arq__cobs_decode(void *p, int len)
 {
-    NANOARQ_ASSERT(p && (len >= 3));
-    char *c = (char *)p;
-    char const *e = c + (len - 1);
+    NANOARQ_ASSERT(p && (len >= 3) && (len <= 256));
+    arq_uchar_t *c = (arq_uchar_t *)p;
+    arq_uchar_t const *e = c + (len - 1);
     while (c < e) {
-        char *next = c + *c;
+        arq_uchar_t *next = c + *c;
         *c = 0;
         c = next;
     }
