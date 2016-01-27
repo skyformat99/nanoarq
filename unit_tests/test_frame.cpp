@@ -13,25 +13,33 @@ TEST(frame, size_is_header_size_plus_segment_size_plus_cobs_overhead)
                 arq__frame_size(seg_size));
 }
 
+struct Fixture
+{
+    arq__frame_hdr_t h;
+    Fixture()
+    {
+        h.version = 12;
+        h.seg_len = 0;
+        h.win_size = 9;
+        h.seq_num = 123;
+        h.msg_len = 5;
+        h.seg_id = 3;
+        h.ack_num = 23;
+        h.ack_seg_mask = 0x0AC3;
+        h.rst = 1;
+        h.fin = 1;
+    }
+};
+
 TEST(frame, write_writes_frame_header_at_offset_1)
 {
-    arq__frame_hdr_t orig;
-    orig.version = 12;
-    orig.seg_len = 0;
-    orig.win_size = 9;
-    orig.seq_num = 123;
-    orig.msg_len = 5;
-    orig.seg_id = 3;
-    orig.ack_num = 23;
-    orig.ack_seg_mask = 0x0AC3;
-    orig.rst = 1;
-    orig.fin = 1;
+    Fixture const f;
     char frame[64];
-    CHECK((int)sizeof(frame) >= arq__frame_size(orig.seg_len));
-    arq__frame_write(&orig, nullptr, frame, sizeof(frame));
+    CHECK((int)sizeof(frame) >= arq__frame_size(f.h.seg_len));
+    arq__frame_write(&f.h, nullptr, frame, sizeof(frame));
     arq__frame_hdr_t actual;
     arq__frame_hdr_read(&frame[1], &actual);
-    MEMCMP_EQUAL(&orig, &actual, sizeof(actual));
+    MEMCMP_EQUAL(&f.h, &actual, sizeof(actual));
 }
 
 TEST(frame, write_copies_segment_into_frame_after_header)
@@ -43,6 +51,32 @@ TEST(frame, write_copies_segment_into_frame_after_header)
     CHECK((int)sizeof(frame) >= arq__frame_size(h.seg_len));
     arq__frame_write(&h, seg, frame, sizeof(frame));
     MEMCMP_EQUAL(seg, &frame[1 + NANOARQ_FRAME_HEADER_SIZE], sizeof(seg));
+}
+
+TEST(frame, read_reads_frame_header_at_offset_1)
+{
+    Fixture const f;
+    char frame[64];
+    CHECK((int)sizeof(frame) >= arq__frame_size(f.h.seg_len));
+    arq__frame_hdr_write(&f.h, &frame[1]);
+    arq__frame_hdr_t actual;
+    void const *seg;
+    arq__frame_read(frame, &actual, &seg);
+    MEMCMP_EQUAL(&f.h, &actual, sizeof(&f.h));
+}
+
+TEST(frame, read_points_out_seg_to_segment_in_frame)
+{
+    Fixture f;
+    char const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    char frame[64];
+    f.h.seg_len = sizeof(seg);
+    arq__frame_hdr_write(&f.h, &frame[1]);
+    std::memcpy(&frame[1 + NANOARQ_FRAME_HEADER_SIZE], seg, sizeof(seg));
+    void const *rseg;
+    arq__frame_hdr_t rh;
+    arq__frame_read(frame, &rh, &rseg);
+    CHECK_EQUAL(rseg, (void const *)&frame[1 + NANOARQ_FRAME_HEADER_SIZE]);
 }
 
 }
