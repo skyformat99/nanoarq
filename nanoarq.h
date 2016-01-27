@@ -124,7 +124,7 @@ arq_err_t arq_backend_fill_recv(struct arq_t *arq, void const *recv, int recv_ma
 arq_uint32_t arq_util_crc32(arq_uint32_t crc, void const *buf, int size);
 #endif
 
-///////////// Internal API
+/* Internal API */
 
 typedef struct arq_t
 {
@@ -280,26 +280,26 @@ void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr)
     arq_uint16_t tmp_n;
     arq_uchar_t *dst = (arq_uchar_t *)&tmp_n;
     NANOARQ_ASSERT(buf && out_frame_hdr);
-    out_frame_hdr->version = *src++;                    // version
-    out_frame_hdr->seg_len = *src++;                    // seg_len
-    out_frame_hdr->fin = !!(*src & (1 << 0));           // flags
+    out_frame_hdr->version = *src++;                    /* version */
+    out_frame_hdr->seg_len = *src++;                    /* seg_len */
+    out_frame_hdr->fin = !!(*src & (1 << 0));           /* flags */
     out_frame_hdr->rst = !!(*src++ & (1 << 1));
-    out_frame_hdr->win_size = *src++;                   // win_size
+    out_frame_hdr->win_size = *src++;                   /* win_size */
     dst[0] = src[0] >> 4;
     dst[1] = (src[0] << 4) | (src[1] >> 4);
-    out_frame_hdr->seq_num = arq__ntoh16(tmp_n);        // seq_num
+    out_frame_hdr->seq_num = arq__ntoh16(tmp_n);        /* seq_num */
     ++src;
-    out_frame_hdr->msg_len = (arq_uchar_t)((src[0] << 4) | (src[1] >> 4)); // msg_len
+    out_frame_hdr->msg_len = (arq_uchar_t)((src[0] << 4) | (src[1] >> 4)); /* msg_len */
     ++src;
-    dst[0] = src[0] & 0x0F;                             // seg_id
+    dst[0] = src[0] & 0x0F;                             /* seg_id */
     dst[1] = src[1];
     out_frame_hdr->seg_id = arq__ntoh16(tmp_n);
     src += 2;
-    dst[0] = src[0] >> 4;                               // ack_num
+    dst[0] = src[0] >> 4;                               /* ack_num */
     dst[1] = (src[0] << 4) | (src[1] >> 4);
     out_frame_hdr->ack_num = arq__ntoh16(tmp_n);
     src += 2;
-    dst[0] = src[0] & 0x0F;                             // ack_seg_mask
+    dst[0] = src[0] & 0x0F;                             /* ack_seg_mask */
     dst[1] = src[1];
     out_frame_hdr->ack_seg_mask = arq__ntoh16(tmp_n);
     src += 2;
@@ -312,20 +312,20 @@ void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     arq_uint16_t tmp_n;
     arq_uchar_t const *src = (arq_uchar_t const *)&tmp_n;
     NANOARQ_ASSERT(frame_hdr && out_buf);
-    *dst++ = (arq_uchar_t)frame_hdr->version;                          // version
-    *dst++ = (arq_uchar_t)frame_hdr->seg_len;                          // seg_len
-    *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);           // flags
-    *dst++ = (arq_uchar_t)frame_hdr->win_size;                         // win_size
-    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seq_num);             // seq_num + msg_len
+    *dst++ = (arq_uchar_t)frame_hdr->version;                          /* version */
+    *dst++ = (arq_uchar_t)frame_hdr->seg_len;                          /* seg_len */
+    *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);           /* flags */
+    *dst++ = (arq_uchar_t)frame_hdr->win_size;                         /* win_size */
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seq_num);             /* seq_num + msg_len */
     *dst++ = (src[0] << 4) | (src[1] >> 4);
     *dst++ = (src[1] << 4) | (arq_uchar_t)(frame_hdr->msg_len >> 4);
-    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seg_id);              // msg_len + seg_id
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->seg_id);              /* msg_len + seg_id */
     *dst++ = (arq_uchar_t)(frame_hdr->msg_len << 4) | (src[0] & 0x0F);
     *dst++ = src[1];
-    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_num);             // ack_num
+    tmp_n = arq__hton16((arq_uint16_t)frame_hdr->ack_num);             /* ack_num */
     *dst++ = (src[0] << 4) | (src[1] >> 4);
     *dst++ = src[1] << 4;
-    tmp_n = arq__hton16(frame_hdr->ack_seg_mask);        // ack_seg_mask
+    tmp_n = arq__hton16(frame_hdr->ack_seg_mask);        /* ack_seg_mask */
     *dst++ = src[0] & 0x0F;
     *dst++ = src[1];
     NANOARQ_ASSERT((dst - (arq_uchar_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
