@@ -106,13 +106,6 @@ TEST(frame_hdr, read_ack_segment_mask)
     CHECK_EQUAL(AckSegmentMask, f.h.ack_seg_mask);
 }
 
-TEST(frame_hdr, read_returns_header_size_in_bytes)
-{
-    ReadFixture f;
-    int const n = arq__frame_hdr_read(f.buf, &f.h);
-    CHECK_EQUAL(12, n);
-}
-
 struct WriteFixture
 {
     WriteFixture()
@@ -209,13 +202,6 @@ TEST(frame_hdr, write_ack_segment_mask)
     CHECK_EQUAL((uint8_t)0x35, (uint8_t)f.buf[11]);
 }
 
-TEST(frame_hdr, write_returns_header_size_in_bytes)
-{
-    WriteFixture f;
-    int const n = arq__frame_hdr_write(&f.h, f.buf);
-    CHECK_EQUAL(12, n);
-}
-
 TEST(frame_hdr, headers_identical)
 {
     arq__frame_hdr_t orig;
@@ -230,13 +216,10 @@ TEST(frame_hdr, headers_identical)
     orig.ack_num = AckNumber;
     orig.ack_seg_mask = AckSegmentMask;
 
-    char buf[12];
-    int const written = arq__frame_hdr_write(&orig, buf);
-    CHECK_EQUAL(sizeof(buf), written);
-
+    char buf[NANOARQ_FRAME_HEADER_SIZE];
+    arq__frame_hdr_write(&orig, buf);
     arq__frame_hdr_t actual;
-    int const read = arq__frame_hdr_read(buf, &actual);
-    CHECK_EQUAL(sizeof(buf), read);
+    arq__frame_hdr_read(buf, &actual);
 
     CHECK_EQUAL(orig.version, actual.version);
     CHECK_EQUAL(orig.seg_len, actual.seg_len);

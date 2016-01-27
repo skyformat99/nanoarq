@@ -95,10 +95,15 @@ set(NANOARQ_FLAGS -Wall
 
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR} ${PLTHOOK_INCLUDE_DIR})
 
-add_library(nanoarq SHARED nanoarq.h
-                           unit_tests/nanoarq_in_test_project.h
-                           unit_tests/nanoarq_in_c_test_project.c)
-target_compile_options(nanoarq PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=0 -pedantic)
+add_library(nanoarq_c90 SHARED nanoarq.h
+                               unit_tests/nanoarq_in_test_project.h
+                               unit_tests/nanoarq_in_c90_test_project.c)
+target_compile_options(nanoarq_c90 PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=0 -pedantic -std=c90)
+
+add_library(nanoarq_c99 SHARED nanoarq.h
+                               unit_tests/nanoarq_in_test_project.h
+                               unit_tests/nanoarq_in_c99_test_project.c)
+target_compile_options(nanoarq_c99 PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=0 -pedantic -std=c99)
 
 add_library(nanoarq_cpp SHARED nanoarq.h
                                unit_tests/nanoarq_in_test_project.h
@@ -112,16 +117,25 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_lin_alloc.cpp
                               unit_tests/test_frame_hdr.cpp
                               unit_tests/test_ntoh_hton_le.cpp
-                              unit_tests/test_ntoh_hton_be.cpp)
+                              unit_tests/test_ntoh_hton_be.cpp
+                              unit_tests/test_backend_recv.cpp
+                              unit_tests/test_frame.cpp
+                              unit_tests/test_cobs.cpp)
 
-add_executable(nanoarq_tests ${NANOARQ_UNIT_TEST_SOURCES})
-target_compile_options(nanoarq_tests PRIVATE -DNANOARQ_COMPILE_AS_CPP=0 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
-target_link_libraries(nanoarq_tests nanoarq libCppUTest libCppUTestExt plthook dl)
-add_unit_tests(nanoarq nanoarq_tests)
+add_executable(nanoarq_c90_tests ${NANOARQ_UNIT_TEST_SOURCES})
+target_compile_options(nanoarq_c90_tests PRIVATE -DNANOARQ_COMPILE_AS_CPP=0 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
+target_link_libraries(nanoarq_c90_tests nanoarq_c90 libCppUTest libCppUTestExt plthook dl)
+add_unit_tests(nanoarq_c90 nanoarq_c90_tests)
 
-add_executable(nanoarq_tests_cpp ${NANOARQ_UNIT_TEST_SOURCES})
-add_dependencies(nanoarq_tests_cpp nanoarq_tests)
-target_compile_options(nanoarq_tests_cpp PRIVATE -DNANOARQ_COMPILE_AS_CPP=1 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
-target_link_libraries(nanoarq_tests_cpp nanoarq_cpp libCppUTest libCppUTestExt plthook dl)
-add_unit_tests(nanoarq_cpp nanoarq_tests_cpp)
+add_executable(nanoarq_c99_tests ${NANOARQ_UNIT_TEST_SOURCES})
+add_dependencies(nanoarq_c99_tests nanoarq_c90_tests)
+target_compile_options(nanoarq_c99_tests PRIVATE -DNANOARQ_COMPILE_AS_CPP=0 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
+target_link_libraries(nanoarq_c99_tests nanoarq_c99 libCppUTest libCppUTestExt plthook dl)
+add_unit_tests(nanoarq_c99 nanoarq_c99_tests)
+
+add_executable(nanoarq_cpp_tests ${NANOARQ_UNIT_TEST_SOURCES})
+add_dependencies(nanoarq_cpp_tests nanoarq_c99_tests)
+target_compile_options(nanoarq_cpp_tests PRIVATE -DNANOARQ_COMPILE_AS_CPP=1 ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
+target_link_libraries(nanoarq_cpp_tests nanoarq_cpp libCppUTest libCppUTestExt plthook dl)
+add_unit_tests(nanoarq_cpp nanoarq_cpp_tests)
 
