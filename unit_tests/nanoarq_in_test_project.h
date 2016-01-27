@@ -1,4 +1,4 @@
-// this file is an example of integrating nanoarq into your project.
+/* this file is an example of integrating nanoarq into your project. */
 #pragma once
 
 #include <stdint.h>
