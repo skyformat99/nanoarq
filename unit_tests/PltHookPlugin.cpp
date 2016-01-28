@@ -50,7 +50,7 @@ PltHookPlugin*& PltHookPlugin::WellKnownInstance()
 
 void PltHookPlugin::Hook(char const *partialFunctionName, void *newFunction)
 {
-    auto found = find_if(m->hooks.begin(), m->hooks.end(),
+    auto found = std::find_if(m->hooks.begin(), m->hooks.end(),
         [=](HookedFunction const &f) { return f.name.find(partialFunctionName) != std::string::npos; });
 
     if (found == m->hooks.end()) {
@@ -69,7 +69,7 @@ void PltHookPlugin::Hook(char const *partialFunctionName, void *newFunction)
 
 void PltHookPlugin::Unhook(char const *partialFunctionName)
 {
-    auto found = find_if(m->hooks.begin(), m->hooks.end(),
+    auto found = std::find_if(m->hooks.begin(), m->hooks.end(),
         [=](HookedFunction const &f) { return f.name.find(partialFunctionName) != std::string::npos; });
 
     if (found == m->hooks.end()) {
