@@ -311,7 +311,7 @@ void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     arq_uchar_t *dst = (arq_uchar_t *)out_buf;
     arq_uint16_t tmp_n;
     arq_uchar_t const *src = (arq_uchar_t const *)&tmp_n;
-    NANOARQ_ASSERT(frame_hdr && out_buf);
+    NANOARQ_ASSERT(frame_hdr && out_buf && ((frame_hdr->ack_seg_mask & 0xF000) == 0));
     *dst++ = (arq_uchar_t)frame_hdr->version;                          /* version */
     *dst++ = (arq_uchar_t)frame_hdr->seg_len;                          /* seg_len */
     *dst++ = (!!frame_hdr->fin) | ((!!frame_hdr->rst) << 1);           /* flags */
