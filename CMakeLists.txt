@@ -112,6 +112,8 @@ target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS
 
 set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
+                              unit_tests/PltHookPlugin.h
+                              unit_tests/PltHookPlugin.cpp
                               unit_tests/test_nanoarq.cpp
                               unit_tests/test_asserts.cpp
                               unit_tests/test_lin_alloc.cpp
