@@ -4,6 +4,7 @@
 #include <CppUTest/CommandLineTestRunner.h>
 #include <CppUTest/TestRegistry.h>
 #include <CppUTestExt/MemoryReporterPlugin.h>
+#include <CppUTestExt/MockSupportPlugin.h>
 #include <CppUTest/TestHarness_c.h>
 
 namespace
@@ -21,6 +22,9 @@ int main(int argc, char *argv[])
 {
     MemoryReporterPlugin memoryReporterPlugin;
     TestRegistry::getCurrentRegistry()->installPlugin(&memoryReporterPlugin);
+
+    MockSupportPlugin mockSupportPlugin;
+    TestRegistry::getCurrentRegistry()->installPlugin(&mockSupportPlugin);
 
     PltHookPlugin pltHookPlugin;
     PltHookPlugin::WellKnownInstance() = &pltHookPlugin;
