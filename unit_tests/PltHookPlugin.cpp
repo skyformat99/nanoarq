@@ -1,5 +1,6 @@
 #include "PltHookPlugin.h"
 #include <vector>
+#include <algorithm>
 #include <cstdio>
 
 extern "C"
