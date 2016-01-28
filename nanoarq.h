@@ -1,4 +1,4 @@
-/* This code is in the public domain. See LICENSE.txt for details. */
+/* This code is in the public domain. See the LICENSE file for details. */
 #ifndef NANOARQ_H_INCLUDED
 #define NANOARQ_H_INCLUDED
 
