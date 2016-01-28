@@ -112,7 +112,7 @@ add_library(nanoarq_cpp SHARED nanoarq.h
                                unit_tests/nanoarq_in_cpp_test_project.cpp)
 target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=1 -pedantic)
 
-set(NANOARQ_UNIT_TEST_FLAGS -std=c++0x -Wno-unused-function -Wno-tautological-compare)
+set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/PltHookPlugin.h
                               unit_tests/PltHookPlugin.cpp
