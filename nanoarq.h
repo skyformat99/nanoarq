@@ -223,6 +223,12 @@ arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
     return ARQ_OK_COMPLETED;
 }
 
+arq_err_t arq_connect(struct arq_t *arq)
+{
+    (void)arq;
+    return ARQ_OK_COMPLETED;
+}
+
 void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
 {
     NANOARQ_ASSERT(a && base && (capacity > 0));

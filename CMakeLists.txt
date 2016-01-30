@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.2)
-project(nanoarq)
+project(nanoarq C CXX)
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
+
 include(ExternalProject)
 
 ################ CppUTest
@@ -112,6 +114,9 @@ target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS
 
 set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
+                              unit_tests/PltHookPlugin.h
+                              unit_tests/PltHookPlugin.cpp
+                              unit_tests/test_hook.cpp
                               unit_tests/test_nanoarq.cpp
                               unit_tests/test_asserts.cpp
                               unit_tests/test_lin_alloc.cpp
