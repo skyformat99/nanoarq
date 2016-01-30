@@ -10,7 +10,9 @@ compiler:
 
 script: ./b
 
-before-install:
+sudo: required
+
+before_install:
     - if [ `uname` = "Linux" ]; then sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y; fi
     - if [ `uname` = "Linux" ]; then sudo apt-get update -qq; fi
     - if [ `uname` = "Linux" ]; then sudo apt-get install -qq g++-4.8; fi
