@@ -92,8 +92,7 @@ set(NANOARQ_FLAGS -Wall
                   -Wcast-qual
                   -Wstrict-aliasing=2
                   --save-temps
-                  -g
-                  -Os)
+                  -g)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR} ${PLTHOOK_INCLUDE_DIR})
 
@@ -110,7 +109,7 @@ target_compile_options(nanoarq_c99 PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS
 add_library(nanoarq_cpp SHARED nanoarq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_cpp_test_project.cpp)
-target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=1 -pedantic)
+target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -DNANOARQ_COMPILE_AS_CPP=1 -pedantic -std=c++11)
 
 set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp

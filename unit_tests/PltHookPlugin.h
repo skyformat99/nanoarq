@@ -23,20 +23,24 @@ private:
 
 #define NANOARQ_HOOK(FUNCTION_NAME, NEW_FUNCTION) \
     do { \
-        (void)&FUNCTION_NAME; \
-        (void)&NEW_FUNCTION; \
+        (void)FUNCTION_NAME; \
+        (void)NEW_FUNCTION; \
         PltHookPlugin *pltHookPlugin__ = PltHookPlugin::WellKnownInstance(); \
         if (pltHookPlugin__) { \
             pltHookPlugin__->Hook(#FUNCTION_NAME, reinterpret_cast< void * >(NEW_FUNCTION)); \
+        } else { \
+            FAIL("Test called NANOARQ_HOOK, but PltHookPlugin is not initialized."); \
         } \
     } while(0)
 
 #define NANOARQ_UNHOOK(FUNCTION_NAME) \
     do { \
-        (void)&FUNCTION_NAME; \
+        (void)FUNCTION_NAME; \
         PltHookPlugin *pltHookPlugin__ = PltHookPlugin::WellKnownInstance(); \
         if (pltHookPlugin__) { \
             pltHookPlugin__->Unhook(#FUNCTION_NAME); \
+        } else { \
+            FAIL("Test tried to NANOARQ_UNHOOK, but PltHookPlugin is not initialized."); \
         } \
     } while(0)
 
