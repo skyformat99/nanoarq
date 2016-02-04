@@ -58,6 +58,7 @@ typedef enum
 
 typedef unsigned int arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
+typedef arq_uint32_t (*arq_checksum_cb_t)(void const *p, int len);
 
 typedef struct arq_cfg_t
 {
@@ -69,6 +70,7 @@ typedef struct arq_cfg_t
     arq_time_t retransmission_timeout;
     arq_time_t keepalive_period;
     arq_time_t disconnect_timeout;
+    arq_checksum_cb_t checksum_cb;
 } arq_cfg_t;
 
 typedef struct arq_stats_t
@@ -163,7 +165,7 @@ typedef struct arq__frame_hdr_t
     char fin;
 } arq__frame_hdr_t;
 
-int arq__frame_size(int max_seg_len);
+int arq__frame_size(int seg_len);
 void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
 void arq__frame_hdr_write(arq__frame_hdr_t const *hdr, void *out_buf);
 void arq__frame_read(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg);
@@ -337,10 +339,10 @@ void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     NANOARQ_ASSERT((dst - (arq_uchar_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
-int arq__frame_size(int segment_size)
+int arq__frame_size(int seg_len)
 {
-    NANOARQ_ASSERT(segment_size <= 256);
-    return NANOARQ_FRAME_COBS_OVERHEAD + NANOARQ_FRAME_HEADER_SIZE + segment_size;
+    NANOARQ_ASSERT(seg_len <= 256);
+    return NANOARQ_FRAME_COBS_OVERHEAD + NANOARQ_FRAME_HEADER_SIZE + seg_len;
 }
 
 void arq__frame_write(arq__frame_hdr_t const *hdr, void const *seg, void *out_frame, int frame_max)

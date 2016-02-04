@@ -9,11 +9,11 @@ TEST_GROUP(frame) {};
 namespace
 {
 
-TEST(frame, size_is_header_size_plus_segment_size_plus_cobs_overhead)
+TEST(frame, size_is_header_size_plus_segment_length_plus_cobs_overhead)
 {
-    int seg_size = 123;
-    CHECK_EQUAL(NANOARQ_FRAME_COBS_OVERHEAD + NANOARQ_FRAME_HEADER_SIZE + seg_size,
-                arq__frame_size(seg_size));
+    int seg_len = 123;
+    CHECK_EQUAL(NANOARQ_FRAME_COBS_OVERHEAD + NANOARQ_FRAME_HEADER_SIZE + seg_len,
+                arq__frame_size(seg_len));
 }
 
 struct Fixture
@@ -36,6 +36,18 @@ struct Fixture
     char const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     char frame[64];
 };
+
+void MockArqFrameHdrWrite(arq__frame_hdr_t const *frame_hdr, void *out_buf)
+{
+    mock().actualCall("arq__frame_hdr_write").withParameter("frame_hdr", frame_hdr).withParameter("out_buf", out_buf);
+}
+
+TEST(frame, mock)
+{
+    Fixture f;
+    NANOARQ_HOOK(arq__frame_hdr_write, MockArqFrameHdrWrite);
+    arq__frame_write(&f.h, nullptr, f.frame, sizeof(f.frame));
+}
 
 TEST(frame, write_writes_frame_header_at_offset_1)
 {
