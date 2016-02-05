@@ -1,4 +1,3 @@
-/* this file is an example of integrating nanoarq into your project. */
 #pragma once
 
 #include <stdint.h>
@@ -11,5 +10,6 @@
 #define NANOARQ_LITTLE_ENDIAN_CPU 1
 #define NANOARQ_COMPILE_CRC32 1
 
+#include "nanoarq_mocks.h"
 #include "nanoarq.h"
 
