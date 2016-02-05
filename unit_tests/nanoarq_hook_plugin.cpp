@@ -1,5 +1,6 @@
 #include "nanoarq_hook_plugin.h"
 #include <vector>
+#include <algorithm>
 
 struct HookRecord
 {
