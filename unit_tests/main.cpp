@@ -1,5 +1,5 @@
 #include "nanoarq_in_test_project.h"
-#include "PltHookPlugin.h"
+#include "nanoarq_hook_plugin.h"
 
 #include <CppUTest/CommandLineTestRunner.h>
 #include <CppUTest/TestRegistry.h>
@@ -26,9 +26,9 @@ int main(int argc, char *argv[])
     MockSupportPlugin mockSupportPlugin;
     TestRegistry::getCurrentRegistry()->installPlugin(&mockSupportPlugin);
 
-    PltHookPlugin pltHookPlugin;
-    PltHookPlugin::WellKnownInstance() = &pltHookPlugin;
-    TestRegistry::getCurrentRegistry()->installPlugin(&pltHookPlugin);
+    NanoArqHookPlugin nanoArqHookPlugin;
+    NanoArqHookPlugin::WellKnownInstance() = &nanoArqHookPlugin;
+    TestRegistry::getCurrentRegistry()->installPlugin(&nanoArqHookPlugin);
 
     arq_err_t const e = arq_assert_handler_set(&test_assert_handler);
     if (e != ARQ_OK_COMPLETED) {
