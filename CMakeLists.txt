@@ -94,9 +94,10 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_ntoh_hton_le.cpp
                               unit_tests/test_backend_recv.cpp
                               unit_tests/test_frame.cpp
-                              unit_tests/test_cobs.cpp)
+                              unit_tests/test_cobs.cpp
+                              unit_tests/test_crc32.cpp)
 
-add_executable(nanoarq_c99_tests ${NANOARQ_UNIT_TEST_SOURCES})
-target_compile_options(nanoarq_c99_tests PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
-target_link_libraries(nanoarq_c99_tests nanoarq_c99 libCppUTest libCppUTestExt dl)
-add_unit_tests(nanoarq_c99 nanoarq_c99_tests)
+add_executable(nanoarq_unit_tests ${NANOARQ_UNIT_TEST_SOURCES})
+target_compile_options(nanoarq_unit_tests PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS})
+target_link_libraries(nanoarq_unit_tests nanoarq_c99 libCppUTest libCppUTestExt dl)
+add_unit_tests(nanoarq_c99 nanoarq_unit_tests)

@@ -1,5 +1,6 @@
 #include "nanoarq_in_test_project.h"
-#include "PltHookPlugin.h"
+#include "nanoarq_hook_plugin.h"
+
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
 #include <cstring>
@@ -37,25 +38,19 @@ struct Fixture
     char frame[64];
 };
 
-void MockArqFrameHdrWrite(arq__frame_hdr_t const *frame_hdr, void *out_buf)
+void MockArqFrameHdrWrite(arq__frame_hdr_t *frame_hdr, void *out_buf)
 {
     mock().actualCall("arq__frame_hdr_write").withParameter("frame_hdr", frame_hdr).withParameter("out_buf", out_buf);
-}
-
-TEST(frame, mock)
-{
-    Fixture f;
-    NANOARQ_HOOK(arq__frame_hdr_write, MockArqFrameHdrWrite);
-    arq__frame_write(&f.h, nullptr, f.frame, sizeof(f.frame));
 }
 
 TEST(frame, write_writes_frame_header_at_offset_1)
 {
     Fixture f;
+    NANOARQ_MOCK_HOOK(arq__frame_hdr_write, MockArqFrameHdrWrite);
+    mock().expectOneCall("arq__frame_hdr_write")
+          .withParameter("frame_hdr", &f.h)
+          .withParameter("out_buf", (void *)&f.frame[1]);
     arq__frame_write(&f.h, nullptr, f.frame, sizeof(f.frame));
-    arq__frame_hdr_t actual;
-    arq__frame_hdr_read(&f.frame[1], &actual);
-    MEMCMP_EQUAL(&f.h, &actual, sizeof(actual));
 }
 
 TEST(frame, write_copies_segment_into_frame_after_header)
@@ -66,14 +61,20 @@ TEST(frame, write_copies_segment_into_frame_after_header)
     MEMCMP_EQUAL(f.seg, &f.frame[1 + NANOARQ_FRAME_HEADER_SIZE], sizeof(f.seg));
 }
 
+void MockArqFrameHdrRead(void const *buf, arq__frame_hdr_t *out_frame_hdr)
+{
+    mock().actualCall("arq__frame_hdr_read").withParameter("buf", buf).withParameter("out_frame_hdr", out_frame_hdr);
+}
+
 TEST(frame, read_reads_frame_header_at_offset_1)
 {
     Fixture f;
-    arq__frame_hdr_write(&f.h, &f.frame[1]);
-    arq__frame_hdr_t actual;
+    NANOARQ_MOCK_HOOK(arq__frame_hdr_read, MockArqFrameHdrRead);
+    mock().expectOneCall("arq__frame_hdr_read")
+          .withParameter("buf", (void const *)&f.frame[1])
+          .ignoreOtherParameters();
     void const *seg;
-    arq__frame_read(f.frame, &actual, &seg);
-    MEMCMP_EQUAL(&f.h, &actual, sizeof(&f.h));
+    arq__frame_read(f.frame, &f.h, &seg);
 }
 
 TEST(frame, read_points_out_seg_to_segment_in_frame)
