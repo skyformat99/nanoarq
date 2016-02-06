@@ -7,7 +7,11 @@
     NANOARQ_MOCK(arq__frame_hdr_read) \
     NANOARQ_MOCK(arq__frame_hdr_write) \
     NANOARQ_MOCK(arq__frame_read) \
-    NANOARQ_MOCK(arq__frame_write)
+    NANOARQ_MOCK(arq__frame_write) \
+    NANOARQ_MOCK(arq__frame_encode) \
+    NANOARQ_MOCK(arq__frame_decode) \
+    NANOARQ_MOCK(arq__cobs_encode) \
+    NANOARQ_MOCK(arq__cobs_decode)
 
 #ifdef __cplusplus
     #define NANOARQ_MOCK(FUNCTION_NAME) extern "C" { extern void *FUNCTION_NAME##_NANOARQ_THUNK_TARGET; }

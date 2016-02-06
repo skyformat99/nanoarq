@@ -371,17 +371,17 @@ void NANOARQ_MOCKABLE(arq__frame_read)(void const *frame, arq__frame_hdr_t *out_
     *out_seg = (void const *)(h + NANOARQ_FRAME_HEADER_SIZE);
 }
 
-void arq__frame_encode(void *frame, int len)
+void NANOARQ_MOCKABLE(arq__frame_encode)(void *frame, int len)
 {
     arq__cobs_encode(frame, len);
 }
 
-void arq__frame_decode(void *frame, int len)
+void NANOARQ_MOCKABLE(arq__frame_decode)(void *frame, int len)
 {
     arq__cobs_decode(frame, len);
 }
 
-void arq__cobs_encode(void *p, int len)
+void NANOARQ_MOCKABLE(arq__cobs_encode)(void *p, int len)
 {
     arq_uchar_t *patch = (arq_uchar_t *)p;
     arq_uchar_t *c = (arq_uchar_t *)p + 1;
@@ -398,7 +398,7 @@ void arq__cobs_encode(void *p, int len)
     *c = 0;
 }
 
-void arq__cobs_decode(void *p, int len)
+void NANOARQ_MOCKABLE(arq__cobs_decode)(void *p, int len)
  {
     arq_uchar_t *c = (arq_uchar_t *)p;
     arq_uchar_t const *e = c + (len - 1);

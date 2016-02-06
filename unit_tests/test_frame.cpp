@@ -89,5 +89,33 @@ TEST(frame, read_points_out_seg_to_segment_in_frame)
     CHECK_EQUAL(rseg, (void const *)&f.frame[1 + NANOARQ_FRAME_HEADER_SIZE]);
 }
 
+void MockArqCobsEncode(void *p, int len)
+{
+    mock().actualCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
+}
+
+TEST(frame, frame_encode_forwards_to_cobs_encode)
+{
+    void *p = (void *)0x12345678;
+    int const len = 54321;
+    NANOARQ_MOCK_HOOK(arq__cobs_encode, MockArqCobsEncode);
+    mock().expectOneCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
+    arq__frame_encode(p, len);
+}
+
+void MockArqCobsDecode(void *p, int len)
+{
+    mock().actualCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
+}
+
+TEST(frame, frame_decode_forwards_to_cobs_decode)
+{
+    void *p = (void *)0x12345678;
+    int const len = 54321;
+    NANOARQ_MOCK_HOOK(arq__cobs_decode, MockArqCobsDecode);
+    mock().expectOneCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
+    arq__frame_decode(p, len);
+}
+
 }
 
