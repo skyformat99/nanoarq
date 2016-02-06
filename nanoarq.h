@@ -26,11 +26,11 @@
 #error You must define NANOARQ_COMPILE_CRC32 to 0 or 1 before including nanoarq.h
 #endif
 
-#ifndef NANOARQ_COMPILE_AS_CPP
-#error You must define NANOARQ_COMPILE_AS_CPP to 0 or 1 before including nanoarq.h
+#ifndef NANOARQ_MOCKABLE
+#define NANOARQ_MOCKABLE(FUNC) FUNC
 #endif
 
-#if defined(__cplusplus) && (NANOARQ_COMPILE_AS_CPP == 0)
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -181,7 +181,7 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 void arq__cobs_encode(void *p, int len);
 void arq__cobs_decode(void *p, int len);
 
-#if defined(__cplusplus) && (NANOARQ_COMPILE_AS_CPP == 0)
+#if defined(__cplusplus)
 }
 #endif
 #endif
@@ -194,9 +194,10 @@ void arq__cobs_decode(void *p, int len);
 
 #define NANOARQ_IMPLEMENTATION_INCLUDED
 
-#define NANOARQ_ASSERT(COND)          do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
+
+#define NANOARQ_ASSERT(COND) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
 #define NANOARQ_ASSERT_MSG(COND, MSG) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, MSG); } } while (0)
-#define NANOARQ_ASSERT_FAIL()         s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
+#define NANOARQ_ASSERT_FAIL() s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
 
 static arq_assert_cb_t s_assert_cb = NANOARQ_NULL_PTR;
 
@@ -339,13 +340,16 @@ void arq__frame_hdr_write(arq__frame_hdr_t const *frame_hdr, void *out_buf)
     NANOARQ_ASSERT((dst - (arq_uchar_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
-int arq__frame_size(int seg_len)
+int NANOARQ_MOCKABLE(arq__frame_size)(int seg_len)
 {
     NANOARQ_ASSERT(seg_len <= 256);
     return NANOARQ_FRAME_COBS_OVERHEAD + NANOARQ_FRAME_HEADER_SIZE + seg_len;
 }
 
-void arq__frame_write(arq__frame_hdr_t const *hdr, void const *seg, void *out_frame, int frame_max)
+void NANOARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *hdr,
+                                        void const *seg,
+                                        void *out_frame,
+                                        int frame_max)
 {
     int i;
     arq_uchar_t *dst = (arq_uchar_t *)out_frame + 1;
@@ -359,7 +363,7 @@ void arq__frame_write(arq__frame_hdr_t const *hdr, void const *seg, void *out_fr
     }
 }
 
-void arq__frame_read(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg)
+void NANOARQ_MOCKABLE(arq__frame_read)(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg)
 {
     arq_uchar_t const *h = (arq_uchar_t const *)frame + 1;
     NANOARQ_ASSERT(frame && out_hdr && out_seg);
