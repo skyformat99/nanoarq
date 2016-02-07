@@ -19,8 +19,10 @@ NANOARQ_MOCK_LIST()
         ".p2align 4,,15\n\t" \
         ".globl " NANOARQ_SYMBOL_PREFIX #FUNCTION_NAME "\n\t" \
         NANOARQ_SYMBOL_PREFIX #FUNCTION_NAME ":\n\t" \
+        ".cfi_startproc\n\t" \
         "movq " NANOARQ_SYMBOL_PREFIX #FUNCTION_NAME "_NANOARQ_THUNK_TARGET (%rip), %r11\n\t" \
         "jmp *%r11\n\t" \
+        ".cfi_endproc\n\t" \
     );
 
 NANOARQ_MOCK_LIST()

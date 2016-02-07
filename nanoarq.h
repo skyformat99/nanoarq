@@ -165,11 +165,14 @@ typedef struct arq__frame_hdr_t
     char fin;
 } arq__frame_hdr_t;
 
-int arq__frame_size(int seg_len);
-void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
-void arq__frame_hdr_write(arq__frame_hdr_t const *hdr, void *out_buf);
 void arq__frame_read(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg);
 void arq__frame_write(arq__frame_hdr_t const *hdr, void const *seg, void *out_frame, int frame_max);
+
+int  arq__frame_size(int seg_len);
+void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
+int  arq__frame_hdr_write(arq__frame_hdr_t const *hdr, void *out_frame);
+int  arq__frame_seg_write(void const *seg, void *out_frame, int len);
+void arq__frame_checksum_write(arq_checksum_cb_t checksum, void *frame, int len);
 void arq__frame_encode(void *frame, int len);
 void arq__frame_decode(void *frame, int len);
 
@@ -315,7 +318,7 @@ void NANOARQ_MOCKABLE(arq__frame_hdr_read)(void const *buf, arq__frame_hdr_t *ou
     NANOARQ_ASSERT((src - (arq_uchar_t const *)buf) == NANOARQ_FRAME_HEADER_SIZE);
 }
 
-void NANOARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *frame_hdr, void *out_buf)
+int NANOARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *frame_hdr, void *out_buf)
 {
     arq_uchar_t *dst = (arq_uchar_t *)out_buf;
     arq_uint16_t tmp_n;
@@ -338,6 +341,18 @@ void NANOARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *frame_hdr, v
     *dst++ = src[0] & 0x0F;
     *dst++ = src[1];
     NANOARQ_ASSERT((dst - (arq_uchar_t const *)out_buf) == NANOARQ_FRAME_HEADER_SIZE);
+    return dst - (arq_uchar_t const *)out_buf;
+}
+
+int NANOARQ_MOCKABLE(arq__frame_seg_write)(void const *seg, void *out_buf, int len)
+{
+    arq_uchar_t const *src = (arq_uchar_t const *)(seg);
+    arq_uchar_t *dst = (arq_uchar_t *)out_buf;
+    NANOARQ_ASSERT(seg && out_buf && (len > 0));
+    while (len--) {
+        *dst++ = *src++;
+    }
+    return len;
 }
 
 int NANOARQ_MOCKABLE(arq__frame_size)(int seg_len)
@@ -351,16 +366,12 @@ void NANOARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *hdr,
                                         void *out_frame,
                                         int frame_max)
 {
-    int i;
     arq_uchar_t *dst = (arq_uchar_t *)out_frame + 1;
-    arq_uchar_t const *src = (arq_uchar_t const *)seg;
     NANOARQ_ASSERT(hdr && out_frame);
     NANOARQ_ASSERT((seg || (hdr->seg_len == 0)) && (frame_max >= arq__frame_size(hdr->seg_len)));
-    arq__frame_hdr_write(hdr, dst);
-    dst += NANOARQ_FRAME_HEADER_SIZE;
-    for (i = 0; i < hdr->seg_len; ++i) {
-        *dst++ = *src++;
-    }
+    dst += arq__frame_hdr_write(hdr, dst);
+    dst += arq__frame_seg_write(seg, out_frame, hdr->seg_len);
+    arq__frame_encode(out_frame, arq__frame_size(hdr->seg_len));
 }
 
 void NANOARQ_MOCKABLE(arq__frame_read)(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg)

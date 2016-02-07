@@ -38,32 +38,108 @@ struct Fixture
     char frame[64];
 };
 
-void MockArqFrameHdrWrite(arq__frame_hdr_t *frame_hdr, void *out_buf)
+int MockArqFrameHdrWrite(arq__frame_hdr_t *frame_hdr, void *out_buf)
 {
-    mock().actualCall("arq__frame_hdr_write").withParameter("frame_hdr", frame_hdr).withParameter("out_buf", out_buf);
+    return mock().actualCall("arq__frame_hdr_write")
+        .withParameter("frame_hdr", frame_hdr).withParameter("out_buf", out_buf)
+        .returnIntValue();
 }
 
-TEST(frame, write_writes_frame_header_at_offset_1)
+int MockArqFrameSegWrite(void const *seg, void *out_frame, int len)
 {
-    Fixture f;
-    NANOARQ_MOCK_HOOK(arq__frame_hdr_write, MockArqFrameHdrWrite);
-    mock().expectOneCall("arq__frame_hdr_write")
-          .withParameter("frame_hdr", &f.h)
-          .withParameter("out_buf", (void *)&f.frame[1]);
-    arq__frame_write(&f.h, nullptr, f.frame, sizeof(f.frame));
+    return mock().actualCall("arq__frame_seg_write")
+        .withParameter("seg", seg).withParameter("out_frame", out_frame).withParameter("len", len)
+        .returnIntValue();
 }
 
-TEST(frame, write_copies_segment_into_frame_after_header)
+void MockArqFrameEncode(void *frame, int len)
 {
-    Fixture f;
-    f.h.seg_len = sizeof(f.seg);
-    arq__frame_write(&f.h, f.seg, f.frame, sizeof(f.frame));
-    MEMCMP_EQUAL(f.seg, &f.frame[1 + NANOARQ_FRAME_HEADER_SIZE], sizeof(f.seg));
+    mock().actualCall("arq__frame_encode").withParameter("frame", frame).withParameter("len", len);
+}
+
+void MockArqCobsEncode(void *p, int len)
+{
+    mock().actualCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
 }
 
 void MockArqFrameHdrRead(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 {
-    mock().actualCall("arq__frame_hdr_read").withParameter("buf", buf).withParameter("out_frame_hdr", out_frame_hdr);
+    mock().actualCall("arq__frame_hdr_read")
+        .withParameter("buf", buf).withParameter("out_frame_hdr", out_frame_hdr);
+}
+
+void MockArqCobsDecode(void *p, int len)
+{
+    mock().actualCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
+}
+
+struct WriteHeaderFixture : Fixture
+{
+    WriteHeaderFixture()
+    {
+        NANOARQ_MOCK_HOOK(arq__frame_hdr_write, MockArqFrameHdrWrite);
+        NANOARQ_MOCK_HOOK(arq__frame_seg_write, MockArqFrameSegWrite);
+        NANOARQ_MOCK_HOOK(arq__frame_encode, MockArqFrameEncode);
+    }
+};
+
+TEST(frame, write_writes_frame_header_at_offset_1)
+{
+    WriteHeaderFixture f;
+    mock().expectOneCall("arq__frame_hdr_write")
+          .withParameter("frame_hdr", &f.h)
+          .withParameter("out_buf", (void *)&f.frame[1]);
+    mock().ignoreOtherCalls();
+    arq__frame_write(&f.h, nullptr, f.frame, sizeof(f.frame));
+}
+
+TEST(frame, write_writes_segment_after_header)
+{
+    WriteHeaderFixture f;
+    f.h.seg_len = sizeof(f.seg);
+    mock().expectOneCall("arq__frame_seg_write")
+          .withParameter("seg", (void const *)f.seg)
+          .withParameter("out_frame", (void *)f.frame)
+          .withParameter("len", f.h.seg_len);
+    mock().ignoreOtherCalls();
+    arq__frame_write(&f.h, f.seg, f.frame, sizeof(f.frame));
+}
+
+TEST(frame, write_encodes_frame_at_offset_zero)
+{
+    WriteHeaderFixture f;
+    f.h.seg_len = sizeof(f.seg);
+    int const frame_len = arq__frame_size(f.h.seg_len);
+    mock().expectOneCall("arq__frame_encode")
+        .withParameter("frame", (void *)f.frame)
+        .withParameter("len", frame_len);
+    mock().ignoreOtherCalls();
+    arq__frame_write(&f.h, f.seg, f.frame, sizeof(f.frame));
+}
+
+TEST(frame, write_seg_copies_segment_into_buffer)
+{
+    Fixture f;
+    arq__frame_seg_write(f.seg, f.frame, sizeof(f.seg));
+    MEMCMP_EQUAL(f.seg, f.frame, sizeof(f.seg));
+}
+
+TEST(frame, frame_encode_forwards_to_cobs_encode)
+{
+    void *p = (void *)0x12345678;
+    int const len = 54321;
+    NANOARQ_MOCK_HOOK(arq__cobs_encode, MockArqCobsEncode);
+    mock().expectOneCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
+    arq__frame_encode(p, len);
+}
+
+TEST(frame, frame_decode_forwards_to_cobs_decode)
+{
+    void *p = (void *)0x12345678;
+    int const len = 54321;
+    NANOARQ_MOCK_HOOK(arq__cobs_decode, MockArqCobsDecode);
+    mock().expectOneCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
+    arq__frame_decode(p, len);
 }
 
 TEST(frame, read_reads_frame_header_at_offset_1)
@@ -87,34 +163,6 @@ TEST(frame, read_points_out_seg_to_segment_in_frame)
     arq__frame_hdr_t rh;
     arq__frame_read(f.frame, &rh, &rseg);
     CHECK_EQUAL(rseg, (void const *)&f.frame[1 + NANOARQ_FRAME_HEADER_SIZE]);
-}
-
-void MockArqCobsEncode(void *p, int len)
-{
-    mock().actualCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
-}
-
-TEST(frame, frame_encode_forwards_to_cobs_encode)
-{
-    void *p = (void *)0x12345678;
-    int const len = 54321;
-    NANOARQ_MOCK_HOOK(arq__cobs_encode, MockArqCobsEncode);
-    mock().expectOneCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
-    arq__frame_encode(p, len);
-}
-
-void MockArqCobsDecode(void *p, int len)
-{
-    mock().actualCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
-}
-
-TEST(frame, frame_decode_forwards_to_cobs_decode)
-{
-    void *p = (void *)0x12345678;
-    int const len = 54321;
-    NANOARQ_MOCK_HOOK(arq__cobs_decode, MockArqCobsDecode);
-    mock().expectOneCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
-    arq__frame_decode(p, len);
 }
 
 }
