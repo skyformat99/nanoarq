@@ -202,6 +202,13 @@ TEST(frame_hdr, write_ack_segment_mask)
     CHECK_EQUAL((uint8_t)0x35, (uint8_t)f.buf[11]);
 }
 
+TEST(frame_hdr, write_returns_bytes_written)
+{
+    WriteFixture f;
+    int const n = arq__frame_hdr_write(&f.h, f.buf);
+    CHECK_EQUAL(NANOARQ_FRAME_HEADER_SIZE, n);
+}
+
 TEST(frame_hdr, headers_identical)
 {
     arq__frame_hdr_t orig;

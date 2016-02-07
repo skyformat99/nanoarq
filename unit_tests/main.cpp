@@ -10,7 +10,7 @@
 namespace
 {
 
-void test_assert_handler(char const *file, int line, char const *cond, char const *msg)
+void TestAssertHandler(char const *file, int line, char const *cond, char const *msg)
 {
     (void)msg;
     FAIL_TEXT_C_LOCATION(cond, file, (int)line);
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     NanoArqHookPlugin::WellKnownInstance() = &nanoArqHookPlugin;
     TestRegistry::getCurrentRegistry()->installPlugin(&nanoArqHookPlugin);
 
-    arq_err_t const e = arq_assert_handler_set(&test_assert_handler);
+    arq_err_t const e = arq_assert_handler_set(&TestAssertHandler);
     if (e != ARQ_OK_COMPLETED) {
         return 1;
     }
