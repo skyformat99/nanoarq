@@ -61,25 +61,24 @@ set(NANOARQ_FLAGS -Wall
                   -Wcast-qual
                   -Wstrict-aliasing=2
                   --save-temps
-                  -g
-                  -Os)
+                  -g)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR})
 
 add_library(nanoarq_c90 STATIC nanoarq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_c90_test_project.c)
-target_compile_options(nanoarq_c90 PRIVATE ${NANOARQ_FLAGS} -pedantic -std=c90)
+target_compile_options(nanoarq_c90 PRIVATE ${NANOARQ_FLAGS} -Os -pedantic -std=c90)
 
 add_library(nanoarq_c99 STATIC nanoarq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_c99_test_project.c)
-target_compile_options(nanoarq_c99 PRIVATE ${NANOARQ_FLAGS} -pedantic -std=c99)
+target_compile_options(nanoarq_c99 PRIVATE ${NANOARQ_FLAGS} -Os -pedantic -std=c99)
 
 add_library(nanoarq_cpp STATIC nanoarq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_cpp_test_project.cpp)
-target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -pedantic)
+target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -Os -pedantic)
 
 set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
