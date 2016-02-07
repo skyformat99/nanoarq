@@ -7,6 +7,7 @@
     NANOARQ_MOCK(arq__frame_hdr_read) \
     NANOARQ_MOCK(arq__frame_hdr_write) \
     NANOARQ_MOCK(arq__frame_seg_write) \
+    NANOARQ_MOCK(arq__frame_checksum_write) \
     NANOARQ_MOCK(arq__frame_read) \
     NANOARQ_MOCK(arq__frame_write) \
     NANOARQ_MOCK(arq__frame_encode) \

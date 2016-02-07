@@ -386,6 +386,12 @@ void NANOARQ_MOCKABLE(arq__frame_read)(void *frame,
     *out_seg = (void const *)(h + NANOARQ_FRAME_HEADER_SIZE);
 }
 
+void NANOARQ_MOCKABLE(arq__frame_checksum_write)(arq_checksum_cb_t checksum, void *frame, int len)
+{
+    arq_uint32_t c = checksum(frame, len);
+    (void)c;
+}
+
 void NANOARQ_MOCKABLE(arq__frame_encode)(void *frame, int len)
 {
     arq__cobs_encode(frame, len);

@@ -78,6 +78,13 @@ void MockArqCobsDecode(void *p, int len)
     mock().actualCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
 }
 
+uint32_t MockChecksum(void const *p, int len)
+{
+    return (uint32_t)mock().actualCall("checksum")
+        .withParameter("p", p).withParameter("len", len)
+        .returnIntValue();
+}
+
 struct WriteHeaderFixture : Fixture
 {
     WriteHeaderFixture()
@@ -127,6 +134,15 @@ TEST(frame, write_seg_copies_segment_into_buffer)
     Fixture f;
     arq__frame_seg_write(f.seg, f.frame, sizeof(f.seg));
     MEMCMP_EQUAL(f.seg, f.frame, sizeof(f.seg));
+}
+
+TEST(frame, checksum_write_computes_checksum_over_range)
+{
+    Fixture f;
+    f.h.seg_len = sizeof(f.seg);
+    int const frame_len = arq__frame_size(f.h.seg_len);
+    mock().expectOneCall("checksum").withParameter("p", (void const *)f.frame).withParameter("len", frame_len);
+    arq__frame_checksum_write(MockChecksum, f.frame, frame_len);
 }
 
 TEST(frame, frame_encode_forwards_to_cobs_encode)
