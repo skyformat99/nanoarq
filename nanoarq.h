@@ -165,16 +165,17 @@ typedef struct arq__frame_hdr_t
     char fin;
 } arq__frame_hdr_t;
 
-void arq__frame_read(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg);
-void arq__frame_write(arq__frame_hdr_t const *hdr, void const *seg, void *out_frame, int frame_max);
-
 int  arq__frame_size(int seg_len);
-void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
+
+void arq__frame_write(arq__frame_hdr_t const *hdr, void const *seg, void *out_frame, int frame_max);
 int  arq__frame_hdr_write(arq__frame_hdr_t const *hdr, void *out_frame);
 int  arq__frame_seg_write(void const *seg, void *out_frame, int len);
 void arq__frame_checksum_write(arq_checksum_cb_t checksum, void *frame, int len);
 void arq__frame_encode(void *frame, int len);
+
+void arq__frame_read(void *frame, int frame_len, arq__frame_hdr_t *out_hdr, void const **out_seg);
 void arq__frame_decode(void *frame, int len);
+void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
 
 arq_uint16_t arq__hton16(arq_uint16_t x);
 arq_uint16_t arq__ntoh16(arq_uint16_t x);
@@ -196,7 +197,6 @@ void arq__cobs_decode(void *p, int len);
 #endif
 
 #define NANOARQ_IMPLEMENTATION_INCLUDED
-
 
 #define NANOARQ_ASSERT(COND) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
 #define NANOARQ_ASSERT_MSG(COND, MSG) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, MSG); } } while (0)
@@ -374,10 +374,14 @@ void NANOARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *hdr,
     arq__frame_encode(out_frame, arq__frame_size(hdr->seg_len));
 }
 
-void NANOARQ_MOCKABLE(arq__frame_read)(void const *frame, arq__frame_hdr_t *out_hdr, void const **out_seg)
+void NANOARQ_MOCKABLE(arq__frame_read)(void *frame,
+                                       int frame_len,
+                                       arq__frame_hdr_t *out_hdr,
+                                       void const **out_seg)
 {
     arq_uchar_t const *h = (arq_uchar_t const *)frame + 1;
     NANOARQ_ASSERT(frame && out_hdr && out_seg);
+    arq__frame_decode(frame, frame_len);
     arq__frame_hdr_read(h, out_hdr);
     *out_seg = (void const *)(h + NANOARQ_FRAME_HEADER_SIZE);
 }

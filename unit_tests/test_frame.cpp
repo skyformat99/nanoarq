@@ -57,6 +57,11 @@ void MockArqFrameEncode(void *frame, int len)
     mock().actualCall("arq__frame_encode").withParameter("frame", frame).withParameter("len", len);
 }
 
+void MockArqFrameDecode(void *frame, int len)
+{
+    mock().actualCall("arq__frame_decode").withParameter("frame", frame).withParameter("len", len);
+}
+
 void MockArqCobsEncode(void *p, int len)
 {
     mock().actualCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
@@ -142,15 +147,36 @@ TEST(frame, frame_decode_forwards_to_cobs_decode)
     arq__frame_decode(p, len);
 }
 
+struct ReadHeaderFixture : Fixture
+{
+    ReadHeaderFixture()
+    {
+        NANOARQ_MOCK_HOOK(arq__frame_hdr_read, MockArqFrameHdrRead);
+        NANOARQ_MOCK_HOOK(arq__frame_decode, MockArqFrameDecode);
+    }
+};
+
+TEST(frame, read_decodes_frame)
+{
+    ReadHeaderFixture f;
+    f.h.seg_len = sizeof(f.seg);
+    int const len = arq__frame_size(sizeof(f.seg));
+    mock().expectOneCall("arq__frame_decode").withParameter("frame", (void *)f.frame).withParameter("len", len);
+    mock().ignoreOtherCalls();
+    void const *seg;
+    arq__frame_read(f.frame, len, &f.h, &seg);
+}
+
 TEST(frame, read_reads_frame_header_at_offset_1)
 {
-    Fixture f;
-    NANOARQ_MOCK_HOOK(arq__frame_hdr_read, MockArqFrameHdrRead);
+    ReadHeaderFixture f;
+    int const len = arq__frame_size(sizeof(f.seg));
     mock().expectOneCall("arq__frame_hdr_read")
           .withParameter("buf", (void const *)&f.frame[1])
           .ignoreOtherParameters();
+    mock().ignoreOtherCalls();
     void const *seg;
-    arq__frame_read(f.frame, &f.h, &seg);
+    arq__frame_read(f.frame, len, &f.h, &seg);
 }
 
 TEST(frame, read_points_out_seg_to_segment_in_frame)
@@ -161,7 +187,8 @@ TEST(frame, read_points_out_seg_to_segment_in_frame)
     std::memcpy(&f.frame[1 + NANOARQ_FRAME_HEADER_SIZE], f.seg, sizeof(f.seg));
     void const *rseg;
     arq__frame_hdr_t rh;
-    arq__frame_read(f.frame, &rh, &rseg);
+    int const len = arq__frame_size(sizeof(f.seg));
+    arq__frame_read(f.frame, len, &rh, &rseg);
     CHECK_EQUAL(rseg, (void const *)&f.frame[1 + NANOARQ_FRAME_HEADER_SIZE]);
 }
 
