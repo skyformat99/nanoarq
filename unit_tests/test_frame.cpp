@@ -22,7 +22,7 @@ struct Fixture
     Fixture()
     {
         h.version = 12;
-        h.seg_len = 0;
+        h.seg_len = sizeof(seg);
         h.win_size = 9;
         h.seq_num = 123;
         h.msg_len = 5;
@@ -34,6 +34,7 @@ struct Fixture
         CHECK((int)sizeof(frame) >= arq__frame_size(h.seg_len));
     }
     arq__frame_hdr_t h;
+    int frame_len = arq__frame_size(sizeof(seg));
     char const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     char frame[64];
 };
@@ -102,13 +103,13 @@ TEST(frame, write_writes_frame_header_at_offset_1)
           .withParameter("frame_hdr", &f.h)
           .withParameter("out_buf", (void *)&f.frame[1]);
     mock().ignoreOtherCalls();
+    f.h.seg_len = 0;
     arq__frame_write(&f.h, nullptr, f.frame, sizeof(f.frame));
 }
 
 TEST(frame, write_writes_segment_after_header)
 {
     WriteHeaderFixture f;
-    f.h.seg_len = sizeof(f.seg);
     mock().expectOneCall("arq__frame_seg_write")
           .withParameter("seg", (void const *)f.seg)
           .withParameter("out_frame", (void *)f.frame)
@@ -120,11 +121,9 @@ TEST(frame, write_writes_segment_after_header)
 TEST(frame, write_encodes_frame_at_offset_zero)
 {
     WriteHeaderFixture f;
-    f.h.seg_len = sizeof(f.seg);
-    int const frame_len = arq__frame_size(f.h.seg_len);
     mock().expectOneCall("arq__frame_encode")
         .withParameter("frame", (void *)f.frame)
-        .withParameter("len", frame_len);
+        .withParameter("len", f.frame_len);
     mock().ignoreOtherCalls();
     arq__frame_write(&f.h, f.seg, f.frame, sizeof(f.frame));
 }
@@ -139,10 +138,8 @@ TEST(frame, write_seg_copies_segment_into_buffer)
 TEST(frame, checksum_write_computes_checksum_over_range)
 {
     Fixture f;
-    f.h.seg_len = sizeof(f.seg);
-    int const frame_len = arq__frame_size(f.h.seg_len);
-    mock().expectOneCall("checksum").withParameter("p", (void const *)f.frame).withParameter("len", frame_len);
-    arq__frame_checksum_write(MockChecksum, f.frame, frame_len);
+    mock().expectOneCall("checksum").withParameter("p", (void const *)f.frame).withParameter("len", f.frame_len);
+    arq__frame_checksum_write(MockChecksum, f.frame, f.frame_len);
 }
 
 TEST(frame, frame_encode_forwards_to_cobs_encode)
@@ -175,36 +172,31 @@ struct ReadHeaderFixture : Fixture
 TEST(frame, read_decodes_frame)
 {
     ReadHeaderFixture f;
-    f.h.seg_len = sizeof(f.seg);
-    int const len = arq__frame_size(sizeof(f.seg));
-    mock().expectOneCall("arq__frame_decode").withParameter("frame", (void *)f.frame).withParameter("len", len);
+    mock().expectOneCall("arq__frame_decode").withParameter("frame", (void *)f.frame).withParameter("len", f.frame_len);
     mock().ignoreOtherCalls();
     void const *seg;
-    arq__frame_read(f.frame, len, &f.h, &seg);
+    arq__frame_read(f.frame, f.frame_len, &f.h, &seg);
 }
 
 TEST(frame, read_reads_frame_header_at_offset_1)
 {
     ReadHeaderFixture f;
-    int const len = arq__frame_size(sizeof(f.seg));
     mock().expectOneCall("arq__frame_hdr_read")
           .withParameter("buf", (void const *)&f.frame[1])
           .ignoreOtherParameters();
     mock().ignoreOtherCalls();
     void const *seg;
-    arq__frame_read(f.frame, len, &f.h, &seg);
+    arq__frame_read(f.frame, f.frame_len, &f.h, &seg);
 }
 
 TEST(frame, read_points_out_seg_to_segment_in_frame)
 {
     Fixture f;
-    f.h.seg_len = sizeof(f.seg);
     arq__frame_hdr_write(&f.h, &f.frame[1]);
     std::memcpy(&f.frame[1 + NANOARQ_FRAME_HEADER_SIZE], f.seg, sizeof(f.seg));
     void const *rseg;
     arq__frame_hdr_t rh;
-    int const len = arq__frame_size(sizeof(f.seg));
-    arq__frame_read(f.frame, len, &rh, &rseg);
+    arq__frame_read(f.frame, f.frame_len, &rh, &rseg);
     CHECK_EQUAL(rseg, (void const *)&f.frame[1 + NANOARQ_FRAME_HEADER_SIZE]);
 }
 
