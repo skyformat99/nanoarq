@@ -6,4 +6,5 @@ NANOARQ_MEMCPY
 ./b downloads and unpacks ninja binaries
 metrics on crc failures, bad frames (too long before 0)
 tiny asserts (skip file/line/cond/msg)
+./bx generates xcodeproj
 

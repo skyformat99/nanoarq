@@ -16,9 +16,9 @@ TEST(mock_hooks, can_hook_nanoarq_function)
         static void MockFrameSize(int) { Called() = true; }
     };
 
-    NANOARQ_MOCK_HOOK(arq__frame_size, Local::MockFrameSize);
+    NANOARQ_MOCK_HOOK(arq__frame_len, Local::MockFrameSize);
     Local::Called() = false;
-    arq__frame_size(16);
+    arq__frame_len(16);
     CHECK(Local::Called());
 }
 
@@ -30,30 +30,30 @@ TEST(mock_hooks, can_unhook_nanoarq_function)
         static void MockFrameSize(int) { Count()++; }
     };
 
-    NANOARQ_MOCK_HOOK(arq__frame_size, Local::MockFrameSize);
+    NANOARQ_MOCK_HOOK(arq__frame_len, Local::MockFrameSize);
     Local::Count() = 0;
-    arq__frame_size(8);
+    arq__frame_len(8);
     CHECK_EQUAL(1, Local::Count());
-    NANOARQ_MOCK_UNHOOK(arq__frame_size);
-    arq__frame_size(8);
+    NANOARQ_MOCK_UNHOOK(arq__frame_len);
+    arq__frame_len(8);
     CHECK_EQUAL(1, Local::Count());
 }
 
 void FailIfCalled(int)
 {
-    FAIL("arq__frame_size was not unhooked between tests");
+    FAIL("arq__frame_len was not unhooked between tests");
 }
 
 TEST(mock_hooks, hooks_removed_after_test_1)
 {
-    arq__frame_size(24);
-    NANOARQ_MOCK_HOOK(arq__frame_size, FailIfCalled);
+    arq__frame_len(24);
+    NANOARQ_MOCK_HOOK(arq__frame_len, FailIfCalled);
 }
 
 TEST(mock_hooks, hooks_removed_after_test_2)
 {
-    arq__frame_size(24);
-    NANOARQ_MOCK_HOOK(arq__frame_size, FailIfCalled);
+    arq__frame_len(24);
+    NANOARQ_MOCK_HOOK(arq__frame_len, FailIfCalled);
 }
 
 TEST(mock_hooks, can_mock_with_hooks)
@@ -62,16 +62,16 @@ TEST(mock_hooks, can_mock_with_hooks)
     {
         static int MockArqFrameSize(int segmentLength)
         {
-            return mock().actualCall("arq__frame_size").withParameter("seg_len", segmentLength).returnIntValue();
+            return mock().actualCall("arq__frame_len").withParameter("seg_len", segmentLength).returnIntValue();
         }
     };
 
     int const mockSegmentLength = 67;
     int const mockReturnValue = 123;
-    mock().expectOneCall("arq__frame_size").withParameter("seg_len", mockSegmentLength).andReturnValue(mockReturnValue);
+    mock().expectOneCall("arq__frame_len").withParameter("seg_len", mockSegmentLength).andReturnValue(mockReturnValue);
 
-    NANOARQ_MOCK_HOOK(arq__frame_size, Local::MockArqFrameSize);
-    int const actualReturnValue = arq__frame_size(mockSegmentLength);
+    NANOARQ_MOCK_HOOK(arq__frame_len, Local::MockArqFrameSize);
+    int const actualReturnValue = arq__frame_len(mockSegmentLength);
     CHECK_EQUAL(mockReturnValue, actualReturnValue);
 }
 

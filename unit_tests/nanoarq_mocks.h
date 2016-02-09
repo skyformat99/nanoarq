@@ -3,7 +3,7 @@
 #define NANOARQ_MOCKABLE(FUNCTION_NAME) FUNCTION_NAME##_NANOARQ_ORIG
 
 #define NANOARQ_MOCK_LIST() \
-    NANOARQ_MOCK(arq__frame_size) \
+    NANOARQ_MOCK(arq__frame_len) \
     NANOARQ_MOCK(arq__frame_hdr_read) \
     NANOARQ_MOCK(arq__frame_hdr_write) \
     NANOARQ_MOCK(arq__frame_seg_write) \
