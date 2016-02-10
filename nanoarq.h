@@ -191,6 +191,10 @@ arq__frame_read_result_t arq__frame_read(void *frame,
                                          void const **out_seg);
 void arq__frame_decode(void *frame, int len);
 void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
+arq__frame_read_result_t arq__frame_checksum_read(void const *frame,
+                                                  int frame_len,
+                                                  int seg_len,
+                                                  arq_checksum_cb_t checksum);
 
 arq_uint16_t arq__hton16(arq_uint16_t x);
 arq_uint16_t arq__ntoh16(arq_uint16_t x);
@@ -420,28 +424,35 @@ arq__frame_read_result_t NANOARQ_MOCKABLE(arq__frame_read)(void *frame,
                                                            void const **out_seg)
 {
     arq_uchar_t const *h = (arq_uchar_t const *)frame + 1;
-    arq_uint32_t computed_checksum, frame_checksum;
     NANOARQ_ASSERT(frame && out_hdr && out_seg);
     arq__frame_decode(frame, frame_len);
     arq__frame_hdr_read(h, out_hdr);
-    if (out_hdr->seg_len + NANOARQ_FRAME_COBS_OVERHEAD + NANOARQ_FRAME_HEADER_SIZE + 4 > frame_len) {
+    *out_seg = (void const *)(h + NANOARQ_FRAME_HEADER_SIZE);
+    return arq__frame_checksum_read(frame, frame_len, out_hdr->seg_len, checksum);
+}
+
+arq__frame_read_result_t NANOARQ_MOCKABLE(arq__frame_checksum_read)(void const *frame,
+                                                                    int frame_len,
+                                                                    int seg_len,
+                                                                    arq_checksum_cb_t checksum)
+{
+    arq_uint32_t frame_checksum, computed_checksum;
+    arq_uchar_t *dst = (arq_uchar_t *)&frame_checksum;
+    arq_uchar_t const *src;
+    NANOARQ_ASSERT(frame && checksum);
+    if (seg_len + NANOARQ_FRAME_COBS_OVERHEAD + NANOARQ_FRAME_HEADER_SIZE + 4 > frame_len) {
         return NANOARQ_FRAME_READ_RESULT_ERR_MALFORMED;
     }
-    /* read checksum from frame */
-    {
-        arq_uchar_t const *src = h + NANOARQ_FRAME_HEADER_SIZE + out_hdr->seg_len;
-        arq_uchar_t *dst = (arq_uchar_t *)&frame_checksum;
-        *dst++ = *src++;
-        *dst++ = *src++;
-        *dst++ = *src++;
-        *dst = *src;
-    }
+    src = (arq_uchar_t const *)frame + 1 + NANOARQ_FRAME_HEADER_SIZE + seg_len;
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst++ = *src++;
+    *dst = *src;
+    computed_checksum = checksum((arq_uchar_t const *)frame + 1, NANOARQ_FRAME_HEADER_SIZE + seg_len);
     frame_checksum = arq__ntoh32(frame_checksum);
-    computed_checksum = checksum(h, frame_len - NANOARQ_FRAME_COBS_OVERHEAD - 4);
     if (frame_checksum != computed_checksum) {
         return NANOARQ_FRAME_READ_RESULT_ERR_CHECKSUM;
     }
-    *out_seg = (void const *)(h + NANOARQ_FRAME_HEADER_SIZE);
     return NANOARQ_FRAME_READ_RESULT_SUCCESS;
 }
 
