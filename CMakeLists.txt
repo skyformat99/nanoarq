@@ -51,7 +51,6 @@ set(NANOARQ_FLAGS -Wall
                   -Wcast-align
                   -Wcast-qual
                   -Wstrict-aliasing=2
-                  --save-temps
                   -g)
 
 include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR})

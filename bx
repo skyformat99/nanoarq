@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e
+
+SCRIPT_PATH=$(cd $(dirname $0) ; pwd -P)
+BUILD_PATH=$SCRIPT_PATH/build/xcode
+
+#### grab cmake
+
+CMAKE_DIR="$SCRIPT_PATH/external/cmake"
+CMAKE_PREFIX=cmake-3.3.2-Darwin-x86_64
+
+CMAKE="$CMAKE_DIR/$CMAKE_PREFIX/CMake.app/Contents/bin/cmake"
+
+if [ ! -f "$CMAKE" ]; then
+    echo CMake not found at $CMAKE, retrieving...
+    mkdir -p "$CMAKE_DIR"
+
+    CMAKE_ARCHIVE="$CMAKE_PREFIX.tar.gz"
+    rm -f "$CMAKE_DIR/$CMAKE_ARCHIVE"
+    CMAKE_URL=https://cmake.org/files/v3.3/$CMAKE_ARCHIVE
+
+    curl -o "$CMAKE_DIR/$CMAKE_ARCHIVE" $CMAKE_URL
+    tar xzf "$CMAKE_DIR/$CMAKE_ARCHIVE" -C "$CMAKE_DIR"
+    rm "$CMAKE_DIR/$CMAKE_ARCHIVE"
+fi
+
+#### everything builds inside of 'build' subdirectory
+
+[ ! -d $BUILD_PATH ] && mkdir -p $BUILD_PATH
+[ ! -d $BUILD_PATH/CMakeFiles ] && (cd $BUILD_PATH; "$CMAKE" -G "Xcode" $SCRIPT_PATH)
+(cd $BUILD_PATH; "$CMAKE" --build . -- "$@")
+

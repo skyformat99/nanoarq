@@ -2,7 +2,7 @@
 set -e
 
 SCRIPT_PATH=$(cd $(dirname $0) ; pwd -P)
-BUILD_PATH=$SCRIPT_PATH/build
+BUILD_PATH=$SCRIPT_PATH/build/ninja
 
 #### grab cmake
 
