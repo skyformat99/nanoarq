@@ -42,16 +42,7 @@ set_target_properties(libCppUTestExt PROPERTIES IMPORTED_LOCATION ${CPPUTEST_LIB
 add_dependencies(libCppUTest CppUTest_external)
 add_dependencies(libCppUTestExt CppUTest_external)
 
-################ tests
-
-function(add_unit_tests TARGET_NAME UNIT_TEST_EXECUTABLE)
-    set(UNIT_TEST_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_unit_tests.timestamp)
-    add_custom_target(RUN_${TARGET_NAME}_UNIT_TESTS ALL DEPENDS ${UNIT_TEST_TIMESTAMP_FILE})
-    add_custom_command(OUTPUT ${UNIT_TEST_TIMESTAMP_FILE}
-                       COMMAND ${UNIT_TEST_EXECUTABLE} && touch ${UNIT_TEST_TIMESTAMP_FILE}
-                       DEPENDS ${UNIT_TEST_EXECUTABLE}
-                       COMMENT "Running ${UNIT_TEST_EXECUTABLE}")
-endfunction()
+################ nanoarq
 
 set(NANOARQ_FLAGS -Wall
                   -Wextra
@@ -79,6 +70,17 @@ add_library(nanoarq_cpp STATIC nanoarq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_cpp_test_project.cpp)
 target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -Os -pedantic)
+
+################ tests
+
+function(add_unit_tests TARGET_NAME UNIT_TEST_EXECUTABLE)
+    set(UNIT_TEST_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_unit_tests.timestamp)
+    add_custom_target(RUN_${TARGET_NAME}_UNIT_TESTS ALL DEPENDS ${UNIT_TEST_TIMESTAMP_FILE})
+    add_custom_command(OUTPUT ${UNIT_TEST_TIMESTAMP_FILE}
+                       COMMAND ${UNIT_TEST_EXECUTABLE} && touch ${UNIT_TEST_TIMESTAMP_FILE}
+                       DEPENDS ${UNIT_TEST_EXECUTABLE}
+                       COMMENT "Running ${UNIT_TEST_EXECUTABLE}")
+endfunction()
 
 set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
