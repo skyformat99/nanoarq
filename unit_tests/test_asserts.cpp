@@ -6,6 +6,7 @@ TEST_GROUP(arq_assert) {};
 namespace
 {
 
+#if NANOARQ_ASSERTS_ENABLED == 1
 TEST(arq_assert, set_and_get_assert)
 {
     struct Local
@@ -32,6 +33,7 @@ TEST(arq_assert, set_and_get_assert)
     ok = arq_assert_handler_set(orig);
     CHECK_EQUAL(ARQ_OK_COMPLETED, ok);
 }
+#endif
 
 }
 
