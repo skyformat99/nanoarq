@@ -26,6 +26,10 @@
 #error You must define NANOARQ_COMPILE_CRC32 to 0 or 1 before including nanoarq.h
 #endif
 
+#ifndef NANOARQ_ASSERTS_ENABLED
+#error You must define NANOARQ_ASSERTS_ENABLED to 0 or 1 before including nanoarq.h
+#endif
+
 #ifndef NANOARQ_MOCKABLE
 #define NANOARQ_MOCKABLE(FUNC) FUNC
 #endif
@@ -217,27 +221,36 @@ void arq__cobs_decode(void *p, int len);
 
 #define NANOARQ_IMPLEMENTATION_INCLUDED
 
-#define NANOARQ_ASSERT(COND) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
-#define NANOARQ_ASSERT_MSG(COND, MSG) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, MSG); } } while (0)
-#define NANOARQ_ASSERT_FAIL() s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
-
+#if NANOARQ_ASSERTS_ENABLED == 1
 static arq_assert_cb_t s_assert_cb = NANOARQ_NULL_PTR;
+#define NANOARQ_ASSERT(COND) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
+#define NANOARQ_ASSERT_FAIL() s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
+#else
+#define NANOARQ_ASSERT(COND) (void)sizeof(COND)
+#define NANOARQ_ASSERT_FAIL()
+#endif
 
 arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb)
 {
+    (void)assert_cb;
+#if NANOARQ_ASSERTS_ENABLED == 1
     if (!assert_cb) {
         return ARQ_ERR_INVALID_PARAM;
     }
     s_assert_cb = assert_cb;
+#endif
     return ARQ_OK_COMPLETED;
 }
 
 arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb)
 {
+    *out_assert_cb = NANOARQ_NULL_PTR;
+#if NANOARQ_ASSERTS_ENABLED == 1
     if (!out_assert_cb) {
         return ARQ_ERR_INVALID_PARAM;
     }
     *out_assert_cb = s_assert_cb;
+#endif
     return ARQ_OK_COMPLETED;
 }
 
