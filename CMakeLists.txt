@@ -99,6 +99,7 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_lin_alloc.cpp
                               unit_tests/test_frame_hdr.cpp
                               unit_tests/test_ntoh_hton_le.cpp
+                              unit_tests/test_backend_send.cpp
                               unit_tests/test_backend_recv.cpp
                               unit_tests/test_frame.cpp
                               unit_tests/test_cobs.cpp
