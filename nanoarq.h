@@ -66,8 +66,8 @@ typedef arq_uint32_t (*arq_checksum_cb_t)(void const *p, int len);
 
 typedef struct arq_cfg_t
 {
-    int segment_size_in_bytes;
-    int message_size_in_segments;
+    int segment_length_in_bytes;
+    int message_length_in_segments;
     int send_window_size_in_messages;
     int recv_window_size_in_messages;
     arq_time_t tinygram_send_delay;
@@ -85,7 +85,8 @@ typedef struct arq_stats_t
     int frames_recvd;
     int messages_sent;
     int messages_recvd;
-    int corrupted_frames_recvd;
+    int malformed_frames_recvd;
+    int checksum_failures_recvd;
     int retransmitted_frames_sent;
 } arq_stats_t;
 
@@ -131,13 +132,6 @@ arq_uint32_t arq_crc32(void const *buf, int size);
 #endif
 
 /* Internal API */
-
-typedef struct arq_t
-{
-    arq_cfg_t cfg;
-    arq_stats_t stats;
-    arq_state_t state;
-} arq_t;
 
 typedef struct arq__lin_alloc_t
 {
@@ -208,6 +202,32 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 void arq__cobs_encode(void *p, int len);
 void arq__cobs_decode(void *p, int len);
 
+typedef struct arq__msg_t
+{
+    arq_uint32_t msg_len;
+    arq_uint32_t buf_pos;
+    arq_uint16_t cur_seg;
+    arq_uint16_t ack_seg_mask;
+} arq__msg_t;
+
+typedef struct arq__wnd_t
+{
+    arq__msg_t *msg;
+    arq_uchar_t *buf;
+    arq_uint16_t head_seq;
+    arq_uint16_t msg_head;
+    arq_uint16_t msg_tail;
+} arq__wnd_t;
+
+typedef struct arq_t
+{
+    arq_cfg_t cfg;
+    arq_stats_t stats;
+    arq_state_t state;
+    arq__wnd_t send_wnd;
+    arq__wnd_t recv_wnd;
+} arq_t;
+
 #if defined(__cplusplus)
 }
 #endif
@@ -223,7 +243,8 @@ void arq__cobs_decode(void *p, int len);
 
 #if NANOARQ_ASSERTS_ENABLED == 1
 static arq_assert_cb_t s_assert_cb = NANOARQ_NULL_PTR;
-#define NANOARQ_ASSERT(COND) do { if (!(COND)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
+#define NANOARQ_ASSERT(COND) \
+    do { if (__builtin_expect(!(COND), 0)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
 #define NANOARQ_ASSERT_FAIL() s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
 #else
 #define NANOARQ_ASSERT(COND) (void)sizeof(COND)
@@ -265,6 +286,15 @@ arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
 arq_err_t arq_connect(struct arq_t *arq)
 {
     (void)arq;
+    return ARQ_OK_COMPLETED;
+}
+
+arq_err_t arq_send(struct arq_t *arq, void *const send, int send_max, int *out_sent_size)
+{
+    (void)arq;
+    (void)send;
+    (void)send_max;
+    (void)out_sent_size;
     return ARQ_OK_COMPLETED;
 }
 
