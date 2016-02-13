@@ -26,12 +26,22 @@
 #error You must define NANOARQ_COMPILE_CRC32 to 0 or 1 before including nanoarq.h
 #endif
 
+#ifndef NANOARQ_USE_BUILTIN_MEMCPY
+#error You must define NANOARQ_USE_BUILTIN_MEMCPY to 0 or 1 before including nanoarq.h
+#endif
+
 #ifndef NANOARQ_ASSERTS_ENABLED
 #error You must define NANOARQ_ASSERTS_ENABLED to 0 or 1 before including nanoarq.h
 #endif
 
 #ifndef NANOARQ_MOCKABLE
 #define NANOARQ_MOCKABLE(FUNC) FUNC
+#endif
+
+#if NANOARQ_USE_BUILTIN_MEMCPY == 1
+#define ARQ_MEMCPY(DST, SRC, SIZE) __builtin_memcpy((DST), (SRC), (SIZE))
+#elif !defined(ARQ_MEMCPY)
+#error NANOARQ_USE_BUILTIN_MEMCPY is defined to 0, you must provide ARQ_MEMCPY
 #endif
 
 #if defined(__cplusplus)
@@ -114,7 +124,7 @@ arq_err_t arq_connect(struct arq_t *arq);
 arq_err_t arq_reset(struct arq_t *arq);
 arq_err_t arq_close(struct arq_t *arq);
 arq_err_t arq_recv(struct arq_t *arq, void *recv, int recv_max, int *out_recv_size);
-arq_err_t arq_send(struct arq_t *arq, void *const send, int send_max, int *out_sent_size);
+arq_err_t arq_send(struct arq_t *arq, void const *send, int send_max, int *out_sent_size);
 arq_err_t arq_flush_tinygrams(struct arq_t *arq);
 
 arq_err_t arq_backend_poll(struct arq_t *arq,
@@ -204,20 +214,24 @@ void arq__cobs_decode(void *p, int len);
 
 typedef struct arq__msg_t
 {
-    arq_uint32_t msg_len;
-    arq_uint32_t buf_pos;
+    arq_uint32_t len;
+    arq_uint32_t seg_buf_pos;
     arq_uint16_t cur_seg;
     arq_uint16_t ack_seg_mask;
 } arq__msg_t;
 
 typedef struct arq__wnd_t
 {
+    int size_in_msgs;
+    int msg_len;
+    int base_seq;
+    int base_idx;
     arq__msg_t *msg;
-    arq_uchar_t *buf;
-    arq_uint16_t head_seq;
-    arq_uint16_t msg_head;
-    arq_uint16_t msg_tail;
+    arq_uchar_t *seg_buf;
 } arq__wnd_t;
+
+int arq__wnd_send(arq__wnd_t *w, void const *seg, int len);
+int arq__wnd_recv(arq__wnd_t *w, arq__frame_hdr_t const *h, void const *seg);
 
 typedef struct arq_t
 {
@@ -289,12 +303,12 @@ arq_err_t arq_connect(struct arq_t *arq)
     return ARQ_OK_COMPLETED;
 }
 
-arq_err_t arq_send(struct arq_t *arq, void *const send, int send_max, int *out_sent_size)
+arq_err_t arq_send(struct arq_t *arq, void const *send, int send_max, int *out_sent_size)
 {
-    (void)arq;
-    (void)send;
+    if (!arq || !send || !out_sent_size) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
     (void)send_max;
-    (void)out_sent_size;
     return ARQ_OK_COMPLETED;
 }
 
@@ -418,12 +432,8 @@ int NANOARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *frame_hdr, vo
 
 int NANOARQ_MOCKABLE(arq__frame_seg_write)(void const *seg, void *out_buf, int len)
 {
-    arq_uchar_t const *src = (arq_uchar_t const *)(seg);
-    arq_uchar_t *dst = (arq_uchar_t *)out_buf;
     NANOARQ_ASSERT(seg && out_buf && (len > 0));
-    while (len--) {
-        *dst++ = *src++;
-    }
+    ARQ_MEMCPY(out_buf, seg, (unsigned long)len);
     return len;
 }
 
@@ -459,10 +469,7 @@ void NANOARQ_MOCKABLE(arq__frame_checksum_write)(arq_checksum_cb_t checksum,
     arq_uchar_t *dst = (arq_uchar_t *)checksum_seat;
     NANOARQ_ASSERT(checksum && checksum_seat && frame && (len > 0));
     c = arq__hton32(checksum((arq_uchar_t const *)frame + 1, len - 1 - 4));
-    *dst++ = *src++;
-    *dst++ = *src++;
-    *dst++ = *src++;
-    *dst = *src;
+    ARQ_MEMCPY(dst, src, 4);
 }
 
 void NANOARQ_MOCKABLE(arq__frame_encode)(void *frame, int len)
@@ -497,10 +504,7 @@ arq__frame_read_result_t NANOARQ_MOCKABLE(arq__frame_checksum_read)(void const *
         return ARQ_FRAME_READ_RESULT_ERR_MALFORMED;
     }
     src = (arq_uchar_t const *)frame + 1 + ARQ_FRAME_HEADER_SIZE + seg_len;
-    *dst++ = *src++;
-    *dst++ = *src++;
-    *dst++ = *src++;
-    *dst = *src;
+    ARQ_MEMCPY(dst, src, 4);
     computed_checksum = checksum((arq_uchar_t const *)frame + 1, ARQ_FRAME_HEADER_SIZE + seg_len);
     frame_checksum = arq__ntoh32(frame_checksum);
     if (frame_checksum != computed_checksum) {
@@ -542,6 +546,19 @@ void NANOARQ_MOCKABLE(arq__cobs_decode)(void *p, int len)
         *c = 0;
         c = next;
     }
+}
+
+void NANOARQ_MOCKABLE(arq__wnd_init)(arq__wnd_t *w, arq__msg_t *msg, arq_uchar_t *seg_buf, int wnd_size_in_msgs)
+{
+    w->size_in_msgs = wnd_size_in_msgs;
+    w->msg = msg;
+    w->seg_buf = seg_buf;
+    w->base_seq = 0;
+    w->base_idx = 0;
+}
+
+int NANOARQ_MOCKABLE(arq__wnd_send)(arq__wnd_t *w, void const *buf, int len)
+{
 }
 
 #if NANOARQ_COMPILE_CRC32 == 1
@@ -594,11 +611,11 @@ arq_uint32_t arq_crc32(void const *buf, int size)
     };
 
     arq_uchar_t const *p = (arq_uchar_t const *)buf;
-    arq_uint32_t crc = ~0U;
+    arq_uint32_t crc = 0xFFFFFFFF;
     while (size--) {
         crc = crc32_tab[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
     }
-    return crc ^ ~0U;
+    return ~crc;
 }
 #endif
 

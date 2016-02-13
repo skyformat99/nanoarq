@@ -9,6 +9,7 @@
 #define NANOARQ_NULL_PTR NULL
 #define NANOARQ_LITTLE_ENDIAN_CPU 1
 #define NANOARQ_COMPILE_CRC32 1
+#define NANOARQ_USE_BUILTIN_MEMCPY 1
 
 #include "nanoarq_mocks.h"
 #include "nanoarq.h"
