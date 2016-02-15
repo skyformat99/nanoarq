@@ -209,9 +209,9 @@ typedef struct arq__send_wnd_t
 {
     int size_in_msgs;
     int msg_len;
-    int base_seq;
-    int base_idx;
-    int cur_idx;
+    int base_msg_seq;
+    int base_msg_idx;
+    int cur_msg_idx;
     arq__msg_t *msg;
     arq_uchar_t *buf;
 } arq__send_wnd_t;
@@ -563,17 +563,22 @@ int arq__min(int x, int y)
 int ARQ_MOCKABLE(arq__wnd_send)(arq__send_wnd_t *w, void const *buf, int const len)
 {
     arq_uchar_t *dst;
-    int full_msgs, msg_len, i;
+    int full_msgs, msg_len, cur_msg_len, cur_msg_idx, i, copy_len, avail;
     ARQ_ASSERT(w && buf && (len > 0));
-    dst = w->buf + (w->msg_len * w->cur_idx) + w->msg[w->cur_idx].len;
-    ARQ_MEMCPY(dst, buf, len);
     msg_len = w->msg_len;
+    cur_msg_idx = w->cur_msg_idx;
+    cur_msg_len = w->msg[cur_msg_idx].len;
+    dst = w->buf + (msg_len * cur_msg_idx) + cur_msg_len;
+    avail = (w->size_in_msgs * msg_len) - (cur_msg_idx * msg_len) - cur_msg_len;
+    copy_len = arq__min(len, avail);
+    ARQ_MEMCPY(dst, buf, copy_len);
+    ARQ_MEMCPY(w->buf, (arq_uchar_t const *)buf + copy_len, len - copy_len);
     full_msgs = len / msg_len;
     for (i = 0; i < full_msgs; ++i) {
         w->msg[i].len = msg_len;
     }
     w->msg[i].len += (len % msg_len);
-    w->cur_idx += full_msgs;
+    w->cur_msg_idx += full_msgs;
     return len;
 }
 
