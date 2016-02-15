@@ -1,5 +1,6 @@
 #include "nanoarq_in_test_project.h"
 #include "nanoarq_hook_plugin.h"
+
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
 
@@ -16,7 +17,7 @@ TEST(mock_hooks, can_hook_nanoarq_function)
         static void MockFrameSize(int) { Called() = true; }
     };
 
-    NANOARQ_MOCK_HOOK(arq__frame_len, Local::MockFrameSize);
+    ARQ_MOCK_HOOK(arq__frame_len, Local::MockFrameSize);
     Local::Called() = false;
     arq__frame_len(16);
     CHECK(Local::Called());
@@ -30,11 +31,11 @@ TEST(mock_hooks, can_unhook_nanoarq_function)
         static void MockFrameSize(int) { Count()++; }
     };
 
-    NANOARQ_MOCK_HOOK(arq__frame_len, Local::MockFrameSize);
+    ARQ_MOCK_HOOK(arq__frame_len, Local::MockFrameSize);
     Local::Count() = 0;
     arq__frame_len(8);
     CHECK_EQUAL(1, Local::Count());
-    NANOARQ_MOCK_UNHOOK(arq__frame_len);
+    ARQ_MOCK_UNHOOK(arq__frame_len);
     arq__frame_len(8);
     CHECK_EQUAL(1, Local::Count());
 }
@@ -47,13 +48,13 @@ void FailIfCalled(int)
 TEST(mock_hooks, hooks_removed_after_test_1)
 {
     arq__frame_len(24);
-    NANOARQ_MOCK_HOOK(arq__frame_len, FailIfCalled);
+    ARQ_MOCK_HOOK(arq__frame_len, FailIfCalled);
 }
 
 TEST(mock_hooks, hooks_removed_after_test_2)
 {
     arq__frame_len(24);
-    NANOARQ_MOCK_HOOK(arq__frame_len, FailIfCalled);
+    ARQ_MOCK_HOOK(arq__frame_len, FailIfCalled);
 }
 
 TEST(mock_hooks, can_mock_with_hooks)
@@ -70,7 +71,7 @@ TEST(mock_hooks, can_mock_with_hooks)
     int const mockReturnValue = 123;
     mock().expectOneCall("arq__frame_len").withParameter("seg_len", mockSegmentLength).andReturnValue(mockReturnValue);
 
-    NANOARQ_MOCK_HOOK(arq__frame_len, Local::MockArqFrameSize);
+    ARQ_MOCK_HOOK(arq__frame_len, Local::MockArqFrameSize);
     int const actualReturnValue = arq__frame_len(mockSegmentLength);
     CHECK_EQUAL(mockReturnValue, actualReturnValue);
 }
