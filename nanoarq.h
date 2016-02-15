@@ -5,15 +5,12 @@
 #ifndef ARQ_USE_C_STDLIB
     #error You must define ARQ_USE_C_STDLIB to 0 or 1 before including nanoarq.h
 #endif
-
 #ifndef ARQ_LITTLE_ENDIAN_CPU
     #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including nanoarq.h
 #endif
-
 #ifndef ARQ_COMPILE_CRC32
     #error You must define ARQ_COMPILE_CRC32 to 0 or 1 before including nanoarq.h
 #endif
-
 #ifndef ARQ_ASSERTS_ENABLED
     #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including nanoarq.h
 #endif
@@ -26,28 +23,12 @@
     #include <stdint.h>
     #define ARQ_UINT16_TYPE uint16_t
     #define ARQ_UINT32_TYPE uint32_t
-    #define ARQ_UINTPTR_TYPE uintptr_t
-    #define ARQ_NULL_PTR NULL
-    #define ARQ_MEMCPY(DST, SRC, LEN) memcpy((DST), (SRC), (unsigned)(LEN))
 #else
     #ifndef ARQ_UINT16_TYPE
         #error You must define ARQ_UINT16_TYPE before including nanoarq.h
     #endif
-
     #ifndef ARQ_UINT32_TYPE
         #error You must define ARQ_UINT32_TYPE before including nanoarq.h
-    #endif
-
-    #ifndef ARQ_UINTPTR_TYPE
-        #error You must define ARQ_UINTPTR_TYPE before including nanoarq.h
-    #endif
-
-    #ifndef ARQ_NULL_PTR
-        #error You must define ARQ_NULL_PTR before including nanoarq.h
-    #endif
-
-    #ifndef ARQ_MEMCPY
-        #error You must define ARQ_MEMCPY before including nanoarq.h
     #endif
 #endif
 
@@ -57,7 +38,6 @@ extern "C" {
 
 typedef ARQ_UINT16_TYPE arq_uint16_t;
 typedef ARQ_UINT32_TYPE arq_uint32_t;
-typedef ARQ_UINTPTR_TYPE arq_uintptr_t;
 typedef unsigned char arq_uchar_t;
 
 typedef enum
@@ -262,19 +242,34 @@ typedef struct arq_t
 #define ARQ_IMPLEMENTATION_INCLUDED
 
 #if ARQ_USE_C_STDLIB == 1
-#include <stdint.h>
-#include <stddef.h>
-#include <string.h>
+    #include <stdint.h>
+    #include <stddef.h>
+    #include <string.h>
+    #define ARQ_UINTPTR_TYPE uintptr_t
+    #define ARQ_NULL_PTR NULL
+    #define ARQ_MEMCPY(DST, SRC, LEN) memcpy((DST), (SRC), (unsigned)(LEN))
+#else
+    #ifndef ARQ_UINTPTR_TYPE
+        #error You must define ARQ_UINTPTR_TYPE before including nanoarq.h
+    #endif
+    #ifndef ARQ_NULL_PTR
+        #error You must define ARQ_NULL_PTR before including nanoarq.h with ARQ_IMPLEMENTATION
+    #endif
+    #ifndef ARQ_MEMCPY
+        #error You must define ARQ_MEMCPY before including nanoarq.h with ARQ_IMPLEMENTATION
+    #endif
 #endif
 
+typedef ARQ_UINTPTR_TYPE arq_uintptr_t;
+
 #if ARQ_ASSERTS_ENABLED == 1
-static arq_assert_cb_t s_assert_cb = ARQ_NULL_PTR;
-#define ARQ_ASSERT(COND) \
-    do { if (__builtin_expect(!(COND), 0)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
-#define ARQ_ASSERT_FAIL() s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
+    static arq_assert_cb_t s_assert_cb = ARQ_NULL_PTR;
+    #define ARQ_ASSERT(COND) \
+        do { if (__builtin_expect(!(COND), 0)) { s_assert_cb(__FILE__, __LINE__, #COND, ""); } } while (0)
+    #define ARQ_ASSERT_FAIL() s_assert_cb(__FILE__, __LINE__, "", "explicit assert")
 #else
-#define ARQ_ASSERT(COND) (void)sizeof(COND)
-#define ARQ_ASSERT_FAIL()
+    #define ARQ_ASSERT(COND) (void)sizeof(COND)
+    #define ARQ_ASSERT_FAIL()
 #endif
 
 arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb)

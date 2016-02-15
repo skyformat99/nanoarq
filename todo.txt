@@ -1,5 +1,4 @@
-NANOARQ => ARQ
-ARQ_USE_CSTDLIB
+no cstdlib unit / compilation tests
 optional checksums
 cpputest builds with cmake and not autoconf
 hooks keyed purely on function being replaced, hide the thunk target
