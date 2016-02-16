@@ -217,6 +217,7 @@ typedef struct arq__send_wnd_t
 } arq__send_wnd_t;
 
 int arq__min(int x, int y);
+int arq__abs(int x);
 int arq__wnd_send(arq__send_wnd_t *w, void const *seg, int len);
 
 typedef struct arq_t
@@ -559,18 +560,25 @@ int arq__min(int x, int y)
     return (x < y) ? x : y;
 }
 
-int ARQ_MOCKABLE(arq__wnd_send)(arq__send_wnd_t *w, void const *buf, int const len)
+int arq__abs(int x)
 {
-    arq_uchar_t *dst;
-    int full_msgs, msg_len, cur_msg_len, cur_msg_idx, wnd_size_in_msgs, i, copy_len;
+    return (x + (x >> 31)) ^ (x >> 31);
+}
+
+int ARQ_MOCKABLE(arq__wnd_send)(arq__send_wnd_t *w, void const *buf, int len)
+{
+    int full_msgs, msg_len, cur_msg_len, cur_msg_idx, wnd_size_in_msgs, wnd_size_in_bytes;
+    int wnd_used_in_bytes, i, copy_len;
     ARQ_ASSERT(w && buf && (len > 0));
     msg_len = w->msg_len;
     cur_msg_idx = w->cur_msg_idx;
     cur_msg_len = w->msg[cur_msg_idx].len;
     wnd_size_in_msgs = w->size_in_msgs;
-    dst = w->buf + (msg_len * cur_msg_idx) + cur_msg_len;
-    copy_len = arq__min(len, (w->size_in_msgs * msg_len) - (cur_msg_idx * msg_len) - cur_msg_len);
-    ARQ_MEMCPY(dst, buf, copy_len);
+    wnd_size_in_bytes = wnd_size_in_msgs * msg_len;
+    wnd_used_in_bytes = cur_msg_len + (arq__abs(cur_msg_idx - w->base_msg_idx) * msg_len);
+    len = arq__min(len, wnd_size_in_bytes - wnd_used_in_bytes);
+    copy_len = arq__min(len, wnd_size_in_bytes - (cur_msg_idx * msg_len) - cur_msg_len);
+    ARQ_MEMCPY(w->buf + (msg_len * cur_msg_idx) + cur_msg_len, buf, copy_len);
     ARQ_MEMCPY(w->buf, (arq_uchar_t const *)buf + copy_len, len - copy_len);
     full_msgs = len / msg_len;
     for (i = 0; i < full_msgs; ++i) {

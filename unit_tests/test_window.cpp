@@ -35,14 +35,6 @@ struct Fixture
     std::vector< unsigned char > snd;
 };
 
-TEST(window, send_with_empty_window_copies_to_start_of_buf)
-{
-    Fixture f;
-    f.snd.resize(5);
-    arq__wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    MEMCMP_EQUAL(f.snd.data(), f.buf.data(), f.snd.size());
-}
-
 TEST(window, send_with_empty_window_returns_full_size_written)
 {
     Fixture f;
@@ -57,6 +49,14 @@ TEST(window, small_send_with_empty_message_sets_message_size)
     f.snd.resize(5);
     arq__wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL((int)f.snd.size(), f.msg[0].len);
+}
+
+TEST(window, send_with_empty_window_copies_to_start_of_buf)
+{
+    Fixture f;
+    f.snd.resize(5);
+    arq__wnd_send(&f.wnd, f.snd.data(), f.snd.size());
+    MEMCMP_EQUAL(f.snd.data(), f.buf.data(), f.snd.size());
 }
 
 TEST(window, send_with_partially_full_window_appends)
@@ -144,12 +144,21 @@ TEST(window, send_updates_messages_at_beginning_of_msg_array_when_copy_wraps_aro
 {
     Fixture f;
     f.wnd.cur_msg_idx = f.wnd.size_in_msgs - 1;
+    f.wnd.base_msg_idx = f.wnd.cur_msg_idx;
     f.snd.resize((size_t)f.wnd.msg_len * 3);
     arq__wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(f.wnd.msg_len, f.msg[(size_t)f.wnd.size_in_msgs - 1].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[0].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[1].len);
     CHECK_EQUAL(0, f.msg[2].len);
+}
+
+TEST(window, send_more_data_than_window_space_returns_bytes_sent)
+{
+    Fixture f;
+    f.snd.resize((size_t)(f.wnd.msg_len * f.wnd.size_in_msgs + 1));
+    int const written = arq__wnd_send(&f.wnd, f.snd.data(), f.snd.size());
+    CHECK_EQUAL(f.wnd.msg_len * f.wnd.size_in_msgs, written);
 }
 
 TEST(window, send_copies_data_to_current_message_space_in_buf)
@@ -169,6 +178,7 @@ TEST(window, send_wraps_copy_around_if_inside_window_at_end_of_buf)
     Fixture f;
     int const orig_msg_idx = f.wnd.size_in_msgs - 1;
     f.wnd.cur_msg_idx = orig_msg_idx;
+    f.wnd.base_msg_idx = orig_msg_idx;
     f.snd.resize((size_t)f.wnd.msg_len * 2);
     for (size_t i = 0; i < f.snd.size(); ++i) {
         f.snd[i] = (unsigned char)i;
@@ -184,6 +194,7 @@ TEST(window, send_wraps_copy_around_and_respects_partially_filled_starting_messa
     Fixture f;
     int const orig_msg_idx = f.wnd.size_in_msgs - 1;
     f.msg[(size_t)orig_msg_idx].len = 3;
+    f.wnd.base_msg_idx = orig_msg_idx;
     f.wnd.cur_msg_idx = orig_msg_idx;
     f.snd.resize((size_t)f.wnd.msg_len + 8);
     for (size_t i = 0; i < f.snd.size(); ++i) {
