@@ -9,8 +9,10 @@ include(ExternalProject)
 ################ CppUTest
 
 set(CPPUTEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/external/CppUTest)
-set(CPPUTEST_LIB_DIR ${CPPUTEST_ROOT_DIR}/bin/lib)
-set(CPPUTEST_INCLUDE_DIR ${CPPUTEST_ROOT_DIR}/bin/include)
+set(CPPUTEST_LIB_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/lib)
+set(CPPUTEST_INCLUDE_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/include)
+set(CPPUTEST_CMAKE_ARGS -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
+                        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/${PROJECT_NAME})
 
 ExternalProject_Add(CppUTest_external
                     PREFIX ${CPPUTEST_ROOT_DIR}
@@ -18,20 +20,10 @@ ExternalProject_Add(CppUTest_external
                     GIT_TAG "efd7a2b75f79d4ee5bd92d1e48a78f8a5b869cd1"
                     UPDATE_COMMAND ""
                     PATCH_COMMAND ""
-                    BINARY_DIR ${CPPUTEST_ROOT_DIR}/src/CppUTest
-                    SOURCE_DIR ${CPPUTEST_ROOT_DIR}/src/CppUTest
-                    INSTALL_DIR ${CPPUTEST_ROOT_DIR}/bin
-                    CONFIGURE_COMMAND ./configure --prefix=<INSTALL_DIR>
-                    BUILD_COMMAND make
-                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a
-                                     ${CPPUTEST_LIB_DIR}/libCppUTestExt.a)
-
-ExternalProject_Add_Step(CppUTest_external
-                         autogen
-                         COMMAND ./autogen.sh
-                         DEPENDEES download
-                         DEPENDERS configure
-                         WORKING_DIRECTORY ${CPPUTEST_ROOT_DIR}/src/CppUTest)
+                    TEST_COMMAND ""
+                    CMAKE_ARGS ${CPPUTEST_CMAKE_ARGS}
+                    BINARY_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
+                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a ${CPPUTEST_LIB_DIR}/libCppUTestExt.a)
 
 add_library(libCppUTest STATIC IMPORTED)
 set_target_properties(libCppUTest PROPERTIES IMPORTED_LOCATION ${CPPUTEST_LIB_DIR}/libCppUTest.a)
