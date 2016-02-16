@@ -5,5 +5,5 @@
 #define ARQ_COMPILE_CRC32 1
 
 #include "nanoarq_mocks.h"
-#include "nanoarq.h"
+#include "arq.h"
 
