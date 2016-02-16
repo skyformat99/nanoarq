@@ -15,10 +15,6 @@
     #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including nanoarq.h
 #endif
 
-#ifndef ARQ_MOCKABLE
-    #define ARQ_MOCKABLE(FUNC) FUNC
-#endif
-
 #if ARQ_USE_C_STDLIB == 1
     #include <stdint.h>
     #define ARQ_UINT16_TYPE uint16_t
@@ -30,6 +26,10 @@
     #ifndef ARQ_UINT32_TYPE
         #error You must define ARQ_UINT32_TYPE before including nanoarq.h
     #endif
+#endif
+
+#ifndef ARQ_MOCKABLE
+    #define ARQ_MOCKABLE(FUNC) FUNC
 #endif
 
 #if defined(__cplusplus)
