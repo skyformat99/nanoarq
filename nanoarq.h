@@ -563,22 +563,23 @@ int arq__min(int x, int y)
 int ARQ_MOCKABLE(arq__wnd_send)(arq__send_wnd_t *w, void const *buf, int const len)
 {
     arq_uchar_t *dst;
-    int full_msgs, msg_len, cur_msg_len, cur_msg_idx, i, copy_len, avail;
+    int full_msgs, msg_len, cur_msg_len, cur_msg_idx, wnd_size_in_msgs, i, copy_len;
     ARQ_ASSERT(w && buf && (len > 0));
     msg_len = w->msg_len;
     cur_msg_idx = w->cur_msg_idx;
     cur_msg_len = w->msg[cur_msg_idx].len;
+    wnd_size_in_msgs = w->size_in_msgs;
     dst = w->buf + (msg_len * cur_msg_idx) + cur_msg_len;
-    avail = (w->size_in_msgs * msg_len) - (cur_msg_idx * msg_len) - cur_msg_len;
-    copy_len = arq__min(len, avail);
+    copy_len = arq__min(len, (w->size_in_msgs * msg_len) - (cur_msg_idx * msg_len) - cur_msg_len);
     ARQ_MEMCPY(dst, buf, copy_len);
     ARQ_MEMCPY(w->buf, (arq_uchar_t const *)buf + copy_len, len - copy_len);
     full_msgs = len / msg_len;
     for (i = 0; i < full_msgs; ++i) {
-        w->msg[i].len = msg_len;
+        w->msg[cur_msg_idx].len = msg_len;
+        cur_msg_idx = (cur_msg_idx + 1) % wnd_size_in_msgs;
     }
-    w->msg[i].len += (len % msg_len);
-    w->cur_msg_idx += full_msgs;
+    w->msg[cur_msg_idx].len += (len % msg_len);
+    w->cur_msg_idx = cur_msg_idx;
     return len;
 }
 

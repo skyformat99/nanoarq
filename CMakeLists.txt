@@ -51,6 +51,7 @@ set(NANOARQ_FLAGS -Wall
                   -Wcast-align
                   -Wcast-qual
                   -Wstrict-aliasing=2
+                  -fstrict-aliasing
                   -march=native
                   -g)
 
