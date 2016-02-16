@@ -217,7 +217,6 @@ typedef struct arq__send_wnd_t
 } arq__send_wnd_t;
 
 int arq__min(int x, int y);
-
 int arq__wnd_send(arq__send_wnd_t *w, void const *seg, int len);
 
 typedef struct arq_t
@@ -250,7 +249,7 @@ typedef struct arq_t
     #define ARQ_MEMCPY(DST, SRC, LEN) memcpy((DST), (SRC), (unsigned)(LEN))
 #else
     #ifndef ARQ_UINTPTR_TYPE
-        #error You must define ARQ_UINTPTR_TYPE before including nanoarq.h
+        #error You must define ARQ_UINTPTR_TYPE before including nanoarq.h with ARQ_IMPLEMENTATION
     #endif
     #ifndef ARQ_NULL_PTR
         #error You must define ARQ_NULL_PTR before including nanoarq.h with ARQ_IMPLEMENTATION
