@@ -440,7 +440,7 @@ int ARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *frame_hdr, void *
 int ARQ_MOCKABLE(arq__frame_seg_write)(void const *seg, void *out_buf, int len)
 {
     ARQ_ASSERT(seg && out_buf && (len > 0));
-    ARQ_MEMCPY(out_buf, seg, (unsigned long)len);
+    ARQ_MEMCPY(out_buf, seg, len);
     return len;
 }
 
