@@ -315,7 +315,7 @@ arq_err_t arq_send(struct arq_t *arq, void const *send, int send_max, int *out_s
     if (!arq || !send || !out_sent_size) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    (void)send_max;
+    *out_sent_size = arq__wnd_send(&arq->send_wnd, send, send_max);
     return ARQ_OK_COMPLETED;
 }
 
