@@ -218,7 +218,7 @@ typedef struct arq__send_wnd_t
 
 int arq__min(int x, int y);
 int arq__abs(int x);
-int arq__wnd_send(arq__send_wnd_t *w, void const *seg, int len);
+int arq__send_wnd_send(arq__send_wnd_t *w, void const *seg, int len);
 
 typedef struct arq_t
 {
@@ -315,7 +315,7 @@ arq_err_t arq_send(struct arq_t *arq, void const *send, int send_max, int *out_s
     if (!arq || !send || !out_sent_size) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    *out_sent_size = arq__wnd_send(&arq->send_wnd, send, send_max);
+    *out_sent_size = arq__send_wnd_send(&arq->send_wnd, send, send_max);
     return ARQ_OK_COMPLETED;
 }
 
@@ -565,7 +565,7 @@ int arq__abs(int x)
     return (x + (x >> 31)) ^ (x >> 31);
 }
 
-int ARQ_MOCKABLE(arq__wnd_send)(arq__send_wnd_t *w, void const *buf, int len)
+int ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, int len)
 {
     int full_msgs, msg_len, cur_msg_len, cur_msg_idx, wnd_size_in_msgs, wnd_size_in_bytes;
     int wnd_used_in_bytes, i, copy_len;

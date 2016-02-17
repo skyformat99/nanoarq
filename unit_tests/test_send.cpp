@@ -26,9 +26,9 @@ TEST(send, fails_if_not_connected)
     // TODO
 }
 
-int MockWndSend(arq__send_wnd_t *w, void const *buf, int len)
+int MockSendWndSend(arq__send_wnd_t *w, void const *buf, int len)
 {
-    return mock().actualCall("arq__wnd_send")
+    return mock().actualCall("arq__send_wnd_send")
                  .withParameter("w", w).withParameter("buf", buf).withParameter("len", len)
                  .returnIntValue();
 }
@@ -37,8 +37,8 @@ TEST(send, calls_wnd_snd)
 {
     arq_t arq;
     char buf[16];
-    ARQ_MOCK_HOOK(arq__wnd_send, MockWndSend);
-    mock().expectOneCall("arq__wnd_send")
+    ARQ_MOCK_HOOK(arq__send_wnd_send, MockSendWndSend);
+    mock().expectOneCall("arq__send_wnd_send")
           .withParameter("w", &arq.send_wnd)
           .withParameter("buf", (void const *)buf)
           .withParameter("len", (int)sizeof(buf));
@@ -50,8 +50,8 @@ TEST(send, bytes_written_is_return_value_from_wnd_send)
 {
     arq_t arq;
     char buf[16];
-    ARQ_MOCK_HOOK(arq__wnd_send, MockWndSend);
-    mock().expectOneCall("arq__wnd_send").ignoreOtherParameters().andReturnValue(1234);
+    ARQ_MOCK_HOOK(arq__send_wnd_send, MockSendWndSend);
+    mock().expectOneCall("arq__send_wnd_send").ignoreOtherParameters().andReturnValue(1234);
     int sent;
     arq_send(&arq, buf, sizeof(buf), &sent);
     CHECK_EQUAL(sent, 1234);
