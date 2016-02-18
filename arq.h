@@ -170,7 +170,6 @@ void arq__frame_write(arq__frame_hdr_t const *hdr,
 int  arq__frame_hdr_write(arq__frame_hdr_t const *hdr, void *out_frame);
 int  arq__frame_seg_write(void const *seg, void *out_frame, int len);
 void arq__frame_checksum_write(arq_checksum_cb_t checksum, void *checksum_seat, void *frame, int len);
-void arq__frame_encode(void *frame, int len);
 
 typedef enum
 {
@@ -184,17 +183,11 @@ arq__frame_read_result_t arq__frame_read(void *frame,
                                          arq_checksum_cb_t checksum,
                                          arq__frame_hdr_t *out_hdr,
                                          void const **out_seg);
-void arq__frame_decode(void *frame, int len);
 void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
 arq__frame_read_result_t arq__frame_checksum_read(void const *frame,
                                                   int frame_len,
                                                   int seg_len,
                                                   arq_checksum_cb_t checksum);
-
-arq_uint16_t arq__hton16(arq_uint16_t x);
-arq_uint16_t arq__ntoh16(arq_uint16_t x);
-arq_uint32_t arq__hton32(arq_uint32_t x);
-arq_uint32_t arq__ntoh32(arq_uint32_t x);
 
 void arq__cobs_encode(void *p, int len);
 void arq__cobs_decode(void *p, int len);
@@ -216,9 +209,8 @@ typedef struct arq__send_wnd_t
     arq_uchar_t *buf;
 } arq__send_wnd_t;
 
-int arq__min(int x, int y);
-int arq__abs(int x);
 int arq__send_wnd_send(arq__send_wnd_t *w, void const *seg, int len);
+void arq__send_wnd_ack(arq__send_wnd_t *w, int seq, arq_uint16_t ack_vector);
 
 typedef struct arq_t
 {
@@ -227,6 +219,14 @@ typedef struct arq_t
     arq_state_t state;
     arq__send_wnd_t send_wnd;
 } arq_t;
+
+int arq__min(int x, int y);
+int arq__abs(int x);
+
+arq_uint16_t arq__hton16(arq_uint16_t x);
+arq_uint16_t arq__ntoh16(arq_uint16_t x);
+arq_uint32_t arq__hton32(arq_uint32_t x);
+arq_uint32_t arq__ntoh32(arq_uint32_t x);
 
 #if defined(__cplusplus)
 }
@@ -463,7 +463,7 @@ void ARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *hdr,
     dst += arq__frame_hdr_write(hdr, dst);
     dst += arq__frame_seg_write(seg, dst, hdr->seg_len);
     arq__frame_checksum_write(checksum, dst, out_frame, frame_len);
-    arq__frame_encode(out_frame, frame_len);
+    arq__cobs_encode(out_frame, frame_len);
 }
 
 void ARQ_MOCKABLE(arq__frame_checksum_write)(arq_checksum_cb_t checksum,
@@ -479,11 +479,6 @@ void ARQ_MOCKABLE(arq__frame_checksum_write)(arq_checksum_cb_t checksum,
     ARQ_MEMCPY(dst, src, 4);
 }
 
-void ARQ_MOCKABLE(arq__frame_encode)(void *frame, int len)
-{
-    arq__cobs_encode(frame, len);
-}
-
 arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_read)(void *frame,
                                                            int frame_len,
                                                            arq_checksum_cb_t checksum,
@@ -492,7 +487,7 @@ arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_read)(void *frame,
 {
     arq_uchar_t const *h = (arq_uchar_t const *)frame + 1;
     ARQ_ASSERT(frame && out_hdr && out_seg);
-    arq__frame_decode(frame, frame_len);
+    arq__cobs_decode(frame, frame_len);
     arq__frame_hdr_read(h, out_hdr);
     *out_seg = (void const *)(h + ARQ_FRAME_HEADER_SIZE);
     return arq__frame_checksum_read(frame, frame_len, out_hdr->seg_len, checksum);
@@ -518,11 +513,6 @@ arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_checksum_read)(void const *fram
         return ARQ_FRAME_READ_RESULT_ERR_CHECKSUM;
     }
     return ARQ_FRAME_READ_RESULT_SUCCESS;
-}
-
-void ARQ_MOCKABLE(arq__frame_decode)(void *frame, int len)
-{
-    arq__cobs_decode(frame, len);
 }
 
 void ARQ_MOCKABLE(arq__cobs_encode)(void *p, int len)

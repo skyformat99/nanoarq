@@ -12,8 +12,6 @@
     ARQ_MOCK(arq__frame_read) \
     ARQ_MOCK(arq__frame_checksum_read) \
     ARQ_MOCK(arq__frame_write) \
-    ARQ_MOCK(arq__frame_encode) \
-    ARQ_MOCK(arq__frame_decode) \
     ARQ_MOCK(arq__cobs_encode) \
     ARQ_MOCK(arq__cobs_decode) \
     ARQ_MOCK(arq__hton32) \
