@@ -14,18 +14,20 @@ struct Fixture
 {
     Fixture()
     {
-        buf.resize(1024 * 32);
-        wnd.buf = buf.data();
         wnd.msg = msg.data();
-        wnd.size_in_msgs = msg.size();
-        wnd.msg_len = 100;
+        wnd.wnd_size_in_msgs = msg.size();
+        wnd.msg_size_in_segs = 4;
+        wnd.msg_len = 128;
         wnd.base_msg_seq = 0;
         wnd.base_msg_idx = 0;
         wnd.cur_msg_idx = 0;
 
+        buf.resize((size_t)(wnd.msg_len * wnd.wnd_size_in_msgs));
+        wnd.buf = buf.data();
+
         for (auto &m : msg) {
             m.len = 0;
-            m.ack_seg_mask = 0;
+            m.ack_vector = 0;
         }
     }
 
@@ -134,7 +136,7 @@ TEST(window, send_when_cur_index_greater_than_zero_more_than_one_message_updates
 TEST(window, cur_index_wraps_if_send_wraps_around)
 {
     Fixture f;
-    f.wnd.cur_msg_idx = f.wnd.size_in_msgs - 1;
+    f.wnd.cur_msg_idx = f.wnd.wnd_size_in_msgs - 1;
     f.snd.resize((size_t)f.wnd.msg_len);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(0, f.wnd.cur_msg_idx);
@@ -143,11 +145,11 @@ TEST(window, cur_index_wraps_if_send_wraps_around)
 TEST(window, send_updates_messages_at_beginning_of_msg_array_when_copy_wraps_around)
 {
     Fixture f;
-    f.wnd.cur_msg_idx = f.wnd.size_in_msgs - 1;
+    f.wnd.cur_msg_idx = f.wnd.wnd_size_in_msgs - 1;
     f.wnd.base_msg_idx = f.wnd.cur_msg_idx;
     f.snd.resize((size_t)f.wnd.msg_len * 3);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    CHECK_EQUAL(f.wnd.msg_len, f.msg[(size_t)f.wnd.size_in_msgs - 1].len);
+    CHECK_EQUAL(f.wnd.msg_len, f.msg[(size_t)f.wnd.wnd_size_in_msgs - 1].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[0].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[1].len);
     CHECK_EQUAL(0, f.msg[2].len);
@@ -156,9 +158,9 @@ TEST(window, send_updates_messages_at_beginning_of_msg_array_when_copy_wraps_aro
 TEST(window, send_more_data_than_window_space_returns_bytes_sent)
 {
     Fixture f;
-    f.snd.resize((size_t)(f.wnd.msg_len * f.wnd.size_in_msgs + 1));
+    f.snd.resize((size_t)(f.wnd.msg_len * f.wnd.wnd_size_in_msgs + 1));
     int const written = arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    CHECK_EQUAL(f.wnd.msg_len * f.wnd.size_in_msgs, written);
+    CHECK_EQUAL(f.wnd.msg_len * f.wnd.wnd_size_in_msgs, written);
 }
 
 TEST(window, send_copies_data_to_current_message_space_in_buf)
@@ -176,7 +178,7 @@ TEST(window, send_copies_data_to_current_message_space_in_buf)
 TEST(window, send_wraps_copy_around_if_inside_window_at_end_of_buf)
 {
     Fixture f;
-    int const orig_msg_idx = f.wnd.size_in_msgs - 1;
+    int const orig_msg_idx = f.wnd.wnd_size_in_msgs - 1;
     f.wnd.cur_msg_idx = orig_msg_idx;
     f.wnd.base_msg_idx = orig_msg_idx;
     f.snd.resize((size_t)f.wnd.msg_len * 2);
@@ -192,7 +194,7 @@ TEST(window, send_wraps_copy_around_if_inside_window_at_end_of_buf)
 TEST(window, send_wraps_copy_around_and_respects_partially_filled_starting_message)
 {
     Fixture f;
-    int const orig_msg_idx = f.wnd.size_in_msgs - 1;
+    int const orig_msg_idx = f.wnd.wnd_size_in_msgs - 1;
     f.msg[(size_t)orig_msg_idx].len = 3;
     f.wnd.base_msg_idx = orig_msg_idx;
     f.wnd.cur_msg_idx = orig_msg_idx;
@@ -204,6 +206,75 @@ TEST(window, send_wraps_copy_around_and_respects_partially_filled_starting_messa
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     MEMCMP_EQUAL(f.snd.data(), &f.buf[(size_t)(orig_msg_idx * f.wnd.msg_len) + 3], (size_t)f.wnd.msg_len - 3);
     MEMCMP_EQUAL(&f.snd[(size_t)f.wnd.msg_len - 3], f.buf.data(), 11);
+}
+
+TEST(window, ack_first_seq_slides_and_increments_base_idx)
+{
+    Fixture f;
+    CHECK_EQUAL(0, f.wnd.base_msg_idx);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    CHECK_EQUAL(1, f.wnd.base_msg_idx);
+}
+
+TEST(window, ack_first_seq_wraps_base_idx_when_base_idx_is_last)
+{
+    Fixture f;
+    f.wnd.base_msg_idx = f.wnd.wnd_size_in_msgs - 1;
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    CHECK_EQUAL(0, f.wnd.base_msg_idx);
+}
+
+TEST(window, ack_sliding_increments_base_seq)
+{
+    Fixture f;
+    CHECK_EQUAL(0, f.wnd.base_msg_seq);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    CHECK_EQUAL(1, f.wnd.base_msg_seq);
+}
+
+TEST(window, ack_sets_vector_and_len_to_zero_when_sliding)
+{
+    Fixture f;
+    int const orig_idx = f.wnd.base_msg_idx;
+    f.wnd.msg[orig_idx].ack_vector = 0xFFFF;
+    f.wnd.msg[orig_idx].len = 1234;
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    CHECK_EQUAL(0, f.wnd.msg[orig_idx].ack_vector);
+    CHECK_EQUAL(0, f.wnd.msg[orig_idx].len);
+}
+
+TEST(window, ack_second_seq_doesnt_slide)
+{
+    Fixture f;
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq + 1, 0xFFFF);
+    CHECK_EQUAL(0, f.wnd.base_msg_seq);
+}
+
+TEST(window, ack_max_seq_num_wraps_to_zero)
+{
+    Fixture f;
+    f.wnd.base_msg_seq = ARQ_FRAME_MAX_SEQ_NUM;
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    CHECK_EQUAL(0, f.wnd.base_msg_seq);
+}
+
+TEST(window, ack_first_seq_copies_ack_vector)
+{
+    Fixture f;
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 1u);
+    CHECK_EQUAL(1u, f.wnd.msg[0].ack_vector);
+}
+
+TEST(window, ack_slides_to_first_unackd_message)
+{
+    Fixture f;
+    f.wnd.msg[f.wnd.base_msg_idx + 1].ack_vector = 0xFFFF;
+    f.wnd.msg[f.wnd.base_msg_idx + 2].ack_vector = 0xFFFF;
+    f.wnd.msg[f.wnd.base_msg_idx + 3].ack_vector = 0xFFFF;
+    f.wnd.msg[f.wnd.base_msg_idx + 4].ack_vector = 0xFFFF;
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    CHECK_EQUAL(5, f.wnd.base_msg_idx);
+    CHECK_EQUAL(5, f.wnd.base_msg_seq);
 }
 
 }
