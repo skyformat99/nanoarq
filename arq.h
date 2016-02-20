@@ -615,7 +615,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t c
     }
 
     w->base_msg_seq = (w->base_msg_seq + i) % (ARQ_FRAME_MAX_SEQ_NUM + 1);
-    w->base_msg_idx = (w->base_msg_idx + i) % w->wnd_size_in_msgs;
+    w->base_msg_idx = msg_idx;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
