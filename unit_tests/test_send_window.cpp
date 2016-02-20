@@ -16,18 +16,19 @@ struct Fixture
     {
         wnd.msg = msg.data();
         wnd.wnd_size_in_msgs = msg.size();
-        wnd.msg_size_in_segs = 4;
         wnd.msg_len = 128;
         wnd.base_msg_seq = 0;
         wnd.base_msg_idx = 0;
         wnd.cur_msg_idx = 0;
+        wnd.full_ack_vec = 0xFFFF;
 
         buf.resize((size_t)(wnd.msg_len * wnd.wnd_size_in_msgs));
         wnd.buf = buf.data();
 
         for (auto &m : msg) {
             m.len = 0;
-            m.ack_vector = 0;
+            m.cur_ack_vec = 0;
+            m.full_ack_vec = wnd.full_ack_vec;
         }
     }
 
@@ -208,11 +209,19 @@ TEST(window, send_wraps_copy_around_and_respects_partially_filled_starting_messa
     MEMCMP_EQUAL(&f.snd[(size_t)f.wnd.msg_len - 3], f.buf.data(), 11);
 }
 
+TEST(window, ack_partial_ack_vec_doesnt_slide_window)
+{
+    Fixture f;
+    CHECK_EQUAL(0, f.wnd.base_msg_idx);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, f.wnd.full_ack_vec - 1);
+    CHECK_EQUAL(0, f.wnd.base_msg_idx);
+}
+
 TEST(window, ack_first_seq_slides_and_increments_base_idx)
 {
     Fixture f;
     CHECK_EQUAL(0, f.wnd.base_msg_idx);
-    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, f.wnd.full_ack_vec);
     CHECK_EQUAL(1, f.wnd.base_msg_idx);
 }
 
@@ -220,7 +229,7 @@ TEST(window, ack_first_seq_wraps_base_idx_when_base_idx_is_last)
 {
     Fixture f;
     f.wnd.base_msg_idx = f.wnd.wnd_size_in_msgs - 1;
-    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, f.wnd.full_ack_vec);
     CHECK_EQUAL(0, f.wnd.base_msg_idx);
 }
 
@@ -228,7 +237,7 @@ TEST(window, ack_sliding_increments_base_seq)
 {
     Fixture f;
     CHECK_EQUAL(0, f.wnd.base_msg_seq);
-    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, f.wnd.full_ack_vec);
     CHECK_EQUAL(1, f.wnd.base_msg_seq);
 }
 
@@ -236,17 +245,17 @@ TEST(window, ack_sets_vector_and_len_to_zero_when_sliding)
 {
     Fixture f;
     int const orig_idx = f.wnd.base_msg_idx;
-    f.wnd.msg[orig_idx].ack_vector = 0xFFFF;
+    f.wnd.msg[orig_idx].cur_ack_vec = f.wnd.full_ack_vec;
     f.wnd.msg[orig_idx].len = 1234;
-    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
-    CHECK_EQUAL(0, f.wnd.msg[orig_idx].ack_vector);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, f.wnd.full_ack_vec);
+    CHECK_EQUAL(0, f.wnd.msg[orig_idx].cur_ack_vec);
     CHECK_EQUAL(0, f.wnd.msg[orig_idx].len);
 }
 
 TEST(window, ack_second_seq_doesnt_slide)
 {
     Fixture f;
-    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq + 1, 0xFFFF);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq + 1, f.wnd.full_ack_vec);
     CHECK_EQUAL(0, f.wnd.base_msg_seq);
 }
 
@@ -254,25 +263,25 @@ TEST(window, ack_max_seq_num_wraps_to_zero)
 {
     Fixture f;
     f.wnd.base_msg_seq = ARQ_FRAME_MAX_SEQ_NUM;
-    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, f.wnd.full_ack_vec);
     CHECK_EQUAL(0, f.wnd.base_msg_seq);
 }
 
-TEST(window, ack_first_seq_copies_ack_vector)
+TEST(window, ack_first_seq_copies_cur_ack_vec)
 {
     Fixture f;
     arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 1u);
-    CHECK_EQUAL(1u, f.wnd.msg[0].ack_vector);
+    CHECK_EQUAL(1u, f.wnd.msg[0].cur_ack_vec);
 }
 
 TEST(window, ack_slides_to_first_unackd_message)
 {
     Fixture f;
-    f.wnd.msg[f.wnd.base_msg_idx + 1].ack_vector = 0xFFFF;
-    f.wnd.msg[f.wnd.base_msg_idx + 2].ack_vector = 0xFFFF;
-    f.wnd.msg[f.wnd.base_msg_idx + 3].ack_vector = 0xFFFF;
-    f.wnd.msg[f.wnd.base_msg_idx + 4].ack_vector = 0xFFFF;
-    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, 0xFFFF);
+    f.wnd.msg[f.wnd.base_msg_idx + 1].cur_ack_vec = f.wnd.full_ack_vec;
+    f.wnd.msg[f.wnd.base_msg_idx + 2].cur_ack_vec = f.wnd.full_ack_vec;
+    f.wnd.msg[f.wnd.base_msg_idx + 3].cur_ack_vec = f.wnd.full_ack_vec;
+    f.wnd.msg[f.wnd.base_msg_idx + 4].cur_ack_vec = f.wnd.full_ack_vec;
+    arq__send_wnd_ack(&f.wnd, f.wnd.base_msg_seq, f.wnd.full_ack_vec);
     CHECK_EQUAL(5, f.wnd.base_msg_idx);
     CHECK_EQUAL(5, f.wnd.base_msg_seq);
 }

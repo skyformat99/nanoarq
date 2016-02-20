@@ -28,7 +28,7 @@ struct Fixture
         h.msg_len = 5;
         h.seg_id = 3;
         h.ack_num = 23;
-        h.ack_vector = 0x0AC3;
+        h.cur_ack_vec = 0x0AC3;
         h.rst = 1;
         h.fin = 1;
         CHECK((int)sizeof(frame) >= arq__frame_len(h.seg_len));
