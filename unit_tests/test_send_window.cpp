@@ -60,7 +60,7 @@ TEST(window, rst_resets_messages_to_default)
     }
     f.wnd.full_ack_vec = 0xABCD;
     arq__send_wnd_rst(&f.wnd);
-    for (auto m : f.msg) {
+    for (auto const &m : f.msg) {
         CHECK_EQUAL(0, m.len);
         CHECK_EQUAL(0, m.cur_ack_vec);
         CHECK_EQUAL(f.wnd.full_ack_vec, m.full_ack_vec);
