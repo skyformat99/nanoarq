@@ -3,16 +3,16 @@
 #define ARQ_H_INCLUDED
 
 #ifndef ARQ_USE_C_STDLIB
-    #error You must define ARQ_USE_C_STDLIB to 0 or 1 before including nanoarq.h
+    #error You must define ARQ_USE_C_STDLIB to 0 or 1 before including arq.h
 #endif
 #ifndef ARQ_LITTLE_ENDIAN_CPU
-    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including nanoarq.h
+    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h
 #endif
 #ifndef ARQ_COMPILE_CRC32
-    #error You must define ARQ_COMPILE_CRC32 to 0 or 1 before including nanoarq.h
+    #error You must define ARQ_COMPILE_CRC32 to 0 or 1 before including arq.h
 #endif
 #ifndef ARQ_ASSERTS_ENABLED
-    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including nanoarq.h
+    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h
 #endif
 
 #if ARQ_USE_C_STDLIB == 1
@@ -21,10 +21,10 @@
     #define ARQ_UINT32_TYPE uint32_t
 #else
     #ifndef ARQ_UINT16_TYPE
-        #error You must define ARQ_UINT16_TYPE before including nanoarq.h
+        #error You must define ARQ_UINT16_TYPE before including arq.h
     #endif
     #ifndef ARQ_UINT32_TYPE
-        #error You must define ARQ_UINT32_TYPE before including nanoarq.h
+        #error You must define ARQ_UINT32_TYPE before including arq.h
     #endif
 #endif
 
@@ -239,7 +239,7 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 #ifdef ARQ_IMPLEMENTATION
 
 #ifdef ARQ_IMPLEMENTATION_INCLUDED
-    #error nanoarq.h already #included with ARQ_IMPLEMENTATION_INCLUDED #defined
+    #error arq.h already #included with ARQ_IMPLEMENTATION_INCLUDED #defined
 #endif
 
 #define ARQ_IMPLEMENTATION_INCLUDED
@@ -253,13 +253,13 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
     #define ARQ_MEMCPY(DST, SRC, LEN) memcpy((DST), (SRC), (unsigned)(LEN))
 #else
     #ifndef ARQ_UINTPTR_TYPE
-        #error You must define ARQ_UINTPTR_TYPE before including nanoarq.h with ARQ_IMPLEMENTATION
+        #error You must define ARQ_UINTPTR_TYPE before including arq.h with ARQ_IMPLEMENTATION
     #endif
     #ifndef ARQ_NULL_PTR
-        #error You must define ARQ_NULL_PTR before including nanoarq.h with ARQ_IMPLEMENTATION
+        #error You must define ARQ_NULL_PTR before including arq.h with ARQ_IMPLEMENTATION
     #endif
     #ifndef ARQ_MEMCPY
-        #error You must define ARQ_MEMCPY before including nanoarq.h with ARQ_IMPLEMENTATION
+        #error You must define ARQ_MEMCPY before including arq.h with ARQ_IMPLEMENTATION
     #endif
 #endif
 
