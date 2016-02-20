@@ -38,6 +38,35 @@ struct Fixture
     std::vector< unsigned char > snd;
 };
 
+TEST(window, rst_resets_window_to_zero)
+{
+    Fixture f;
+    f.wnd.base_msg_idx = 1234;
+    f.wnd.base_msg_seq = 4321;
+    f.wnd.cur_msg_idx = 13;
+    arq__send_wnd_rst(&f.wnd);
+    CHECK_EQUAL(0, f.wnd.base_msg_idx);
+    CHECK_EQUAL(0, f.wnd.base_msg_seq);
+    CHECK_EQUAL(0, f.wnd.cur_msg_idx);
+}
+
+TEST(window, rst_resets_messages_to_default)
+{
+    Fixture f;
+    for (auto &m : f.msg) {
+        m.len = 1234;
+        m.cur_ack_vec = 100;
+        m.full_ack_vec = 123;
+    }
+    f.wnd.full_ack_vec = 0xABCD;
+    arq__send_wnd_rst(&f.wnd);
+    for (auto m : f.msg) {
+        CHECK_EQUAL(0, m.len);
+        CHECK_EQUAL(0, m.cur_ack_vec);
+        CHECK_EQUAL(f.wnd.full_ack_vec, m.full_ack_vec);
+    }
+}
+
 TEST(window, send_with_empty_window_returns_full_size_written)
 {
     Fixture f;

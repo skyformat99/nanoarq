@@ -3,6 +3,7 @@
 #define ARQ_MOCKABLE(FUNCTION_NAME) FUNCTION_NAME##_ARQ_ORIG
 
 #define ARQ_MOCK_LIST() \
+    ARQ_MOCK(arq__send_wnd_rst) \
     ARQ_MOCK(arq__send_wnd_send) \
     ARQ_MOCK(arq__send_wnd_ack) \
     ARQ_MOCK(arq__frame_len) \

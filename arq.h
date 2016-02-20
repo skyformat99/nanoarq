@@ -212,6 +212,7 @@ typedef struct arq__send_wnd_t
     arq_uint16_t full_ack_vec;
 } arq__send_wnd_t;
 
+void arq__send_wnd_rst(arq__send_wnd_t *w);
 int arq__send_wnd_send(arq__send_wnd_t *w, void const *seg, int len);
 void arq__send_wnd_ack(arq__send_wnd_t *w, int seq, arq_uint16_t cur_ack_vec);
 
@@ -556,6 +557,20 @@ int arq__min(int x, int y)
 int arq__abs(int x)
 {
     return (x + (x >> 31)) ^ (x >> 31);
+}
+
+void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *w)
+{
+    int i;
+    ARQ_ASSERT(w);
+    w->cur_msg_idx = 0;
+    w->base_msg_idx = 0;
+    w->base_msg_seq = 0;
+    for (i = 0; i < w->wnd_size_in_msgs; ++i) {
+        w->msg[i].len = 0;
+        w->msg[i].full_ack_vec = w->full_ack_vec;
+        w->msg[i].cur_ack_vec = 0;
+    }
 }
 
 int ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, int len)
