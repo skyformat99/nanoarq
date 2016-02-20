@@ -103,7 +103,7 @@ TEST(frame_hdr, read_ack_number)
 TEST(frame_hdr, read_ack_segment_mask)
 {
     ReadFixture f;
-    CHECK_EQUAL(AckSegmentMask, f.h.ack_seg_mask);
+    CHECK_EQUAL(AckSegmentMask, f.h.cur_ack_vec);
 }
 
 struct WriteFixture
@@ -119,7 +119,7 @@ struct WriteFixture
         h.msg_len = MessageLength;
         h.seg_id = SegmentID;
         h.ack_num = AckNumber;
-        h.ack_seg_mask = AckSegmentMask;
+        h.cur_ack_vec = AckSegmentMask;
         arq__frame_hdr_write(&h, buf);
     }
 
@@ -221,7 +221,7 @@ TEST(frame_hdr, headers_identical)
     orig.msg_len = MessageLength;
     orig.seg_id = SegmentID;
     orig.ack_num = AckNumber;
-    orig.ack_seg_mask = AckSegmentMask;
+    orig.cur_ack_vec = AckSegmentMask;
 
     char buf[ARQ_FRAME_HEADER_SIZE];
     arq__frame_hdr_write(&orig, buf);
@@ -237,7 +237,7 @@ TEST(frame_hdr, headers_identical)
     CHECK_EQUAL(orig.msg_len, actual.msg_len);
     CHECK_EQUAL(orig.seg_id, actual.seg_id);
     CHECK_EQUAL(orig.ack_num, actual.ack_num);
-    CHECK_EQUAL(orig.ack_seg_mask, actual.ack_seg_mask);
+    CHECK_EQUAL(orig.cur_ack_vec, actual.cur_ack_vec);
 }
 
 }

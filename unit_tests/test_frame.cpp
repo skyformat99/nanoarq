@@ -28,7 +28,7 @@ struct Fixture
         h.msg_len = 5;
         h.seg_id = 3;
         h.ack_num = 23;
-        h.ack_seg_mask = 0x0AC3;
+        h.cur_ack_vec = 0x0AC3;
         h.rst = 1;
         h.fin = 1;
         CHECK((int)sizeof(frame) >= arq__frame_len(h.seg_len));
@@ -61,16 +61,6 @@ void MockArqFrameChecksumWrite(arq_checksum_cb_t checksum, void *checksum_seat, 
         .withParameter("checksum_seat", checksum_seat)
         .withParameter("frame", frame)
         .withParameter("len", len);
-}
-
-void MockArqFrameEncode(void *frame, int len)
-{
-    mock().actualCall("arq__frame_encode").withParameter("frame", frame).withParameter("len", len);
-}
-
-void MockArqFrameDecode(void *frame, int len)
-{
-    mock().actualCall("arq__frame_decode").withParameter("frame", frame).withParameter("len", len);
 }
 
 void MockArqCobsEncode(void *p, int len)
@@ -125,10 +115,10 @@ struct MockFixture : Fixture
         ARQ_MOCK_HOOK(arq__frame_hdr_write, MockArqFrameHdrWrite);
         ARQ_MOCK_HOOK(arq__frame_seg_write, MockArqFrameSegWrite);
         ARQ_MOCK_HOOK(arq__frame_checksum_write, MockArqFrameChecksumWrite);
-        ARQ_MOCK_HOOK(arq__frame_encode, MockArqFrameEncode);
         ARQ_MOCK_HOOK(arq__frame_hdr_read, MockArqFrameHdrRead);
-        ARQ_MOCK_HOOK(arq__frame_decode, MockArqFrameDecode);
         ARQ_MOCK_HOOK(arq__frame_checksum_read, MockArqFrameChecksumRead);
+        ARQ_MOCK_HOOK(arq__cobs_encode, MockArqCobsEncode);
+        ARQ_MOCK_HOOK(arq__cobs_decode, MockArqCobsDecode);
         ARQ_MOCK_HOOK(arq__ntoh32, MockNtoH32);
         ARQ_MOCK_HOOK(arq__hton32, MockHtoN32);
     }
@@ -175,8 +165,8 @@ TEST(frame, write_writes_checksum_after_segment)
 TEST(frame, write_encodes_frame_at_offset_zero)
 {
     MockFixture f;
-    mock().expectOneCall("arq__frame_encode")
-        .withParameter("frame", (void *)f.frame)
+    mock().expectOneCall("arq__cobs_encode")
+        .withParameter("p", (void *)f.frame)
         .withParameter("len", f.frame_len);
     mock().ignoreOtherCalls();
     arq__frame_write(&f.h, f.seg, &MockChecksum, f.frame, sizeof(f.frame));
@@ -225,29 +215,11 @@ TEST(frame, checksum_write_writes_network_order_checksum_to_checksum_seat)
     CHECK_EQUAL(checksum_n, checksum_actual);
 }
 
-TEST(frame, frame_encode_forwards_to_cobs_encode)
-{
-    void *p = (void *)0x12345678;
-    int const len = 54321;
-    ARQ_MOCK_HOOK(arq__cobs_encode, MockArqCobsEncode);
-    mock().expectOneCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
-    arq__frame_encode(p, len);
-}
-
-TEST(frame, frame_decode_forwards_to_cobs_decode)
-{
-    void *p = (void *)0x12345678;
-    int const len = 54321;
-    ARQ_MOCK_HOOK(arq__cobs_decode, MockArqCobsDecode);
-    mock().expectOneCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
-    arq__frame_decode(p, len);
-}
-
 TEST(frame, read_decodes_frame)
 {
     MockFixture f;
-    mock().expectOneCall("arq__frame_decode")
-        .withParameter("frame", (void *)f.frame).withParameter("len", f.frame_len);
+    mock().expectOneCall("arq__cobs_decode")
+        .withParameter("p", (void *)f.frame).withParameter("len", f.frame_len);
     mock().ignoreOtherCalls();
     void const *seg;
     arq__frame_read(f.frame, f.frame_len, MockChecksum, &f.h, &seg);
