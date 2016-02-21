@@ -49,6 +49,7 @@ TEST(window, rst_resets_messages_to_default)
         m.len = 1234;
         m.cur_ack_vec = 100;
         m.full_ack_vec = 123;
+        m.rtx = 9000;
     }
     f.wnd.full_ack_vec = 0xABCD;
     arq__send_wnd_rst(&f.wnd);
@@ -56,6 +57,7 @@ TEST(window, rst_resets_messages_to_default)
         CHECK_EQUAL(0, m.len);
         CHECK_EQUAL(0, m.cur_ack_vec);
         CHECK_EQUAL(f.wnd.full_ack_vec, m.full_ack_vec);
+        CHECK_EQUAL(0, m.rtx);
     }
 }
 
@@ -405,6 +407,62 @@ TEST(window, flush_makes_msg_full_ack_vector_from_current_message_size)
     f.msg[0].len = f.wnd.seg_len * 2 + 1;
     arq__send_wnd_flush(&f.wnd);
     CHECK_EQUAL(0b111, f.msg[0].full_ack_vec);
+}
+
+TEST(window, step_decrements_first_timer_in_window_by_dt)
+{
+    Fixture f;
+    f.msg[0].rtx = 100;
+    arq__send_wnd_step(&f.wnd, 10);
+    CHECK_EQUAL(90, f.msg[0].rtx);
+}
+
+TEST(window, step_saturates_rtx_to_zero)
+{
+    Fixture f;
+    f.msg[0].rtx = 100;
+    arq__send_wnd_step(&f.wnd, f.msg[0].rtx + 1);
+    CHECK_EQUAL(0, f.msg[0].rtx);
+}
+
+TEST(window, step_decrements_all_timers_in_window)
+{
+    Fixture f;
+    f.wnd.size = 3;
+    f.msg[0].rtx = 100;
+    f.msg[1].rtx = 90;
+    f.msg[2].rtx = 80;
+    f.msg[3].rtx = 1000; // sentinel
+    arq__send_wnd_step(&f.wnd, 80);
+    CHECK_EQUAL(20, f.msg[0].rtx);
+    CHECK_EQUAL(10, f.msg[1].rtx);
+    CHECK_EQUAL(0, f.msg[2].rtx);
+    CHECK_EQUAL(1000, f.msg[3].rtx);
+}
+
+TEST(window, step_operates_on_messages_in_window)
+{
+    Fixture f;
+    f.wnd.base_idx = 31;
+    f.msg[f.wnd.base_idx].rtx = 100;
+    arq__send_wnd_step(&f.wnd, 10);
+    CHECK_EQUAL(90, f.msg[f.wnd.base_idx].rtx);
+}
+
+TEST(window, step_wraps_around_when_window_wraps)
+{
+    Fixture f;
+    f.wnd.base_idx = f.wnd.cap - 2;
+    f.wnd.size = 4;
+    f.msg[f.wnd.base_idx].rtx = 100;
+    f.msg[f.wnd.base_idx + 1].rtx = 90;
+    f.msg[0].rtx = 80;
+    f.msg[1].rtx = 70;
+    arq__send_wnd_step(&f.wnd, 10);
+    CHECK_EQUAL(90, f.msg[f.wnd.base_idx].rtx);
+    CHECK_EQUAL(80, f.msg[f.wnd.base_idx + 1].rtx);
+    CHECK_EQUAL(70, f.msg[0].rtx);
+    CHECK_EQUAL(60, f.msg[1].rtx);
 }
 
 }
