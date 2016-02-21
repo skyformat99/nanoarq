@@ -120,7 +120,7 @@ TEST(window, send_more_than_one_message_updates_sizes_in_first_two_messages)
     f.snd.resize(f.wnd.msg_len + 7);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(f.wnd.msg_len, f.msg[0].len);
-    CHECK_EQUAL(f.snd.size() % f.wnd.msg_len, f.msg[1].len);
+    CHECK_EQUAL((int)f.snd.size() % f.wnd.msg_len, f.msg[1].len);
     CHECK_EQUAL(0, f.msg[2].len);
 }
 
@@ -131,7 +131,7 @@ TEST(window, send_more_than_two_messages_updates_sizes_in_first_three_messages)
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(f.wnd.msg_len, f.msg[0].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[1].len);
-    CHECK_EQUAL(f.snd.size() % f.wnd.msg_len, f.msg[2].len);
+    CHECK_EQUAL((int)f.snd.size() % f.wnd.msg_len, f.msg[2].len);
     CHECK_EQUAL(0, f.msg[3].len);
 }
 
