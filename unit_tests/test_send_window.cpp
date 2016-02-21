@@ -341,5 +341,20 @@ TEST(window, ack_slides_to_first_unackd_message)
     CHECK_EQUAL(4, f.wnd.base_seq);
 }
 
+TEST(window, ack_the_entire_send_window)
+{
+    Fixture f;
+    f.wnd.size = f.wnd.cap + 1;
+    for (auto &m : f.msg) {
+        m.cur_ack_vec = m.full_ack_vec = f.wnd.full_ack_vec;
+        m.len = f.wnd.msg_len;
+    }
+    --f.wnd.msg[0].cur_ack_vec;
+    arq__send_wnd_ack(&f.wnd, 0, f.wnd.full_ack_vec);
+    CHECK_EQUAL(1, f.wnd.size);
+    CHECK_EQUAL(0, f.wnd.base_idx);
+    CHECK_EQUAL(f.wnd.cap, f.wnd.base_seq);
+}
+
 }
 
