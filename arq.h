@@ -57,7 +57,7 @@ typedef enum
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
 } arq_event_t;
 
-typedef unsigned int arq_time_t;
+typedef arq_uint32_t arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 typedef arq_uint32_t (*arq_checksum_cb_t)(void const *p, int len);
 
@@ -227,7 +227,7 @@ typedef struct arq_t
 } arq_t;
 
 int arq__min(int x, int y);
-int arq__abs(int x);
+arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y);
 
 arq_uint16_t arq__hton16(arq_uint16_t x);
 arq_uint16_t arq__ntoh16(arq_uint16_t x);
@@ -563,6 +563,11 @@ void ARQ_MOCKABLE(arq__cobs_decode)(void *p, int len)
 int arq__min(int x, int y)
 {
     return (x < y) ? x : y;
+}
+
+arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y)
+{
+    return (x - y) & -((x - y) <= x);
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *w)
