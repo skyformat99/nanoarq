@@ -101,7 +101,6 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_frame.cpp
                               unit_tests/test_cobs.cpp
                               unit_tests/test_min.cpp
-                              unit_tests/test_abs.cpp
                               unit_tests/test_crc32.cpp)
 
 add_executable(nanoarq_unit_tests ${NANOARQ_UNIT_TEST_SOURCES})

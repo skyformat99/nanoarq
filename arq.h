@@ -204,17 +204,18 @@ typedef struct arq__send_wnd_t
 {
     arq__msg_t *msg;
     arq_uchar_t *buf;
-    int wnd_size_in_msgs;
-    int msg_len;
-    int base_msg_seq;
-    int base_msg_idx;
-    int cur_msg_idx;
+    int cap; /* in messages */
+    int size; /* in messages */
+    int msg_len; /* in bytes */
+    int base_seq;
+    int base_idx;
     arq_uint16_t full_ack_vec;
 } arq__send_wnd_t;
 
 void arq__send_wnd_rst(arq__send_wnd_t *w);
 int arq__send_wnd_send(arq__send_wnd_t *w, void const *seg, int len);
 void arq__send_wnd_ack(arq__send_wnd_t *w, int seq, arq_uint16_t cur_ack_vec);
+void arq__send_wnd_flush(arq__send_wnd_t *w);
 
 typedef struct arq_t
 {
@@ -554,19 +555,14 @@ int arq__min(int x, int y)
     return (x < y) ? x : y;
 }
 
-int arq__abs(int x)
-{
-    return (x + (x >> 31)) ^ (x >> 31);
-}
-
 void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *w)
 {
     int i;
     ARQ_ASSERT(w);
-    w->cur_msg_idx = 0;
-    w->base_msg_idx = 0;
-    w->base_msg_seq = 0;
-    for (i = 0; i < w->wnd_size_in_msgs; ++i) {
+    w->size = 1;
+    w->base_idx = 0;
+    w->base_seq = 0;
+    for (i = 0; i < w->cap; ++i) {
         w->msg[i].len = 0;
         w->msg[i].full_ack_vec = w->full_ack_vec;
         w->msg[i].cur_ack_vec = 0;
@@ -575,47 +571,44 @@ void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *w)
 
 int ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, int len)
 {
-    int full_msgs, cur_msg_len, cur_msg_idx, wnd_size_in_msgs, wnd_size_in_bytes;
-    int wnd_used_in_bytes, i, copy_len;
-    ARQ_ASSERT(w && buf && (len > 0));
-    cur_msg_idx = w->cur_msg_idx;
-    wnd_size_in_msgs = w->wnd_size_in_msgs;
+    int cur_msg_len, cur_msg_idx, cur_byte_idx;
+    int wnd_cap_in_bytes, wnd_size_in_bytes, i, pre_wrap_copy_len;
+    ARQ_ASSERT(w && buf && (len >= 0));
+    cur_msg_idx = (w->base_idx + (w->size - 1)) % w->cap;
     cur_msg_len = w->msg[cur_msg_idx].len;
-    wnd_size_in_bytes = wnd_size_in_msgs * w->msg_len;
-    wnd_used_in_bytes = cur_msg_len + (arq__abs(cur_msg_idx - w->base_msg_idx) * w->msg_len);
-    len = arq__min(len, wnd_size_in_bytes - wnd_used_in_bytes);
-    copy_len = arq__min(len, wnd_size_in_bytes - (cur_msg_idx * w->msg_len) - cur_msg_len);
-    ARQ_MEMCPY(w->buf + (w->msg_len * cur_msg_idx) + cur_msg_len, buf, copy_len);
-    ARQ_MEMCPY(w->buf, (arq_uchar_t const *)buf + copy_len, len - copy_len);
-    full_msgs = len / w->msg_len;
-    for (i = 0; i < full_msgs; ++i) {
+    cur_byte_idx = (cur_msg_idx * w->msg_len) + cur_msg_len;
+    wnd_cap_in_bytes = w->cap * w->msg_len;
+    wnd_size_in_bytes = ((w->size - 1) * w->msg_len) + cur_msg_len;
+    len = arq__min(len, wnd_cap_in_bytes - wnd_size_in_bytes);
+    pre_wrap_copy_len = arq__min(len, wnd_cap_in_bytes - cur_byte_idx);
+    ARQ_MEMCPY(w->buf + cur_byte_idx, buf, pre_wrap_copy_len);
+    ARQ_MEMCPY(w->buf, (arq_uchar_t const *)buf + pre_wrap_copy_len, len - pre_wrap_copy_len);
+    for (i = 0; i < len / w->msg_len; ++i) {
         w->msg[cur_msg_idx].len = w->msg_len;
-        cur_msg_idx = (cur_msg_idx + 1) % wnd_size_in_msgs;
+        cur_msg_idx = (cur_msg_idx + 1) % w->cap;
     }
     w->msg[cur_msg_idx].len += (len % w->msg_len);
-    w->cur_msg_idx = cur_msg_idx;
+    w->size += (cur_msg_len + len) / w->msg_len;
     return len;
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t cur_ack_vec)
 {
-    int msg_idx, i;
-    ARQ_ASSERT(w);
-    msg_idx = (w->base_msg_idx + (seq - w->base_msg_seq)) % w->wnd_size_in_msgs;
-    w->msg[msg_idx].cur_ack_vec = cur_ack_vec;
-    for (i = 0; i < w->wnd_size_in_msgs; ++i) {
-        msg_idx = (w->base_msg_idx + i) % w->wnd_size_in_msgs;
-        if (w->msg[msg_idx].cur_ack_vec == w->msg[msg_idx].full_ack_vec) {
-            w->msg[msg_idx].len = 0;
-            w->msg[msg_idx].cur_ack_vec = 0;
-        }
-        else {
+    int ack_msg_idx, i;
+    ARQ_ASSERT(w && (seq >= 0));
+    ack_msg_idx = (w->base_idx + (seq - w->base_seq)) % w->cap;
+    w->msg[ack_msg_idx].cur_ack_vec = cur_ack_vec;
+    for (i = 0; i < w->size; ++i) {
+        arq__msg_t *m = &w->msg[(w->base_idx + i) % w->cap];
+        if (m->cur_ack_vec != m->full_ack_vec) {
             break;
         }
+        m->len = 0;
+        m->cur_ack_vec = 0;
     }
-
-    w->base_msg_seq = (w->base_msg_seq + i) % (ARQ_FRAME_MAX_SEQ_NUM + 1);
-    w->base_msg_idx = msg_idx;
+    w->size -= i;
+    w->base_seq = (w->base_seq + i) % (ARQ_FRAME_MAX_SEQ_NUM + 1);
+    w->base_idx = (w->base_idx + i) % w->cap;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
