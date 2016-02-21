@@ -57,6 +57,17 @@ TEST(send, bytes_written_is_return_value_from_wnd_send)
     CHECK_EQUAL(sent, 1234);
 }
 
+TEST(send, returns_success)
+{
+    arq_t arq;
+    char buf[16];
+    ARQ_MOCK_HOOK(arq__send_wnd_send, MockSendWndSend);
+    mock().ignoreOtherCalls();
+    int sent;
+    arq_err_t const e = arq_send(&arq, buf, sizeof(buf), &sent);
+    CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+}
+
 }
 
 

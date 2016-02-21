@@ -83,6 +83,7 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_mock_hooks.cpp
                               unit_tests/test_nanoarq.cpp
                               unit_tests/test_send.cpp
+                              unit_tests/test_flush.cpp
                               unit_tests/test_asserts.cpp
                               unit_tests/test_lin_alloc.cpp
                               unit_tests/test_frame_hdr.cpp

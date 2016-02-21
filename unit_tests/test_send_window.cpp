@@ -15,6 +15,7 @@ struct Fixture
     Fixture()
     {
         wnd.msg_len = 128;
+        wnd.seg_len = 16;
         wnd.full_ack_vec = 0xFFFF;
         wnd.cap = msg.size();
         buf.resize(wnd.msg_len * wnd.cap);
@@ -302,6 +303,14 @@ TEST(window, ack_sets_ack_vector_and_len_to_zero_when_sliding)
     CHECK_EQUAL(0, f.wnd.msg[0].len);
 }
 
+TEST(window, ack_resets_full_ack_vec_when_sliding)
+{
+    Fixture f;
+    f.wnd.msg[0].cur_ack_vec = f.wnd.msg[0].full_ack_vec = 0b1111;
+    arq__send_wnd_ack(&f.wnd, 0, 0b1111);
+    CHECK_EQUAL(f.wnd.full_ack_vec, f.wnd.msg[0].full_ack_vec);
+}
+
 TEST(window, ack_second_seq_doesnt_slide)
 {
     Fixture f;
@@ -354,6 +363,48 @@ TEST(window, ack_the_entire_send_window)
     CHECK_EQUAL(1, f.wnd.size);
     CHECK_EQUAL(0, f.wnd.base_idx);
     CHECK_EQUAL(f.wnd.cap, f.wnd.base_seq);
+}
+
+TEST(window, flush_does_nothing_on_empty_window)
+{
+    Fixture f;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(1, f.wnd.size);
+}
+
+TEST(window, flush_does_nothing_if_current_message_has_zero_length)
+{
+    Fixture f;
+    f.wnd.size = 2;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(2, f.wnd.size);
+}
+
+TEST(window, flush_increments_size_if_current_message_has_nonzero_length)
+{
+    Fixture f;
+    f.msg[0].len = 12;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(2, f.wnd.size);
+}
+
+TEST(window, flush_does_nothing_on_full_window)
+{
+    Fixture f;
+    f.wnd.size = f.wnd.cap + 1;
+    for (auto &m : f.msg) {
+        m.len = f.wnd.msg_len;
+    }
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(f.wnd.cap + 1, f.wnd.size);
+}
+
+TEST(window, flush_makes_msg_full_ack_vector_from_current_message_size)
+{
+    Fixture f;
+    f.msg[0].len = f.wnd.seg_len * 2 + 1;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(0b111, f.msg[0].full_ack_vec);
 }
 
 }
