@@ -69,7 +69,7 @@ TEST(lin_alloc, doesnt_assert_when_perfectly_full)
     CHECK_EQUAL(ARQ_OK_COMPLETED, arq_assert_handler_set(orig));
 }
 
-#if NANOARQ_ASSERTS_ENABLED == 1
+#if ARQ_ASSERTS_ENABLED == 1
 TEST(lin_alloc, asserts_when_capacity_exhausted)
 {
     struct Local

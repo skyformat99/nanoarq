@@ -39,28 +39,23 @@ add_dependencies(libCppUTestExt CppUTest_external)
 
 set(NANOARQ_FLAGS -Os -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
 set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wshadow -Wcast-align -Wcast-qual -Wstrict-aliasing=2 -march=native -g)
+set(NANOARQ_COMMON_SOURCES arq.h unit_tests/nanoarq_in_test_project.h)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-add_library(nanoarq_c90 STATIC arq.h
-                               unit_tests/nanoarq_in_test_project.h
-                               unit_tests/nanoarq_in_c90_test_project.c)
-target_compile_options(nanoarq_c90 PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c90 -DARQ_ASSERTS_ENABLED=1)
+add_library(nanoarq_c90 STATIC ${NANOARQ_COMMON_SOURCES} unit_tests/nanoarq_in_c90_test_project.c)
+target_compile_options(nanoarq_c90 PRIVATE
+                       ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c90 -DARQ_ASSERTS_ENABLED=1)
 
-add_library(nanoarq_c99 STATIC arq.h
-                               unit_tests/nanoarq_in_test_project.h
-                               unit_tests/nanoarq_in_c99_test_project.c)
-target_compile_options(nanoarq_c99 PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c99 -DARQ_ASSERTS_ENABLED=1)
+add_library(nanoarq_c99 STATIC ${NANOARQ_COMMON_SOURCES} unit_tests/nanoarq_in_c99_test_project.c)
+target_compile_options(nanoarq_c99 PRIVATE
+                       ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c99 -DARQ_ASSERTS_ENABLED=1)
 
-add_library(nanoarq_c99_no_asserts STATIC arq.h
-                                          unit_tests/nanoarq_in_test_project.h
-                                          unit_tests/nanoarq_in_c99_test_project.c)
+add_library(nanoarq_c99_no_asserts STATIC ${NANOARQ_COMMON_SOURCES} unit_tests/nanoarq_in_c99_test_project.c)
 target_compile_options(nanoarq_c99_no_asserts PRIVATE
                        ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c99 -DARQ_ASSERTS_ENABLED=0)
 
-add_library(nanoarq_cpp STATIC arq.h
-                               unit_tests/nanoarq_in_test_project.h
-                               unit_tests/nanoarq_in_cpp_test_project.cpp)
+add_library(nanoarq_cpp STATIC ${NANOARQ_COMMON_SOURCES} unit_tests/nanoarq_in_cpp_test_project.cpp)
 target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=1)
 
 ################ tests
