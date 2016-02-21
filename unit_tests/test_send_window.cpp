@@ -15,9 +15,10 @@ struct Fixture
     Fixture()
     {
         wnd.msg_len = 128;
+        wnd.seg_len = 16;
         wnd.full_ack_vec = 0xFFFF;
         wnd.cap = msg.size();
-        buf.resize((size_t)(wnd.msg_len * wnd.cap));
+        buf.resize(wnd.msg_len * wnd.cap);
         wnd.buf = buf.data();
         wnd.msg = msg.data();
         arq__send_wnd_rst(&wnd);
@@ -116,7 +117,7 @@ TEST(window, send_with_partially_full_window_updates_message_length)
 TEST(window, send_more_than_one_message_updates_sizes_in_first_two_messages)
 {
     Fixture f;
-    f.snd.resize((size_t)f.wnd.msg_len + 7);
+    f.snd.resize(f.wnd.msg_len + 7);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(f.wnd.msg_len, f.msg[0].len);
     CHECK_EQUAL((int)f.snd.size() % f.wnd.msg_len, f.msg[1].len);
@@ -126,7 +127,7 @@ TEST(window, send_more_than_one_message_updates_sizes_in_first_two_messages)
 TEST(window, send_more_than_two_messages_updates_sizes_in_first_three_messages)
 {
     Fixture f;
-    f.snd.resize((size_t)f.wnd.msg_len * 2 + 7);
+    f.snd.resize(f.wnd.msg_len * 2 + 7);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(f.wnd.msg_len, f.msg[0].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[1].len);
@@ -137,7 +138,7 @@ TEST(window, send_more_than_two_messages_updates_sizes_in_first_three_messages)
 TEST(window, send_more_than_one_messages_increments_size_by_number_of_messages)
 {
     Fixture f;
-    f.snd.resize((size_t)f.wnd.msg_len * 4);
+    f.snd.resize(f.wnd.msg_len * 4);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(5, f.wnd.size);
 }
@@ -168,7 +169,7 @@ TEST(window, send_when_cur_index_greater_than_zero_more_than_one_message_updates
 {
     Fixture f;
     f.wnd.base_idx = 2;
-    f.snd.resize((size_t)f.wnd.msg_len + 1);
+    f.snd.resize(f.wnd.msg_len + 1);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(f.wnd.msg_len, f.msg[2].len);
     CHECK_EQUAL(1, f.msg[3].len);
@@ -179,9 +180,9 @@ TEST(window, send_updates_messages_at_beginning_of_msg_array_when_copy_wraps_aro
 {
     Fixture f;
     f.wnd.base_idx = f.wnd.cap - 1;
-    f.snd.resize((size_t)f.wnd.msg_len * 3);
+    f.snd.resize(f.wnd.msg_len * 3);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    CHECK_EQUAL(f.wnd.msg_len, f.msg[(size_t)f.wnd.cap - 1].len);
+    CHECK_EQUAL(f.wnd.msg_len, f.msg[f.wnd.cap - 1].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[0].len);
     CHECK_EQUAL(f.wnd.msg_len, f.msg[1].len);
     CHECK_EQUAL(0, f.msg[2].len);
@@ -190,7 +191,7 @@ TEST(window, send_updates_messages_at_beginning_of_msg_array_when_copy_wraps_aro
 TEST(window, send_more_data_than_window_space_returns_bytes_sent)
 {
     Fixture f;
-    f.snd.resize((size_t)((f.wnd.msg_len * f.wnd.cap) + 1));
+    f.snd.resize(((f.wnd.msg_len * f.wnd.cap) + 1));
     int const written = arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(f.wnd.msg_len * f.wnd.cap, written);
 }
@@ -203,7 +204,7 @@ TEST(window, send_more_data_than_window_space_with_partial_msg_returns_rest_of_w
     f.wnd.msg[1].len = 27;
     int const cap_in_bytes = f.wnd.cap * f.wnd.msg_len;
     int const size_in_bytes = f.wnd.msg[0].len + f.wnd.msg[1].len;
-    f.snd.resize((size_t)cap_in_bytes);
+    f.snd.resize(cap_in_bytes);
     int const written = arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(cap_in_bytes - size_in_bytes, written);
 }
@@ -217,7 +218,7 @@ TEST(window, send_copies_data_to_current_message_space_in_buf)
         f.snd[i] = (unsigned char)i;
     }
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    MEMCMP_EQUAL(f.snd.data(), &f.buf[(size_t)f.wnd.msg_len], f.snd.size());
+    MEMCMP_EQUAL(f.snd.data(), &f.buf[f.wnd.msg_len], f.snd.size());
 }
 
 TEST(window, send_wraps_copy_around_if_inside_window_at_end_of_buf)
@@ -225,30 +226,30 @@ TEST(window, send_wraps_copy_around_if_inside_window_at_end_of_buf)
     Fixture f;
     int const orig_msg_idx = f.wnd.cap - 1;
     f.wnd.base_idx = orig_msg_idx;
-    f.snd.resize((size_t)f.wnd.msg_len * 2);
+    f.snd.resize(f.wnd.msg_len * 2);
     for (size_t i = 0; i < f.snd.size(); ++i) {
         f.snd[i] = (unsigned char)i;
     }
     std::fill(std::begin(f.buf), std::end(f.buf), 0xFE);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    MEMCMP_EQUAL(f.snd.data(), &f.buf[(size_t)(orig_msg_idx * f.wnd.msg_len)], (size_t)f.wnd.msg_len);
-    MEMCMP_EQUAL(&f.snd[(size_t)f.wnd.msg_len], f.buf.data(), (size_t)f.wnd.msg_len);
+    MEMCMP_EQUAL(f.snd.data(), &f.buf[(orig_msg_idx * f.wnd.msg_len)], f.wnd.msg_len);
+    MEMCMP_EQUAL(&f.snd[f.wnd.msg_len], f.buf.data(), f.wnd.msg_len);
 }
 
 TEST(window, send_wraps_copy_around_and_respects_partially_filled_starting_message)
 {
     Fixture f;
-    f.snd.resize((size_t)f.wnd.msg_len);
+    f.snd.resize(f.wnd.msg_len);
     for (size_t i = 0; i < f.snd.size(); ++i) {
         f.snd[i] = (unsigned char)i;
     }
     std::fill(std::begin(f.buf), std::end(f.buf), 0xFE);
     int const orig_msg_idx = f.wnd.cap - 1;
     f.wnd.base_idx = orig_msg_idx;
-    f.msg[(size_t)orig_msg_idx].len = 3;
+    f.msg[orig_msg_idx].len = 3;
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    MEMCMP_EQUAL(f.snd.data(), &f.buf[(size_t)(orig_msg_idx * f.wnd.msg_len) + 3], (size_t)f.wnd.msg_len - 3);
-    MEMCMP_EQUAL(&f.snd[(size_t)f.wnd.msg_len - 3], f.buf.data(), 3);
+    MEMCMP_EQUAL(f.snd.data(), &f.buf[(orig_msg_idx * f.wnd.msg_len) + 3], f.wnd.msg_len - 3);
+    MEMCMP_EQUAL(&f.snd[f.wnd.msg_len - 3], f.buf.data(), 3);
 }
 
 TEST(window, ack_partial_ack_vec_doesnt_slide_window)
@@ -302,6 +303,14 @@ TEST(window, ack_sets_ack_vector_and_len_to_zero_when_sliding)
     CHECK_EQUAL(0, f.wnd.msg[0].len);
 }
 
+TEST(window, ack_resets_full_ack_vec_when_sliding)
+{
+    Fixture f;
+    f.wnd.msg[0].cur_ack_vec = f.wnd.msg[0].full_ack_vec = 0b1111;
+    arq__send_wnd_ack(&f.wnd, 0, 0b1111);
+    CHECK_EQUAL(f.wnd.full_ack_vec, f.wnd.msg[0].full_ack_vec);
+}
+
 TEST(window, ack_second_seq_doesnt_slide)
 {
     Fixture f;
@@ -339,6 +348,63 @@ TEST(window, ack_slides_to_first_unackd_message)
     arq__send_wnd_ack(&f.wnd, 0, f.wnd.full_ack_vec);
     CHECK_EQUAL(4, f.wnd.base_idx);
     CHECK_EQUAL(4, f.wnd.base_seq);
+}
+
+TEST(window, ack_the_entire_send_window)
+{
+    Fixture f;
+    f.wnd.size = f.wnd.cap + 1;
+    for (auto &m : f.msg) {
+        m.cur_ack_vec = m.full_ack_vec = f.wnd.full_ack_vec;
+        m.len = f.wnd.msg_len;
+    }
+    --f.wnd.msg[0].cur_ack_vec;
+    arq__send_wnd_ack(&f.wnd, 0, f.wnd.full_ack_vec);
+    CHECK_EQUAL(1, f.wnd.size);
+    CHECK_EQUAL(0, f.wnd.base_idx);
+    CHECK_EQUAL(f.wnd.cap, f.wnd.base_seq);
+}
+
+TEST(window, flush_does_nothing_on_empty_window)
+{
+    Fixture f;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(1, f.wnd.size);
+}
+
+TEST(window, flush_does_nothing_if_current_message_has_zero_length)
+{
+    Fixture f;
+    f.wnd.size = 2;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(2, f.wnd.size);
+}
+
+TEST(window, flush_increments_size_if_current_message_has_nonzero_length)
+{
+    Fixture f;
+    f.msg[0].len = 12;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(2, f.wnd.size);
+}
+
+TEST(window, flush_does_nothing_on_full_window)
+{
+    Fixture f;
+    f.wnd.size = f.wnd.cap + 1;
+    for (auto &m : f.msg) {
+        m.len = f.wnd.msg_len;
+    }
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(f.wnd.cap + 1, f.wnd.size);
+}
+
+TEST(window, flush_makes_msg_full_ack_vector_from_current_message_size)
+{
+    Fixture f;
+    f.msg[0].len = f.wnd.seg_len * 2 + 1;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(0b111, f.msg[0].full_ack_vec);
 }
 
 }

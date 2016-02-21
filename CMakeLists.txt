@@ -37,39 +37,31 @@ add_dependencies(libCppUTestExt CppUTest_external)
 
 ################ nanoarq
 
-set(NANOARQ_FLAGS -Wall
-                  -Wextra
-                  -Wshadow
-                  -Wsign-conversion
-                  -Wcast-align
-                  -Wcast-qual
-                  -Wstrict-aliasing=2
-                  -fstrict-aliasing
-                  -march=native
-                  -g)
+set(NANOARQ_FLAGS -Os -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
+set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wshadow -Wcast-align -Wcast-qual -Wstrict-aliasing=2 -march=native -g)
 
-include_directories(${CMAKE_SOURCE_DIR} ${CPPUTEST_INCLUDE_DIR})
+include_directories(${CMAKE_SOURCE_DIR})
 
 add_library(nanoarq_c90 STATIC arq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_c90_test_project.c)
-target_compile_options(nanoarq_c90 PRIVATE ${NANOARQ_FLAGS} -Os -pedantic -std=c90 -DARQ_ASSERTS_ENABLED=1)
+target_compile_options(nanoarq_c90 PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c90 -DARQ_ASSERTS_ENABLED=1)
 
 add_library(nanoarq_c99 STATIC arq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_c99_test_project.c)
-target_compile_options(nanoarq_c99 PRIVATE ${NANOARQ_FLAGS} -Os -pedantic -std=c99 -DARQ_ASSERTS_ENABLED=1)
+target_compile_options(nanoarq_c99 PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c99 -DARQ_ASSERTS_ENABLED=1)
 
 add_library(nanoarq_c99_no_asserts STATIC arq.h
                                           unit_tests/nanoarq_in_test_project.h
                                           unit_tests/nanoarq_in_c99_test_project.c)
 target_compile_options(nanoarq_c99_no_asserts PRIVATE
-                       ${NANOARQ_FLAGS} -Os -pedantic -std=c99 -DARQ_ASSERTS_ENABLED=0)
+                       ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -std=c99 -DARQ_ASSERTS_ENABLED=0)
 
 add_library(nanoarq_cpp STATIC arq.h
                                unit_tests/nanoarq_in_test_project.h
                                unit_tests/nanoarq_in_cpp_test_project.cpp)
-target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} -Os -pedantic -DARQ_ASSERTS_ENABLED=1)
+target_compile_options(nanoarq_cpp PRIVATE ${NANOARQ_FLAGS} ${NANOARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=1)
 
 ################ tests
 
@@ -82,7 +74,7 @@ function(add_unit_tests TARGET_NAME UNIT_TEST_EXECUTABLE)
                        COMMENT "Running ${UNIT_TEST_EXECUTABLE}")
 endfunction()
 
-set(NANOARQ_UNIT_TEST_FLAGS -Wno-unused-function -Wno-tautological-compare)
+set(NANOARQ_UNIT_TEST_FLAGS -Wno-tautological-compare)
 set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/nanoarq_mocks.h
                               unit_tests/nanoarq_mocks.cpp
@@ -91,6 +83,7 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_mock_hooks.cpp
                               unit_tests/test_nanoarq.cpp
                               unit_tests/test_send.cpp
+                              unit_tests/test_flush.cpp
                               unit_tests/test_asserts.cpp
                               unit_tests/test_lin_alloc.cpp
                               unit_tests/test_frame_hdr.cpp
@@ -103,16 +96,18 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_min.cpp
                               unit_tests/test_crc32.cpp)
 
+include_directories(${CPPUTEST_INCLUDE_DIR})
+
 add_executable(nanoarq_unit_tests ${NANOARQ_UNIT_TEST_SOURCES})
 target_compile_options(nanoarq_unit_tests PRIVATE
-                       ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS} -DARQ_ASSERTS_ENABLED=1)
+                       ${NANOARQ_COMMON_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS} -DARQ_ASSERTS_ENABLED=1)
 target_link_libraries(nanoarq_unit_tests nanoarq_c99 libCppUTest libCppUTestExt)
 add_unit_tests(nanoarq_c99 nanoarq_unit_tests)
 
 add_executable(nanoarq_no_asserts_unit_tests ${NANOARQ_UNIT_TEST_SOURCES})
 add_dependencies(nanoarq_no_asserts_unit_tests nanoarq_unit_tests)
 target_compile_options(nanoarq_no_asserts_unit_tests PRIVATE
-                       ${NANOARQ_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS} -DARQ_ASSERTS_ENABLED=0)
+                       ${NANOARQ_COMMON_FLAGS} ${NANOARQ_UNIT_TEST_FLAGS} -DARQ_ASSERTS_ENABLED=0)
 target_link_libraries(nanoarq_no_asserts_unit_tests nanoarq_c99_no_asserts libCppUTest libCppUTestExt)
 add_unit_tests(nanoarq_c99_no_asserts nanoarq_no_asserts_unit_tests)
 
