@@ -6,7 +6,7 @@ TEST_GROUP(arq_assert) {};
 namespace
 {
 
-#if NANOARQ_ASSERTS_ENABLED == 1
+#if ARQ_ASSERTS_ENABLED == 1
 TEST(arq_assert, set_and_get_assert)
 {
     struct Local
