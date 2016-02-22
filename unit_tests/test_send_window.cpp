@@ -1,4 +1,7 @@
 #include "nanoarq_in_test_project.h"
+#include "nanoarq_hook_plugin.h"
+
+#include <CppUTestExt/MockSupport.h>
 #include <CppUTest/TestHarness.h>
 
 #include <cstring>
@@ -10,22 +13,48 @@ TEST_GROUP(window) {};
 namespace
 {
 
-struct Fixture
+struct UninitializedWindowFixture
+{
+    UninitializedWindowFixture()
+    {
+        wnd.buf = nullptr;
+        wnd.msg = msg.data();
+    }
+    arq__send_wnd_t wnd;
+    std::array< arq__msg_t, 64 > msg;
+};
+
+TEST(window, init_writes_params_to_struct)
+{
+    UninitializedWindowFixture f;
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8);
+    CHECK_EQUAL(f.msg.size(), f.wnd.cap);
+    CHECK_EQUAL(16, f.wnd.msg_len);
+    CHECK_EQUAL(8, f.wnd.seg_len);
+}
+
+void MockSendWndRst(arq__send_wnd_t *w)
+{
+    mock().actualCall("arq__send_wnd_rst").withParameter("w", w);
+}
+
+TEST(window, init_calls_rst)
+{
+    UninitializedWindowFixture f;
+    ARQ_MOCK_HOOK(arq__send_wnd_rst, MockSendWndRst);
+    mock().expectOneCall("arq__send_wnd_rst").withParameter("w", &f.wnd);
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8);
+}
+
+struct Fixture : UninitializedWindowFixture
 {
     Fixture()
     {
-        wnd.msg_len = 128;
-        wnd.seg_len = 16;
         wnd.full_ack_vec = 0xFFFF;
-        wnd.cap = msg.size();
+        arq__send_wnd_init(&wnd, msg.size(), 128, 16);
         buf.resize(wnd.msg_len * wnd.cap);
         wnd.buf = buf.data();
-        wnd.msg = msg.data();
-        arq__send_wnd_rst(&wnd);
     }
-
-    arq__send_wnd_t wnd;
-    std::array< arq__msg_t, 64 > msg;
     std::vector< unsigned char > buf;
     std::vector< unsigned char > snd;
 };
