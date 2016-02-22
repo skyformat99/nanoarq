@@ -570,10 +570,7 @@ int arq__min(int x, int y)
 
 arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y)
 {
-    arq_uint32_t const result = x - y;
-    int const underflow = (result <= x);
-    arq_uint32_t const mask = (arq_uint32_t)(underflow * -1);
-    return result & mask;
+    return (x - y) & (arq_uint32_t)-((x - y) <= x);
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_init)(arq__send_wnd_t *w, int wnd_cap, int msg_len, int seg_len)
