@@ -647,7 +647,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t c
 
 void ARQ_MOCKABLE(arq__send_wnd_flush)(arq__send_wnd_t *w)
 {
-    unsigned segs;
+    int segs;
     arq__msg_t *m;
     ARQ_ASSERT(w);
     m = &w->msg[w->base_idx];
