@@ -1,4 +1,7 @@
 #include "nanoarq_in_test_project.h"
+#include "nanoarq_hook_plugin.h"
+
+#include <CppUTestExt/MockSupport.h>
 #include <CppUTest/TestHarness.h>
 
 #include <cstring>
@@ -10,22 +13,62 @@ TEST_GROUP(window) {};
 namespace
 {
 
-struct Fixture
+struct UninitializedWindowFixture
+{
+    UninitializedWindowFixture()
+    {
+        wnd.buf = nullptr;
+        wnd.msg = msg.data();
+    }
+    arq__send_wnd_t wnd;
+    std::array< arq__msg_t, 64 > msg;
+};
+
+TEST(window, init_writes_params_to_struct)
+{
+    UninitializedWindowFixture f;
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8);
+    CHECK_EQUAL(f.msg.size(), f.wnd.cap);
+    CHECK_EQUAL(16, f.wnd.msg_len);
+    CHECK_EQUAL(8, f.wnd.seg_len);
+}
+
+TEST(window, init_full_ack_vec_is_one_if_seg_len_equals_msg_len)
+{
+    UninitializedWindowFixture f;
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 16);
+    CHECK_EQUAL(0b1, f.wnd.full_ack_vec);
+}
+
+TEST(window, init_calculates_full_ack_vector_from_msg_len_and_seg_len)
+{
+    UninitializedWindowFixture f;
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 32, 8);
+    CHECK_EQUAL(0b1111, f.wnd.full_ack_vec);
+}
+
+void MockSendWndRst(arq__send_wnd_t *w)
+{
+    mock().actualCall("arq__send_wnd_rst").withParameter("w", w);
+}
+
+TEST(window, init_calls_rst)
+{
+    UninitializedWindowFixture f;
+    ARQ_MOCK_HOOK(arq__send_wnd_rst, MockSendWndRst);
+    mock().expectOneCall("arq__send_wnd_rst").withParameter("w", &f.wnd);
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8);
+}
+
+struct Fixture : UninitializedWindowFixture
 {
     Fixture()
     {
-        wnd.msg_len = 128;
-        wnd.seg_len = 16;
         wnd.full_ack_vec = 0xFFFF;
-        wnd.cap = msg.size();
+        arq__send_wnd_init(&wnd, msg.size(), 128, 16);
         buf.resize(wnd.msg_len * wnd.cap);
         wnd.buf = buf.data();
-        wnd.msg = msg.data();
-        arq__send_wnd_rst(&wnd);
     }
-
-    arq__send_wnd_t wnd;
-    std::array< arq__msg_t, 64 > msg;
     std::vector< unsigned char > buf;
     std::vector< unsigned char > snd;
 };
@@ -294,15 +337,17 @@ TEST(window, ack_sliding_increments_base_seq)
     CHECK_EQUAL(1, f.wnd.base_seq);
 }
 
-TEST(window, ack_sets_ack_vector_and_len_to_zero_when_sliding)
+TEST(window, ack_resets_message_when_sliding)
 {
     Fixture f;
     f.wnd.size = 1;
     f.wnd.msg[0].cur_ack_vec = f.wnd.full_ack_vec;
     f.wnd.msg[0].len = 1234;
+    f.wnd.msg[0].rtx = 93;
     arq__send_wnd_ack(&f.wnd, 0, f.wnd.full_ack_vec);
     CHECK_EQUAL(0, f.wnd.msg[0].cur_ack_vec);
     CHECK_EQUAL(0, f.wnd.msg[0].len);
+    CHECK_EQUAL(0, f.wnd.msg[0].rtx);
 }
 
 TEST(window, ack_resets_full_ack_vec_when_sliding)
@@ -399,6 +444,22 @@ TEST(window, flush_does_nothing_on_full_window)
     }
     arq__send_wnd_flush(&f.wnd);
     CHECK_EQUAL(f.wnd.cap + 1, f.wnd.size);
+}
+
+TEST(window, flush_sets_full_ack_vector_to_one_if_less_than_one_segment)
+{
+    Fixture f;
+    f.msg[0].len = 1;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(0b1, f.msg[0].full_ack_vec);
+}
+
+TEST(window, flush_number_of_bits_in_ack_vector_is_number_of_segments)
+{
+    Fixture f;
+    f.msg[0].len = f.wnd.seg_len * 5;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(0b11111, f.msg[0].full_ack_vec);
 }
 
 TEST(window, flush_makes_msg_full_ack_vector_from_current_message_size)

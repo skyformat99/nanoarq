@@ -214,6 +214,7 @@ typedef struct arq__send_wnd_t
     arq_uint16_t full_ack_vec;
 } arq__send_wnd_t;
 
+void arq__send_wnd_init(arq__send_wnd_t *w, int wnd_cap, int msg_len, int seg_len);
 void arq__send_wnd_rst(arq__send_wnd_t *w);
 int arq__send_wnd_send(arq__send_wnd_t *w, void const *seg, int len);
 void arq__send_wnd_ack(arq__send_wnd_t *w, int seq, arq_uint16_t cur_ack_vec);
@@ -572,6 +573,16 @@ arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y)
     return (x - y) & -((x - y) <= x);
 }
 
+void ARQ_MOCKABLE(arq__send_wnd_init)(arq__send_wnd_t *w, int wnd_cap, int msg_len, int seg_len)
+{
+    ARQ_ASSERT(w);
+    w->cap = wnd_cap;
+    w->msg_len = msg_len;
+    w->seg_len = seg_len;
+    w->full_ack_vec = (1 << (msg_len / seg_len)) - 1;
+    arq__send_wnd_rst(w);
+}
+
 void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *w)
 {
     int i;
@@ -621,6 +632,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t c
         if (m->cur_ack_vec != m->full_ack_vec) {
             break;
         }
+        m->rtx = 0;
         m->len = 0;
         m->cur_ack_vec = 0;
         m->full_ack_vec = w->full_ack_vec;
