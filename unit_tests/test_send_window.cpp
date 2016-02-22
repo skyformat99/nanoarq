@@ -64,7 +64,6 @@ struct Fixture : UninitializedWindowFixture
 {
     Fixture()
     {
-        wnd.full_ack_vec = 0xFFFF;
         arq__send_wnd_init(&wnd, msg.size(), 128, 16);
         buf.resize(wnd.msg_len * wnd.cap);
         wnd.buf = buf.data();
@@ -493,7 +492,7 @@ TEST(window, step_decrements_all_timers_in_window)
     f.msg[0].rtx = 100;
     f.msg[1].rtx = 90;
     f.msg[2].rtx = 80;
-    f.msg[3].rtx = 1000; // sentinel
+    f.msg[3].rtx = 1000;
     arq__send_wnd_step(&f.wnd, 80);
     CHECK_EQUAL(20, f.msg[0].rtx);
     CHECK_EQUAL(10, f.msg[1].rtx);
@@ -504,7 +503,7 @@ TEST(window, step_decrements_all_timers_in_window)
 TEST(window, step_operates_on_messages_in_window)
 {
     Fixture f;
-    f.wnd.base_idx = 31;
+    f.wnd.base_idx = f.wnd.cap / 2;
     f.msg[f.wnd.base_idx].rtx = 100;
     arq__send_wnd_step(&f.wnd, 10);
     CHECK_EQUAL(90, f.msg[f.wnd.base_idx].rtx);
