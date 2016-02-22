@@ -579,6 +579,7 @@ void ARQ_MOCKABLE(arq__send_wnd_init)(arq__send_wnd_t *w, int wnd_cap, int msg_l
     w->cap = wnd_cap;
     w->msg_len = msg_len;
     w->seg_len = seg_len;
+    w->full_ack_vec = (1 << (msg_len / seg_len)) - 1;
     arq__send_wnd_rst(w);
 }
 

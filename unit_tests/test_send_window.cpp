@@ -33,6 +33,20 @@ TEST(window, init_writes_params_to_struct)
     CHECK_EQUAL(8, f.wnd.seg_len);
 }
 
+TEST(window, init_full_ack_vec_is_one_if_seg_len_equals_msg_len)
+{
+    UninitializedWindowFixture f;
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 16);
+    CHECK_EQUAL(0b1, f.wnd.full_ack_vec);
+}
+
+TEST(window, init_calculates_full_ack_vector_from_msg_len_and_seg_len)
+{
+    UninitializedWindowFixture f;
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 32, 8);
+    CHECK_EQUAL(0b1111, f.wnd.full_ack_vec);
+}
+
 void MockSendWndRst(arq__send_wnd_t *w)
 {
     mock().actualCall("arq__send_wnd_rst").withParameter("w", w);
