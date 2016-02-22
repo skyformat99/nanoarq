@@ -570,7 +570,10 @@ int arq__min(int x, int y)
 
 arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y)
 {
-    return (x - y) & -((x - y) <= x);
+    arq_uint32_t const result = x - y;
+    int const underflow = (result <= x);
+    arq_uint32_t const mask = (arq_uint32_t)(underflow * -1);
+    return result & mask;
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_init)(arq__send_wnd_t *w, int wnd_cap, int msg_len, int seg_len)
@@ -644,7 +647,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t c
 
 void ARQ_MOCKABLE(arq__send_wnd_flush)(arq__send_wnd_t *w)
 {
-    unsigned segs;
+    int segs;
     arq__msg_t *m;
     ARQ_ASSERT(w);
     m = &w->msg[w->base_idx];
