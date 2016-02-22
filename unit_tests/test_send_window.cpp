@@ -294,15 +294,17 @@ TEST(window, ack_sliding_increments_base_seq)
     CHECK_EQUAL(1, f.wnd.base_seq);
 }
 
-TEST(window, ack_sets_ack_vector_and_len_to_zero_when_sliding)
+TEST(window, ack_resets_message_when_sliding)
 {
     Fixture f;
     f.wnd.size = 1;
     f.wnd.msg[0].cur_ack_vec = f.wnd.full_ack_vec;
     f.wnd.msg[0].len = 1234;
+    f.wnd.msg[0].rtx = 93;
     arq__send_wnd_ack(&f.wnd, 0, f.wnd.full_ack_vec);
     CHECK_EQUAL(0, f.wnd.msg[0].cur_ack_vec);
     CHECK_EQUAL(0, f.wnd.msg[0].len);
+    CHECK_EQUAL(0, f.wnd.msg[0].rtx);
 }
 
 TEST(window, ack_resets_full_ack_vec_when_sliding)
@@ -399,6 +401,22 @@ TEST(window, flush_does_nothing_on_full_window)
     }
     arq__send_wnd_flush(&f.wnd);
     CHECK_EQUAL(f.wnd.cap + 1, f.wnd.size);
+}
+
+TEST(window, flush_sets_full_ack_vector_to_one_if_less_than_one_segment)
+{
+    Fixture f;
+    f.msg[0].len = 1;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(0b1, f.msg[0].full_ack_vec);
+}
+
+TEST(window, flush_number_of_bits_in_ack_vector_is_number_of_segments)
+{
+    Fixture f;
+    f.msg[0].len = f.wnd.seg_len * 5;
+    arq__send_wnd_flush(&f.wnd);
+    CHECK_EQUAL(0b11111, f.msg[0].full_ack_vec);
 }
 
 TEST(window, flush_makes_msg_full_ack_vector_from_current_message_size)
