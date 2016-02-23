@@ -121,7 +121,9 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_event_t *out_event,
                            arq_time_t *out_next_poll);
 
-arq_err_t arq_backend_drain_send(struct arq_t *arq, void *out_send, int send_max, int *out_send_size);
+arq_err_t arq_backend_send_ptr_get(struct arq_t *arq, void **out_send, int *out_send_size);
+arq_err_t arq_backend_send_ptr_release(struct arq_t *arq, void *send);
+
 arq_err_t arq_backend_fill_recv(struct arq_t *arq, void const *recv, int recv_max, int *out_recv_size);
 
 #if ARQ_COMPILE_CRC32 == 1
@@ -337,12 +339,19 @@ arq_err_t arq_flush(struct arq_t *arq)
     return ARQ_OK_COMPLETED;
 }
 
-arq_err_t arq_backend_drain_send(struct arq_t *arq, void *out_send, int send_max, int *out_send_size)
+arq_err_t arq_backend_send_ptr_get(struct arq_t *arq, void **out_send, int *out_send_size)
 {
-    (void)arq;
-    (void)out_send;
-    (void)send_max;
-    (void)out_send_size;
+    if (!arq || !out_send || !out_send_size) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    return ARQ_OK_COMPLETED;
+}
+
+arq_err_t arq_backend_send_ptr_release(struct arq_t *arq, void *send)
+{
+    if (!arq || !send) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
     return ARQ_OK_COMPLETED;
 }
 
