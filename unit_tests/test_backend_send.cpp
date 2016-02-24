@@ -45,7 +45,7 @@ TEST(backend_send, send_ptr_get_writes_zero_and_null_when_nothing_to_send)
     f.send = (void *)1;
     f.size = 1;
     arq_backend_send_ptr_get(&f.arq, &f.send, &f.size);
-    CHECK_EQUAL(NULL, f.send);
+    CHECK_EQUAL((void const *)NULL, f.send);
     CHECK_EQUAL(0, f.size);
 }
 
