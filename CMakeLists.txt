@@ -13,7 +13,8 @@ set(CPPUTEST_LIB_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/lib)
 set(CPPUTEST_INCLUDE_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/include)
 set(CPPUTEST_CMAKE_ARGS -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
                         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/${PROJECT_NAME}
-                        -DTESTS=OFF)
+                        -DTESTS=OFF
+                        -DC++11=ON)
 
 ExternalProject_Add(CppUTest_external
                     PREFIX ${CPPUTEST_ROOT_DIR}
@@ -87,6 +88,7 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_backend_recv.cpp
                               unit_tests/test_backend_poll.cpp
                               unit_tests/test_send_window.cpp
+                              unit_tests/test_send_window_ptr.cpp
                               unit_tests/test_frame.cpp
                               unit_tests/test_cobs.cpp
                               unit_tests/test_min.cpp
