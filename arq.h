@@ -356,6 +356,19 @@ arq_err_t arq_flush(struct arq_t *arq)
     return ARQ_OK_COMPLETED;
 }
 
+arq_err_t arq_backend_poll(struct arq_t *arq,
+                           arq_time_t dt,
+                           int *out_backend_send_size,
+                           arq_event_t *out_event,
+                           arq_time_t *out_next_poll)
+{
+    if (!arq || !out_backend_send_size || !out_event || !out_next_poll) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    (void)dt;
+    return ARQ_OK_COMPLETED;
+}
+
 arq_err_t arq_backend_send_ptr_get(struct arq_t *arq, void const **out_send, int *out_send_size)
 {
     if (!arq || !out_send || !out_send_size) {
