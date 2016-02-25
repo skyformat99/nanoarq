@@ -117,10 +117,39 @@ TEST(send_wnd_ptr, next_increments_segment_if_not_at_final_seg)
 
 TEST(send_wnd_ptr, next_increments_msg_index_if_ptr_was_pointing_at_last_segment_of_nonfinal_message)
 {
+    Fixture f;
+    f.w.size = 2;
+    f.w.msg[0].len = (f.w.seg_len * 2) + 1;
+    f.w.msg[0].full_ack_vec = 0b111;
+    f.w.msg[0].rtx = 1;
+    f.w.msg[1].len = 1;
+    f.w.msg[1].full_ack_vec = 1;
+    f.p.msg = 0;
+    f.p.seg = 2;
+    f.p.valid = 1;
+    arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, f.p.msg);
+    CHECK_EQUAL(0, f.p.seg);
+    CHECK_EQUAL(1, f.p.valid);
 }
 
 TEST(send_wnd_ptr, next_wraps_msg_index_to_first_zero_rtx_msg_in_window_if_pointing_at_final_seg)
 {
+    Fixture f;
+    f.w.size = 2;
+    f.w.base_idx = f.w.cap - 1;
+    f.w.msg[f.w.base_idx].len = (f.w.seg_len * 2) + 1;
+    f.w.msg[f.w.base_idx].full_ack_vec = 0b111;
+    f.w.msg[f.w.base_idx].rtx = 1;
+    f.p.msg = f.w.base_idx;
+    f.p.seg = 2;
+    f.p.valid = 1;
+    f.w.msg[0].len = 1;
+    f.w.msg[0].full_ack_vec = 1;
+    arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(0, f.p.msg);
+    CHECK_EQUAL(0, f.p.seg);
+    CHECK_EQUAL(1, f.p.valid);
 }
 
 TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_segment_of_last_message)
@@ -128,21 +157,26 @@ TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_segment_of_la
     Fixture f;
     f.w.size = 2;
     f.w.msg[0].len = 1;
+    f.w.msg[0].full_ack_vec = 0b1;
+    f.w.msg[0].rtx = 1;
     f.w.msg[1].len = f.w.seg_len + 1;
     f.w.msg[1].full_ack_vec = 0b11;
+    f.w.msg[1].rtx = 1;
     f.p.msg = f.p.seg = f.p.valid = 1;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.valid);
 }
 
-TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_seg_of_last_msg_wnd_size_1)
+TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_seg_of_last_msg_wnd_size_one)
 {
     Fixture f;
     f.w.size = 1;
     f.w.msg[0].len = 1;
     f.w.msg[0].full_ack_vec = 1;
+    f.w.msg[0].rtx = 1;
     f.w.msg[1].len = 1; // out of bounds, f.w.size == 1
     f.w.msg[1].full_ack_vec = 1;
+    f.w.msg[1].rtx = 0;
     f.p.valid = 1;
     f.p.msg = 0;
     f.p.seg = 0;

@@ -738,21 +738,19 @@ void ARQ_MOCKABLE(arq__send_wnd_ptr_init)(arq__send_wnd_ptr_t *p)
 
 void ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w)
 {
-    unsigned i, base;
+    unsigned i;
     ARQ_ASSERT(p && w);
-    base = w->base_idx;
     if (p->valid) {
-        if (((1 << (p->seg + 1)) - 1) == w->msg[p->msg].full_ack_vec) {
-            base = (p->msg + 1) % w->cap;
-        } else {
+        if (((1 << (p->seg + 1)) - 1) < w->msg[p->msg].full_ack_vec) {
             ++p->seg;
             return;
         }
     }
     for (i = 0; i < w->size; ++i) {
-        arq__msg_t const *m = &w->msg[(i + base) % w->cap];
+        unsigned const idx = (i + w->base_idx) % w->cap;
+        arq__msg_t const *m = &w->msg[idx];
         if ((m->rtx == 0) && (m->len > 0)) {
-            p->msg = i;
+            p->msg = idx;
             p->seg = 0;
             p->valid = 1;
             return;
