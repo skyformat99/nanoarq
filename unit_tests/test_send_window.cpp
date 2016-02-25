@@ -525,6 +525,58 @@ TEST(window, step_wraps_around_when_window_wraps)
     CHECK_EQUAL(60, f.msg[1].rtx);
 }
 
+TEST(window, step_returns_zero_if_no_timers_expired)
+{
+    Fixture f;
+    f.msg[0].rtx = 10;
+    int const expired = arq__send_wnd_step(&f.wnd, 1);
+    CHECK_EQUAL(0, expired);
+}
+
+TEST(window, step_returns_zero_when_multiple_timers_didnt_expire)
+{
+    Fixture f;
+    f.wnd.size = 4;
+    f.msg[0].rtx = 10;
+    f.msg[1].rtx = 10;
+    f.msg[2].rtx = 10;
+    f.msg[3].rtx = 10;
+    int const expired = arq__send_wnd_step(&f.wnd, 1);
+    CHECK_EQUAL(0, expired);
+}
+
+TEST(window, step_returns_one_if_timer_expired)
+{
+    Fixture f;
+    f.msg[0].rtx = 10;
+    int const expired = arq__send_wnd_step(&f.wnd, 11);
+    CHECK_EQUAL(1, expired);
+}
+
+TEST(window, step_returns_one_when_multiple_timers_expire)
+{
+    Fixture f;
+    f.wnd.size = 4;
+    f.msg[0].rtx = 10;
+    f.msg[1].rtx = 10;
+    f.msg[2].rtx = 10;
+    f.msg[3].rtx = 10;
+    int const expired = arq__send_wnd_step(&f.wnd, 11);
+    CHECK_EQUAL(1, expired);
+}
+
+TEST(window, step_returns_one_when_only_one_timer_expires)
+{
+    Fixture f;
+    f.wnd.size = 4;
+    f.msg[0].rtx = 20;
+    f.msg[1].rtx = 20;
+    f.msg[2].rtx = 10;
+    f.msg[3].rtx = 20;
+    int const expired = arq__send_wnd_step(&f.wnd, 11);
+    CHECK_EQUAL(1, expired);
+}
+
 struct SegFixture : Fixture
 {
     int n = 0;
