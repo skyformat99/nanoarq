@@ -525,5 +525,77 @@ TEST(window, step_wraps_around_when_window_wraps)
     CHECK_EQUAL(60, f.msg[1].rtx);
 }
 
+struct SegFixture : Fixture
+{
+    int n = 0;
+    void const *p = nullptr;
+};
+
+TEST(window, seg_with_base_idx_zero_returns_buf)
+{
+    SegFixture f;
+    arq__send_wnd_seg(&f.wnd, 0, 0, &f.p, &f.n);
+    CHECK_EQUAL((void const *)f.buf.data(), f.p);
+}
+
+TEST(window, seg_message_less_than_one_segment_returns_message_size)
+{
+    SegFixture f;
+    f.wnd.msg_len = f.wnd.msg[0].len = 13;
+    arq__send_wnd_seg(&f.wnd, 0, 0, &f.p, &f.n);
+    CHECK_EQUAL(f.wnd.msg[0].len, f.n);
+}
+
+TEST(window, seg_message_greater_than_one_segment_returns_seg_len_for_non_final_segment_index)
+{
+    SegFixture f;
+    f.wnd.msg[0].len = f.wnd.msg_len;
+    arq__send_wnd_seg(&f.wnd, 0, 0, &f.p, &f.n);
+    CHECK_EQUAL(f.wnd.seg_len, f.n);
+}
+
+TEST(window, seg_points_at_segment_len_times_segment_index)
+{
+    SegFixture f;
+    f.wnd.msg[0].len = f.wnd.msg_len;
+    arq__send_wnd_seg(&f.wnd, 0, 3, &f.p, &f.n);
+    CHECK_EQUAL((void const *)&f.buf[3 * f.wnd.seg_len], f.p);
+}
+
+TEST(window, seg_returns_msg_len_remainder_for_final_segment)
+{
+    SegFixture f;
+    f.wnd.msg[0].len = f.wnd.msg_len - (f.wnd.seg_len / 2);
+    arq__send_wnd_seg(&f.wnd, 0, (f.wnd.msg_len / f.wnd.seg_len) - 1, &f.p, &f.n);
+    CHECK_EQUAL(f.wnd.seg_len / 2, f.n);
+}
+
+TEST(window, seg_size_looks_up_message_by_message_index)
+{
+    SegFixture f;
+    f.wnd.size = 2;
+    f.wnd.msg[1].len = 5;
+    arq__send_wnd_seg(&f.wnd, 1, 0, &f.p, &f.n);
+    CHECK_EQUAL(5, f.n);
+}
+
+TEST(window, seg_buf_looks_up_message_by_message_index)
+{
+    SegFixture f;
+    f.wnd.size = 2;
+    f.wnd.msg[1].len = 5;
+    arq__send_wnd_seg(&f.wnd, 1, 0, &f.p, &f.n);
+    CHECK_EQUAL((void const *)&f.buf[f.wnd.msg_len], f.p);
+}
+
+TEST(window, seg_buf_pointer_is_message_offset_plus_segment_offset)
+{
+    SegFixture f;
+    f.wnd.size = 3;
+    f.wnd.msg[2].len = f.wnd.seg_len + 1;
+    arq__send_wnd_seg(&f.wnd, 2, 1, &f.p, &f.n);
+    CHECK_EQUAL((void const *)&f.buf[(f.wnd.msg_len * 2) + f.wnd.seg_len], f.p);
+}
+
 }
 

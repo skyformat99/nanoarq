@@ -9,6 +9,9 @@
     ARQ_MOCK(arq__send_wnd_ack) \
     ARQ_MOCK(arq__send_wnd_flush) \
     ARQ_MOCK(arq__send_wnd_step) \
+    ARQ_MOCK(arq__send_wnd_seg) \
+    ARQ_MOCK(arq__send_wnd_ptr_init) \
+    ARQ_MOCK(arq__send_wnd_ptr_next) \
     ARQ_MOCK(arq__frame_len) \
     ARQ_MOCK(arq__frame_hdr_read) \
     ARQ_MOCK(arq__frame_hdr_write) \
