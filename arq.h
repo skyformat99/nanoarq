@@ -236,9 +236,18 @@ void arq__send_wnd_ptr_next(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w);
 typedef struct arq__send_frame_t
 {
     arq_uchar_t *buf;
+    arq_uint16_t cap;
     arq_uint16_t len;
     arq_uchar_t usr;
 } arq__send_frame_t;
+
+void arq__send_frame_init(arq__send_frame_t *f, int cap);
+
+int arq__send_poll(arq__send_wnd_t *w,
+                   arq__send_wnd_ptr_t *p,
+                   arq__send_frame_t *f,
+                   arq_checksum_cb_t checksum,
+                   arq_time_t dt);
 
 typedef struct arq_t
 {
@@ -363,10 +372,11 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_event_t *out_event,
                            arq_time_t *out_next_poll)
 {
-    (void)dt;
     if (!arq || !out_backend_send_size || !out_event || !out_next_poll) {
         return ARQ_ERR_INVALID_PARAM;
     }
+    *out_backend_send_size =
+        arq__send_poll(&arq->send_wnd, &arq->send_wnd_ptr, &arq->send_frame, arq->cfg.checksum_cb, dt);
     return ARQ_OK_COMPLETED;
 }
 
@@ -731,6 +741,25 @@ void ARQ_MOCKABLE(arq__send_wnd_ptr_init)(arq__send_wnd_ptr_t *p)
     p->valid = 0;
     p->msg = 0;
     p->seg = 0;
+}
+
+void arq__send_frame_init(arq__send_frame_t *f, int cap)
+{
+    ARQ_ASSERT(f);
+    f->cap = (arq_uint16_t)cap;
+    f->len = 0;
+    f->usr = 0;
+}
+
+int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
+                                 arq__send_wnd_ptr_t *p,
+                                 arq__send_frame_t *f,
+                                 arq_checksum_cb_t checksum,
+                                 arq_time_t dt)
+{
+    ARQ_ASSERT(w && p && f && checksum);
+    (void)dt;
+    return 0;
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w)
