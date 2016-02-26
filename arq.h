@@ -738,7 +738,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_
     unsigned i;
     ARQ_ASSERT(p && w);
     if (p->valid) {
-        unsigned const next = w->msg[p->msg].cur_ack_vec >> (p->seg + 1);
+        unsigned const next = w->msg[p->msg].cur_ack_vec >> (unsigned)(p->seg + 1);
         p->seg += (1 + __builtin_ctz(~next));
         if (((1 << p->seg) - 1) < w->msg[p->msg].full_ack_vec) {
             return;
