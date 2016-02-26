@@ -738,7 +738,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_
     unsigned i;
     ARQ_ASSERT(p && w);
     if (p->valid) {
-        arq_uint16_t const next = w->msg[p->msg].cur_ack_vec >> (p->seg + 1);
+        unsigned const next = w->msg[p->msg].cur_ack_vec >> (p->seg + 1);
         p->seg += (1 + __builtin_ctz(~next));
         if (((1 << p->seg) - 1) < w->msg[p->msg].full_ack_vec) {
             return;
@@ -750,7 +750,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_
         if ((m->rtx == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
             p->msg = idx;
             p->valid = 1;
-            p->seg = __builtin_ctz(~m->cur_ack_vec);
+            p->seg = __builtin_ctz(~(unsigned)m->cur_ack_vec);
             return;
         }
     }
