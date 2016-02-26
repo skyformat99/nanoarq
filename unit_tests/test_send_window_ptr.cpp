@@ -115,6 +115,65 @@ TEST(send_wnd_ptr, next_increments_segment_if_not_at_final_seg)
     CHECK_EQUAL(1, f.p.seg);
 }
 
+TEST(send_wnd_ptr, next_can_iterate_across_entire_message)
+{
+    Fixture f;
+    f.w.msg[0].len = f.w.msg_len;
+    f.w.msg[0].full_ack_vec = (1 << (f.w.msg_len / f.w.seg_len)) - 1;
+    f.p.valid = 0;
+    for (int i = 0; i < (f.w.msg_len / f.w.seg_len); ++i) {
+        arq__send_wnd_ptr_next(&f.p, &f.w);
+        CHECK_EQUAL(0, f.p.msg);
+        CHECK_EQUAL(i, f.p.seg);
+        CHECK_EQUAL(1, f.p.valid);
+    }
+}
+
+TEST(send_wnd_ptr, next_skips_msg_if_all_segs_are_already_acked)
+{
+    Fixture f;
+    f.w.size = 2;
+    f.w.msg[0].len = 1; // being retransmitted
+    f.w.msg[0].rtx = 1;
+    f.w.msg[0].full_ack_vec = 1;
+    f.w.msg[0].cur_ack_vec = 0;
+    f.w.msg[1].len = f.w.msg_len; // already fully ACK'd
+    f.w.msg[1].full_ack_vec = 0xFF;
+    f.w.msg[1].cur_ack_vec = 0xFF;
+    f.w.msg[1].rtx = 0;
+    f.p.valid = 1;
+    arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(0, f.p.valid);
+}
+
+TEST(send_wnd_ptr, next_invalid_ptr_skips_acked_segs_in_new_msg)
+{
+    Fixture f;
+    f.w.msg[0].len = f.w.seg_len * 3;
+    f.w.msg[0].rtx = 0;
+    f.w.msg[0].full_ack_vec = 0b111;
+    f.w.msg[0].cur_ack_vec = 0b101;
+    f.p.valid = 0;
+    arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, f.p.valid);
+    CHECK_EQUAL(1, f.p.seg);
+}
+
+TEST(send_wnd_ptr, next_valid_ptr_skips_acked_segs_in_current_msg)
+{
+    Fixture f;
+    f.w.msg[0].len = f.w.seg_len * 4;
+    f.w.msg[0].rtx = 0;
+    f.w.msg[0].full_ack_vec = 0b1111;
+    f.w.msg[0].cur_ack_vec = 0b1010;
+    f.p.valid = 1;
+    f.p.msg = 0;
+    f.p.seg = 0;
+    arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, f.p.valid);
+    CHECK_EQUAL(2, f.p.seg);
+}
+
 TEST(send_wnd_ptr, next_increments_msg_index_if_ptr_was_pointing_at_last_segment_of_nonfinal_message)
 {
     Fixture f;
