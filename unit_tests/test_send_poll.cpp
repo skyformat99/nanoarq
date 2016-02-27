@@ -134,5 +134,17 @@ TEST(send_poll, returns_zero_if_no_new_data_to_send)
     CHECK_EQUAL(0, written);
 }
 
+TEST(send_poll, gets_segment_pointer_from_send_wnd_seg_if_sending_next_seg)
+{
+}
+
+TEST(send_poll, calls_frame_write_if_sending_next_seg)
+{
+}
+
+TEST(send_poll, sets_frame_length_if_sending_next_seg)
+{
+}
+
 }
 
