@@ -758,7 +758,7 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
                                  arq_time_t dt)
 {
     ARQ_ASSERT(w && p && f && checksum);
-    (void)dt;
+    arq__send_wnd_step(w, dt);
     return 0;
 }
 

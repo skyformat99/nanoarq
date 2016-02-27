@@ -90,6 +90,7 @@ set(NANOARQ_UNIT_TEST_SOURCES unit_tests/main.cpp
                               unit_tests/test_send_window.cpp
                               unit_tests/test_send_window_ptr.cpp
                               unit_tests/test_send_frame.cpp
+                              unit_tests/test_send_poll.cpp
                               unit_tests/test_frame.cpp
                               unit_tests/test_cobs.cpp
                               unit_tests/test_min.cpp
