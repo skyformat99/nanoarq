@@ -231,7 +231,7 @@ typedef struct arq__send_wnd_ptr_t
 } arq__send_wnd_ptr_t;
 
 void arq__send_wnd_ptr_init(arq__send_wnd_ptr_t *p);
-void arq__send_wnd_ptr_next(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w);
+int arq__send_wnd_ptr_next(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w);
 
 typedef struct arq__send_frame_t
 {
@@ -762,16 +762,18 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
     return 0;
 }
 
-void ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w)
+int ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w)
 {
     unsigned i;
+    int fin = 0;
     ARQ_ASSERT(p && w);
     if (p->valid) {
-        unsigned const next = (unsigned)w->msg[p->msg].cur_ack_vec >> (unsigned)(p->seg + 1);
-        p->seg += (1 + __builtin_ctz(~next));
+        unsigned const rem = (unsigned)w->msg[p->msg].cur_ack_vec >> (unsigned)(p->seg + 1);
+        p->seg += (1 + __builtin_ctz(~rem));
         if (((1 << p->seg) - 1) < w->msg[p->msg].full_ack_vec) {
-            return;
+            return 0;
         }
+        fin = 1;
     }
     for (i = 0; i < w->size; ++i) {
         unsigned const idx = (i + w->base_idx) % w->cap;
@@ -780,10 +782,11 @@ void ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_
             p->msg = idx;
             p->valid = 1;
             p->seg = __builtin_ctz(~(unsigned)m->cur_ack_vec);
-            return;
+            return fin;
         }
     }
     p->valid = 0;
+    return fin;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
