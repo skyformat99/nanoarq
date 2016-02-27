@@ -28,12 +28,14 @@ TEST(poll, invalid_params)
 int MockSendPoll(arq__send_wnd_t *w,
                  arq__send_wnd_ptr_t *p,
                  arq__send_frame_t *f,
+                 arq__frame_hdr_t *h,
                  arq_checksum_cb_t checksum_cb,
                  arq_time_t dt)
 {
     return mock().actualCall("arq__send_poll").withParameter("w", w)
                                               .withParameter("p", p)
                                               .withParameter("f", f)
+                                              .withParameter("h", h)
                                               .withParameter("checksum_cb", (void *)checksum_cb)
                                               .withParameter("dt", dt)
                                               .returnIntValue();
@@ -48,7 +50,8 @@ TEST(poll, calls_send_poll_with_arq_context)
                                           .withParameter("p", &f.arq.send_wnd_ptr)
                                           .withParameter("f", &f.arq.send_frame)
                                           .withParameter("checksum_cb", (void *)f.arq.cfg.checksum_cb)
-                                          .withParameter("dt", dt);
+                                          .withParameter("dt", dt)
+                                          .ignoreOtherParameters();
     ARQ_MOCK_HOOK(arq__send_poll, MockSendPoll);
     arq_backend_poll(&f.arq, dt, &f.send_size, &f.event, &f.time);
 }

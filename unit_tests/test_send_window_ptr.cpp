@@ -31,7 +31,7 @@ struct Fixture
     {
         w.msg = m.data();
         arq__send_wnd_ptr_init(&p);
-        arq__send_wnd_init(&w, m.size(), 128, 16);
+        arq__send_wnd_init(&w, m.size(), 128, 16, 10);
     }
     arq__send_wnd_ptr_t p;
     arq__send_wnd_t w;
