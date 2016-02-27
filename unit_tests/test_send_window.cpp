@@ -369,7 +369,7 @@ TEST(window, ack_max_seq_num_wraps_to_zero)
 {
     Fixture f;
     f.wnd.size = 1;
-    f.wnd.base_seq = ARQ_FRAME_MAX_SEQ_NUM;
+    f.wnd.base_seq = ARQ__FRAME_MAX_SEQ_NUM;
     arq__send_wnd_ack(&f.wnd, f.wnd.base_seq, f.wnd.full_ack_vec);
     CHECK_EQUAL(0, f.wnd.base_seq);
 }

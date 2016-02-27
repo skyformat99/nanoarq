@@ -206,7 +206,7 @@ TEST(frame_hdr, write_returns_bytes_written)
 {
     WriteFixture f;
     int const n = arq__frame_hdr_write(&f.h, f.buf);
-    CHECK_EQUAL(ARQ_FRAME_HEADER_SIZE, n);
+    CHECK_EQUAL(ARQ__FRAME_HEADER_SIZE, n);
 }
 
 TEST(frame_hdr, headers_identical)
@@ -223,7 +223,7 @@ TEST(frame_hdr, headers_identical)
     orig.ack_num = AckNumber;
     orig.cur_ack_vec = AckSegmentMask;
 
-    char buf[ARQ_FRAME_HEADER_SIZE];
+    char buf[ARQ__FRAME_HEADER_SIZE];
     arq__frame_hdr_write(&orig, buf);
     arq__frame_hdr_t actual;
     arq__frame_hdr_read(buf, &actual);

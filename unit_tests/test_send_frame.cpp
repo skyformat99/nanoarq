@@ -17,12 +17,12 @@ TEST(send_frame, init_writes_cap_and_zeroes_len)
     CHECK_EQUAL(0, f.len);
 }
 
-TEST(send_frame, init_writes_zero_to_user_lock)
+TEST(send_frame, init_sets_state_to_unused)
 {
     arq__send_frame_t f;
-    f.usr = 2;
+    f.state = (arq__send_frame_state_t)100;
     arq__send_frame_init(&f, 123);
-    CHECK_EQUAL(0, f.usr);
+    CHECK_EQUAL(ARQ__SEND_FRAME_STATE_UNUSED, f.state);
 }
 
 }
