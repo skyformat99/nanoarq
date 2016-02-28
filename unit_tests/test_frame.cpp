@@ -1,6 +1,5 @@
 #include "nanoarq_in_test_project.h"
 #include "nanoarq_hook_plugin.h"
-
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
 #include <cstring>
@@ -39,6 +38,19 @@ struct Fixture
     char const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     char frame[64];
 };
+
+TEST(frame, write_returns_frame_len)
+{
+    struct Local
+    {
+        static arq_uint32_t StubChecksum(void const *, int) { return 0; }
+    };
+
+    Fixture f;
+    int const written =
+        arq__frame_write(&f.h, f.seg, &Local::StubChecksum, &f.frame, sizeof(f.frame));
+    CHECK_EQUAL(arq__frame_len(sizeof(f.seg)), written);
+}
 
 int MockArqFrameHdrWrite(arq__frame_hdr_t *frame_hdr, void *out_buf)
 {

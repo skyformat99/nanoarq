@@ -27,6 +27,31 @@ int MockSendWndPtrNext(arq__send_wnd_ptr_t *p, arq__send_wnd_t *w)
                  .returnIntValue();
 }
 
+void MockSendWndSeg(arq__send_wnd_t *w, int msg, int seg, void const **out_seg, int *out_seg_len)
+{
+    mock().actualCall("arq__send_wnd_seg")
+          .withParameter("w", w)
+          .withParameter("msg", msg)
+          .withParameter("seg", seg)
+          .withParameter("out_seg", (void const *)out_seg)
+          .withParameter("out_seg_len", out_seg_len);
+}
+
+int MockFrameWrite(arq__frame_hdr_t const *h,
+                   void const *seg,
+                   arq_checksum_cb_t checksum,
+                   void *out_frame,
+                   int frame_max)
+{
+    return mock().actualCall("arq__frame_write")
+                 .withParameter("h", h)
+                 .withParameter("seg", seg)
+                 .withParameter("checksum", (void *)checksum)
+                 .withParameter("out_frame", out_frame)
+                 .withParameter("frame_max", frame_max)
+                 .returnIntValue();
+}
+
 struct Fixture
 {
     Fixture()
@@ -37,6 +62,8 @@ struct Fixture
         arq__send_wnd_ptr_init(&p);
         ARQ_MOCK_HOOK(arq__send_wnd_step, MockSendWndStep);
         ARQ_MOCK_HOOK(arq__send_wnd_ptr_next, MockSendWndPtrNext);
+        ARQ_MOCK_HOOK(arq__send_wnd_seg, MockSendWndSeg);
+        ARQ_MOCK_HOOK(arq__frame_write, MockFrameWrite);
     }
 
     arq__send_wnd_t w;
@@ -109,7 +136,7 @@ TEST(send_poll, resets_message_retransmission_timer_if_finished_sending_message)
     CHECK_EQUAL(f.w.rtx, f.w.msg[0].rtx);
 }
 
-struct ExpectSendWndPtrNextFixture :ExpectSendWndStepFixture
+struct ExpectSendWndPtrNextFixture : ExpectSendWndStepFixture
 {
     ExpectSendWndPtrNextFixture()
     {
@@ -144,6 +171,13 @@ TEST(send_poll, calls_frame_write_if_sending_next_seg)
 
 TEST(send_poll, sets_frame_length_if_sending_next_seg)
 {
+    ExpectSendWndPtrNextFixture f;
+    f.p.valid = 1;
+    f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
+    mock().expectOneCall("arq__frame_write").ignoreOtherParameters().andReturnValue(123);
+    mock().ignoreOtherCalls();
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, 1);
+    CHECK_EQUAL(123, f.f.len);
 }
 
 }
