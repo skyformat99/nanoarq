@@ -1,6 +1,5 @@
 #include "nanoarq_in_test_project.h"
 #include "nanoarq_hook_plugin.h"
-
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
 #include <cstring>
@@ -13,7 +12,7 @@ namespace
 TEST(frame, len_is_header_size_plus_segment_length_plus_cobs_overhead_plus_checksum)
 {
     int const seg_len = 123;
-    CHECK_EQUAL(ARQ_FRAME_COBS_OVERHEAD + ARQ_FRAME_HEADER_SIZE + seg_len + 4,
+    CHECK_EQUAL(ARQ__FRAME_COBS_OVERHEAD + ARQ__FRAME_HEADER_SIZE + seg_len + 4,
                 arq__frame_len(seg_len));
 }
 
@@ -39,6 +38,19 @@ struct Fixture
     char const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     char frame[64];
 };
+
+TEST(frame, write_returns_frame_len)
+{
+    struct Local
+    {
+        static arq_uint32_t StubChecksum(void const *, int) { return 0; }
+    };
+
+    Fixture f;
+    int const written =
+        arq__frame_write(&f.h, f.seg, &Local::StubChecksum, &f.frame, sizeof(f.frame));
+    CHECK_EQUAL(arq__frame_len(sizeof(f.seg)), written);
+}
 
 int MockArqFrameHdrWrite(arq__frame_hdr_t *frame_hdr, void *out_buf)
 {
@@ -130,7 +142,7 @@ TEST(frame, write_writes_frame_header_at_offset_1)
     mock().expectOneCall("arq__frame_hdr_write")
           .withParameter("frame_hdr", &f.h)
           .withParameter("out_buf", (void *)&f.frame[1])
-          .andReturnValue(ARQ_FRAME_HEADER_SIZE);
+          .andReturnValue(ARQ__FRAME_HEADER_SIZE);
     mock().ignoreOtherCalls();
     f.h.seg_len = 0;
     arq__frame_write(&f.h, nullptr, &MockChecksum, f.frame, sizeof(f.frame));
@@ -142,7 +154,7 @@ TEST(frame, write_writes_segment_after_header)
     ARQ_MOCK_UNHOOK(arq__frame_hdr_write);
     mock().expectOneCall("arq__frame_seg_write")
           .withParameter("seg", (void const *)f.seg)
-          .withParameter("out_buf", (void *)(f.frame + 1 + ARQ_FRAME_HEADER_SIZE))
+          .withParameter("out_buf", (void *)(f.frame + 1 + ARQ__FRAME_HEADER_SIZE))
           .withParameter("len", f.h.seg_len);
     mock().ignoreOtherCalls();
     arq__frame_write(&f.h, f.seg, &MockChecksum, f.frame, sizeof(f.frame));
@@ -151,11 +163,11 @@ TEST(frame, write_writes_segment_after_header)
 TEST(frame, write_writes_checksum_after_segment)
 {
     MockFixture f;
-    mock().expectOneCall("arq__frame_hdr_write").ignoreOtherParameters().andReturnValue(ARQ_FRAME_HEADER_SIZE);
+    mock().expectOneCall("arq__frame_hdr_write").ignoreOtherParameters().andReturnValue(ARQ__FRAME_HEADER_SIZE);
     mock().expectOneCall("arq__frame_seg_write").ignoreOtherParameters().andReturnValue(f.h.seg_len);
     mock().expectOneCall("arq__frame_checksum_write")
           .withParameter("checksum", (void *)&MockChecksum)
-          .withParameter("checksum_seat", (void *)(f.frame + 1 + ARQ_FRAME_HEADER_SIZE + f.h.seg_len))
+          .withParameter("checksum_seat", (void *)(f.frame + 1 + ARQ__FRAME_HEADER_SIZE + f.h.seg_len))
           .withParameter("frame", (void *)f.frame)
           .withParameter("len", f.frame_len);
     mock().ignoreOtherCalls();
@@ -233,7 +245,7 @@ TEST(frame, read_reads_checksum)
         .withParameter("frame_len", f.frame_len)
         .withParameter("seg_len", f.h.seg_len)
         .withParameter("checksum", (void *)MockChecksum)
-        .andReturnValue(ARQ_FRAME_READ_RESULT_SUCCESS);
+        .andReturnValue(ARQ__FRAME_READ_RESULT_SUCCESS);
     mock().ignoreOtherCalls();
     void const *seg;
     arq__frame_read(f.frame, f.frame_len, MockChecksum, &f.h, &seg);
@@ -245,7 +257,7 @@ TEST(frame, checksum_read_calculates_checksum_over_header_and_segment)
     ARQ_MOCK_UNHOOK(arq__frame_checksum_read);
     mock().expectOneCall("checksum")
         .withParameter("p", (void const *)&f.frame[1])
-        .withParameter("len", ARQ_FRAME_HEADER_SIZE + f.h.seg_len)
+        .withParameter("len", ARQ__FRAME_HEADER_SIZE + f.h.seg_len)
         .andReturnValue(0);
     mock().ignoreOtherCalls();
     arq__frame_checksum_read(f.frame, f.frame_len, f.h.seg_len, MockChecksum);
@@ -258,7 +270,7 @@ TEST(frame, checksum_read_returns_malformed_if_checksum_doesnt_fit_in_frame)
     mock().ignoreOtherCalls();
     arq__frame_read_result_t const r =
         arq__frame_checksum_read(f.frame, f.frame_len, f.h.seg_len + 1, MockChecksum);
-    CHECK_EQUAL(ARQ_FRAME_READ_RESULT_ERR_MALFORMED, r);
+    CHECK_EQUAL(ARQ__FRAME_READ_RESULT_ERR_MALFORMED, r);
 }
 
 TEST(frame, checksum_read_returns_bad_checksum_if_computed_checksum_doesnt_match_frame_checksum)
@@ -269,10 +281,10 @@ TEST(frame, checksum_read_returns_bad_checksum_if_computed_checksum_doesnt_match
     uint32_t const computed_checksum = 0x22222222;
     mock().expectOneCall("checksum").ignoreOtherParameters().andReturnValue(computed_checksum);
     mock().ignoreOtherCalls();
-    std::memcpy(&f.frame[1 + ARQ_FRAME_HEADER_SIZE + f.h.seg_len], &payload_checksum, 4);
+    std::memcpy(&f.frame[1 + ARQ__FRAME_HEADER_SIZE + f.h.seg_len], &payload_checksum, 4);
     arq__frame_read_result_t const r =
         arq__frame_checksum_read(f.frame, f.frame_len, f.h.seg_len, MockChecksum);
-    CHECK_EQUAL(ARQ_FRAME_READ_RESULT_ERR_CHECKSUM, r);
+    CHECK_EQUAL(ARQ__FRAME_READ_RESULT_ERR_CHECKSUM, r);
 }
 
 TEST(frame, checksum_read_returns_success_if_computed_checksum_matches_frame_checksum)
@@ -285,7 +297,7 @@ TEST(frame, checksum_read_returns_success_if_computed_checksum_matches_frame_che
     mock().ignoreOtherCalls();
     arq__frame_read_result_t const r =
         arq__frame_checksum_read(f.frame, f.frame_len, f.h.seg_len, MockChecksum);
-    CHECK_EQUAL(ARQ_FRAME_READ_RESULT_SUCCESS, r);
+    CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
 }
 
 TEST(frame, read_reads_frame_header_at_offset_1)
@@ -305,7 +317,7 @@ TEST(frame, read_points_out_seg_to_segment_in_frame)
     mock().ignoreOtherCalls();
     void const *seg;
     arq__frame_read(f.frame, f.frame_len, MockChecksum, &f.h, &seg);
-    CHECK_EQUAL((void *)&f.frame[1 + ARQ_FRAME_HEADER_SIZE], seg);
+    CHECK_EQUAL((void *)&f.frame[1 + ARQ__FRAME_HEADER_SIZE], seg);
 }
 
 }

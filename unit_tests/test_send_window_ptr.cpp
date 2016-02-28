@@ -31,7 +31,7 @@ struct Fixture
     {
         w.msg = m.data();
         arq__send_wnd_ptr_init(&p);
-        arq__send_wnd_init(&w, m.size(), 128, 16);
+        arq__send_wnd_init(&w, m.size(), 128, 16, 10);
     }
     arq__send_wnd_ptr_t p;
     arq__send_wnd_t w;
@@ -241,6 +241,79 @@ TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_seg_of_last_m
     f.p.seg = 0;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.valid);
+}
+
+TEST(send_wnd_ptr, returns_zero_if_the_pointer_stays_inside_of_current_msg)
+{
+    Fixture f;
+    f.w.msg[0].len = f.w.seg_len * 3;
+    f.p.valid = 1;
+    int const new_msg = arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(0, new_msg);
+}
+
+TEST(send_wnd_ptr, returns_zero_when_pointer_goes_to_last_seg_in_longer_msg)
+{
+    Fixture f;
+    f.w.msg[0].len = f.w.seg_len * 3;
+    f.p.seg = f.p.valid = 1;
+    int const new_msg = arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(0, new_msg);
+}
+
+TEST(send_wnd_ptr, returns_zero_when_moving_to_first_msg_from_invalid)
+{
+    Fixture f;
+    f.w.msg[0].len = 1;
+    f.p.valid = 0;
+    int const new_msg = arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(0, new_msg);
+}
+
+TEST(send_wnd_ptr, returns_one_when_ptr_moves_past_msg_with_one_seg)
+{
+    Fixture f;
+    f.w.size = 2;
+    f.w.msg[0].len = f.w.msg[0].full_ack_vec = 1;
+    f.w.msg[1].len = 1;
+    f.p.valid = 1;
+    int const new_msg = arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, new_msg);
+}
+
+TEST(send_wnd_ptr, returns_one_when_ptr_moves_past_last_seg_in_msg)
+{
+    Fixture f;
+    f.w.size = 2;
+    f.w.msg[0].len = f.w.seg_len * 3;
+    f.w.msg[0].rtx = 1;
+    f.w.msg[0].full_ack_vec = 0b111;
+    f.w.msg[1].len = 1;
+    f.p.seg = 2;
+    f.p.valid = 1;
+    int const new_msg = arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, new_msg);
+}
+
+TEST(send_wnd_ptr, returns_one_when_finishing_only_msg)
+{
+    Fixture f;
+    f.w.msg[0].len = f.w.msg[0].full_ack_vec = 1;
+    f.p.valid = 1;
+    int const new_msg = arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, new_msg);
+}
+
+TEST(send_wnd_ptr, returns_one_when_finishing_final_msg)
+{
+    Fixture f;
+    f.w.size = 2;
+    f.w.msg[0].len = f.w.msg[0].rtx = f.w.msg[0].full_ack_vec = 1;
+    f.w.msg[1].len = f.w.msg[1].full_ack_vec = 1;
+    f.p.valid = 1;
+    f.p.msg = 1;
+    int const new_msg = arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, new_msg);
 }
 
 }
