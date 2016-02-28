@@ -65,13 +65,13 @@ int MockArqFrameSegWrite(void const *seg, void *out_buf, int len)
         .returnIntValue();
 }
 
-void MockArqFrameChecksumWrite(arq_checksum_cb_t checksum, void *checksum_seat, void *frame, int len)
+void MockArqFrameChecksumWrite(arq_checksum_cb_t checksum, void *checksum_seat, void *frame, int seg_len)
 {
     mock().actualCall("arq__frame_checksum_write")
         .withParameter("checksum", (void *)checksum)
         .withParameter("checksum_seat", checksum_seat)
         .withParameter("frame", frame)
-        .withParameter("len", len);
+        .withParameter("seg_len", seg_len);
 }
 
 void MockArqCobsEncode(void *p, int len)
@@ -168,7 +168,7 @@ TEST(frame, write_writes_checksum_after_segment)
           .withParameter("checksum", (void *)&MockChecksum)
           .withParameter("checksum_seat", (void *)(f.frame + 1 + ARQ__FRAME_HEADER_SIZE + f.h.seg_len))
           .withParameter("frame", (void *)f.frame)
-          .withParameter("len", f.frame_len);
+          .withParameter("seg_len", f.h.seg_len);
     mock().ignoreOtherCalls();
     arq__frame_write(&f.h, f.seg, &MockChecksum, f.frame, sizeof(f.frame));
 }
@@ -196,10 +196,10 @@ TEST(frame, checksum_write_computes_checksum_over_range_starting_at_offset_1)
     ARQ_MOCK_UNHOOK(arq__frame_checksum_write);
     mock().expectOneCall("checksum")
           .withParameter("p", (void const *)&f.frame[1])
-          .withParameter("len", f.frame_len - 1 - 4);
+          .withParameter("len", ARQ__FRAME_HEADER_SIZE + f.h.seg_len);
     mock().ignoreOtherCalls();
     uint32_t dummy;
-    arq__frame_checksum_write(MockChecksum, &dummy, f.frame, f.frame_len);
+    arq__frame_checksum_write(MockChecksum, &dummy, f.frame, f.h.seg_len);
 }
 
 TEST(frame, checksum_write_converts_checksum_to_network_order)

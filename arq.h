@@ -555,7 +555,7 @@ int ARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *h,
     ARQ_ASSERT((seg || (h->seg_len == 0)) && (frame_max >= frame_len));
     dst += arq__frame_hdr_write(h, dst);
     dst += arq__frame_seg_write(seg, dst, h->seg_len);
-    arq__frame_checksum_write(checksum, dst, out_frame, frame_len);
+    arq__frame_checksum_write(checksum, dst, out_frame, h->seg_len);
     arq__cobs_encode(out_frame, frame_len);
     return frame_len;
 }
@@ -563,14 +563,12 @@ int ARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *h,
 void ARQ_MOCKABLE(arq__frame_checksum_write)(arq_checksum_cb_t checksum,
                                              void *checksum_seat,
                                              void *frame,
-                                             int len)
+                                             int seg_len)
 {
     arq_uint32_t c;
-    arq_uchar_t const *src = (arq_uchar_t const *)&c;
-    arq_uchar_t *dst = (arq_uchar_t *)checksum_seat;
-    ARQ_ASSERT(checksum && checksum_seat && frame && (len > 0));
-    c = arq__hton32(checksum((arq_uchar_t const *)frame + 1, len - 1 - 4));
-    ARQ_MEMCPY(dst, src, 4);
+    ARQ_ASSERT(checksum && checksum_seat && frame);
+    c = arq__hton32(checksum((arq_uchar_t const *)frame + 1, ARQ__FRAME_HEADER_SIZE + seg_len));
+    ARQ_MEMCPY(checksum_seat, &c, 4);
 }
 
 arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_read)(void *frame,
@@ -593,14 +591,13 @@ arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_checksum_read)(void const *fram
                                                                 arq_checksum_cb_t checksum)
 {
     arq_uint32_t frame_checksum, computed_checksum;
-    arq_uchar_t *dst = (arq_uchar_t *)&frame_checksum;
     arq_uchar_t const *src;
     ARQ_ASSERT(frame && checksum);
     if (seg_len + ARQ__FRAME_COBS_OVERHEAD + ARQ__FRAME_HEADER_SIZE + 4 > frame_len) {
         return ARQ__FRAME_READ_RESULT_ERR_MALFORMED;
     }
     src = (arq_uchar_t const *)frame + 1 + ARQ__FRAME_HEADER_SIZE + seg_len;
-    ARQ_MEMCPY(dst, src, 4);
+    ARQ_MEMCPY(&frame_checksum, src, 4);
     computed_checksum = checksum((arq_uchar_t const *)frame + 1, ARQ__FRAME_HEADER_SIZE + seg_len);
     frame_checksum = arq__ntoh32(frame_checksum);
     if (frame_checksum != computed_checksum) {
