@@ -33,8 +33,8 @@ void MockSendWndSeg(arq__send_wnd_t *w, int msg, int seg, void const **out_seg, 
           .withParameter("w", w)
           .withParameter("msg", msg)
           .withParameter("seg", seg)
-          .withParameter("out_seg", (void const *)out_seg)
-          .withParameter("out_seg_len", out_seg_len);
+          .withOutputParameter("out_seg", (void *)out_seg)
+          .withOutputParameter("out_seg_len", out_seg_len);
 }
 
 int MockFrameWrite(arq__frame_hdr_t const *h,
@@ -44,7 +44,7 @@ int MockFrameWrite(arq__frame_hdr_t const *h,
                    int frame_max)
 {
     return mock().actualCall("arq__frame_write")
-                 .withParameter("h", h)
+                 .withParameter("h", (void const *)h)
                  .withParameter("seg", seg)
                  .withParameter("checksum", (void *)checksum)
                  .withParameter("out_frame", out_frame)
@@ -163,10 +163,40 @@ TEST(send_poll, returns_zero_if_no_new_data_to_send)
 
 TEST(send_poll, gets_segment_pointer_from_send_wnd_seg_if_sending_next_seg)
 {
+    ExpectSendWndPtrNextFixture f;
+    f.p.valid = 1;
+    f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
+    f.p.msg = 123;
+    f.p.seg = 456;
+    mock().expectOneCall("arq__send_wnd_seg")
+          .withParameter("w", &f.w)
+          .withParameter("msg", f.p.msg)
+          .withParameter("seg", f.p.seg)
+          .ignoreOtherParameters();
+    mock().ignoreOtherCalls();
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, 1);
 }
 
 TEST(send_poll, calls_frame_write_if_sending_next_seg)
 {
+    ExpectSendWndPtrNextFixture f;
+    f.p.valid = 1;
+    f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
+    void *seg = (void *)0x12345678;
+    int seg_len = 432;
+    mock().expectOneCall("arq__send_wnd_seg")
+          .withOutputParameterReturning("out_seg", &seg, sizeof(void *))
+          .withOutputParameterReturning("out_seg_len", &seg_len, sizeof(int))
+          .ignoreOtherParameters();
+    mock().expectOneCall("arq__frame_write")
+          .withParameter("h", (void const *)&f.h)
+          .withParameter("seg", (void const *)seg)
+          .withParameter("checksum", (void *)&StubChecksum)
+          .withParameter("out_frame", f.f.buf)
+          .withParameter("frame_max", f.f.cap);
+    mock().ignoreOtherCalls();
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, 1);
+    CHECK_EQUAL(seg_len, f.h.seg_len);
 }
 
 TEST(send_poll, sets_frame_length_if_sending_next_seg)
