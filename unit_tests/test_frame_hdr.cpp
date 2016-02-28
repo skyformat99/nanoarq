@@ -3,8 +3,7 @@
 
 TEST_GROUP(frame_hdr) {};
 
-namespace
-{
+namespace {
 
 enum
 {

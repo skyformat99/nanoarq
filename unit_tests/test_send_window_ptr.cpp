@@ -5,8 +5,7 @@
 
 TEST_GROUP(send_wnd_ptr) {};
 
-namespace
-{
+namespace {
 
 TEST(send_wnd_ptr, init_sets_valid_to_zero)
 {

@@ -1,14 +1,13 @@
 #include "nanoarq_in_test_project.h"
 #include "nanoarq_hook_plugin.h"
-
 #include <CppUTest/CommandLineTestRunner.h>
 #include <CppUTest/TestRegistry.h>
 #include <CppUTestExt/MemoryReporterPlugin.h>
 #include <CppUTestExt/MockSupportPlugin.h>
 #include <CppUTest/TestHarness_c.h>
+#include <cstdio>
 
-namespace
-{
+namespace {
 
 void TestAssertHandler(char const *file, int line, char const *cond, char const *msg)
 {

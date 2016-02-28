@@ -8,8 +8,7 @@
 
 TEST_GROUP(flush) {};
 
-namespace
-{
+namespace {
 
 TEST(flush, invalid_params)
 {

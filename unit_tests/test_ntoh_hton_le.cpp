@@ -3,8 +3,7 @@
 
 TEST_GROUP(ntoh_hton_le) {};
 
-namespace
-{
+namespace {
 
 TEST(ntoh_hton_le, ntoh16_swapped)
 {

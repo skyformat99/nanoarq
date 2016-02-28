@@ -5,8 +5,7 @@
 
 TEST_GROUP(send_frame) {};
 
-namespace
-{
+namespace {
 
 TEST(send_frame, init_writes_cap_and_zeroes_len)
 {

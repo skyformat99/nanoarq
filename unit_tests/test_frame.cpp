@@ -6,8 +6,7 @@
 
 TEST_GROUP(frame) {};
 
-namespace
-{
+namespace {
 
 TEST(frame, len_is_header_size_plus_segment_length_plus_cobs_overhead_plus_checksum)
 {

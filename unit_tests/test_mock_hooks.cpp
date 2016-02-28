@@ -6,8 +6,7 @@
 
 TEST_GROUP(mock_hooks) {};
 
-namespace
-{
+namespace {
 
 TEST(mock_hooks, can_hook_nanoarq_function)
 {

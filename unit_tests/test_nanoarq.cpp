@@ -3,8 +3,7 @@
 
 TEST_GROUP(nanoarq) {};
 
-namespace
-{
+namespace {
 
 TEST(nanoarq, required_size_returns_zero)
 {

@@ -53,12 +53,8 @@ set(NANOARQ_FLAGS -Os -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
 set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wshadow -Wcast-align -Wcast-qual -Wstrict-aliasing=2 -march=native -g)
 include_directories(${CMAKE_SOURCE_DIR}) # arq.h
 
-################ Unit tests
+################ Targets
 
 add_subdirectory(unit_tests)
-
-################ Functional tests
-
 add_subdirectory(functional_tests)
-
 

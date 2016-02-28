@@ -3,8 +3,7 @@
 
 TEST_GROUP(lin_alloc) {};
 
-namespace
-{
+namespace {
 
 TEST(lin_alloc, init_sets_fields)
 {

@@ -386,6 +386,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
     if (!arq || !out_backend_send_size || !out_event || !out_next_poll) {
         return ARQ_ERR_INVALID_PARAM;
     }
+    h.cur_ack_vec = 0;
     *out_backend_send_size =
         arq__send_poll(&arq->send_wnd, &arq->send_wnd_ptr, &arq->send_frame, &h, arq->cfg.checksum_cb, dt);
     return ARQ_OK_COMPLETED;

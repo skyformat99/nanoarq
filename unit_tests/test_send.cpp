@@ -6,8 +6,7 @@
 
 TEST_GROUP(send) {};
 
-namespace
-{
+namespace {
 
 TEST(send, invalid_params)
 {

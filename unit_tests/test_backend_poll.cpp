@@ -5,8 +5,7 @@
 
 TEST_GROUP(poll) {};
 
-namespace
-{
+namespace {
 
 struct Fixture
 {

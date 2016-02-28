@@ -1,16 +1,16 @@
 #include "nanoarq_in_test_project.h"
-
 #include <CppUTest/CommandLineTestRunner.h>
 #include <CppUTest/TestRegistry.h>
 #include <CppUTestExt/MemoryReporterPlugin.h>
 #include <CppUTest/TestHarness_c.h>
+#include <cstdio>
 
-namespace
-{
+namespace {
 
 void TestAssertHandler(char const *file, int line, char const *cond, char const *msg)
 {
     (void)msg;
+    std::printf("Assert failure! %s(%d): (%s) %s\n", file, line, cond, msg);
     FAIL_TEXT_C_LOCATION(cond, file, (int)line);
 }
 
@@ -29,5 +29,4 @@ int main(int, char *argv[])
     char const *verbose_argv[] = { argv[0], "-v" };
     return CommandLineTestRunner::RunAllTests(2, verbose_argv);
 }
-
 

@@ -5,8 +5,7 @@
 
 TEST_GROUP(backend_send) {};
 
-namespace
-{
+namespace {
 
 TEST(backend_send, send_ptr_get_invalid_params)
 {
