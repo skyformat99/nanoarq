@@ -4,6 +4,14 @@ project(nanoarq C CXX)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
+set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_C_FLAGS_RELEASE "-Os")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-Os -g")
+
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
+
 ################ CppUTest
 
 include(ExternalProject)
@@ -12,6 +20,7 @@ set(CPPUTEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/external/CppUTest)
 set(CPPUTEST_LIB_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/lib)
 set(CPPUTEST_INCLUDE_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/include)
 set(CPPUTEST_CMAKE_ARGS -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
+                        -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/${PROJECT_NAME}
                         -DTESTS=OFF
                         -DC++11=ON)
@@ -49,8 +58,8 @@ endfunction()
 
 ################ Nanoarq
 
-set(NANOARQ_FLAGS -Os -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
-set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wshadow -Wcast-align -Wcast-qual -Wstrict-aliasing=2 -march=native -g)
+set(NANOARQ_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
+set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wshadow -Wcast-align -Wcast-qual -Wstrict-aliasing=2 -march=native)
 include_directories(${CMAKE_SOURCE_DIR}) # arq.h
 
 ################ Targets

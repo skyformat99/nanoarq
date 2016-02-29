@@ -11,7 +11,8 @@ set(NANOARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                     write_and_read_frames.cpp
                                     decode_sent_frames.cpp)
 
-set_source_files_properties(nanoarq_in_test_project.c PROPERTIES COMPILE_FLAGS ${NANOARQ_FLAGS})
+string(REPLACE ";" " " NANOARQ_FLAGS_STR "${NANOARQ_FLAGS}")
+set_source_files_properties(nanoarq_in_test_project.c PROPERTIES COMPILE_FLAGS "${NANOARQ_FLAGS_STR}")
 
 add_executable(nanoarq_functional_tests ${NANOARQ_FUNCTIONAL_TEST_SOURCES})
 target_compile_options(nanoarq_functional_tests PRIVATE ${NANOARQ_COMMON_FLAGS})
