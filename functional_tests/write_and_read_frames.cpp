@@ -11,15 +11,15 @@ TEST(functional, write_and_read_frames)
         seg[i] = (arq_uchar_t)i;
     }
 
-    for (int i = 0; i < 239; ++i) {
+    for (auto i = 0; i < 239; ++i) {
         arq__frame_hdr_t write_hdr;
         arq__frame_hdr_init(&write_hdr);
         write_hdr.seg_len = i;
-        int const frame_len = arq__frame_write(&write_hdr, seg, arq_crc32, frame, sizeof(frame));
+        auto const frame_len = arq__frame_write(&write_hdr, seg, arq_crc32, frame, sizeof(frame));
 
         arq__frame_hdr_t read_hdr;
         void const *read_seg;
-        arq__frame_read_result_t const r = arq__frame_read(frame, frame_len, arq_crc32, &read_hdr, &read_seg);
+        auto const r = arq__frame_read(frame, frame_len, arq_crc32, &read_hdr, &read_seg);
         CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
         CHECK_EQUAL(write_hdr.seg_len, read_hdr.seg_len);
         MEMCMP_EQUAL(seg, read_seg, read_hdr.seg_len);
