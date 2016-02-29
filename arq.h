@@ -717,7 +717,7 @@ int ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, int le
 
 void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t cur_ack_vec)
 {
-    unsigned ack_msg_idx, i;
+    int ack_msg_idx, i;
     ARQ_ASSERT(w && (seq >= 0));
     ack_msg_idx = seq % w->cap;
     w->msg[ack_msg_idx].cur_ack_vec = cur_ack_vec;
