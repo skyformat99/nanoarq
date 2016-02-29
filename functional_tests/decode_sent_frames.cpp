@@ -4,12 +4,11 @@ namespace {
 
 TEST(functional, decode_sent_frames)
 {
-    std::printf("\n");
     arq_t arq;
     std::array< arq__msg_t, 64 > send_wnd_msgs;
     std::array< unsigned char, 256 > send_frame;
 
-    int const segment_length_in_bytes = 128;
+    int const segment_length_in_bytes = 230;
     int const message_length_in_segments = 10;
     arq_time_t const retransmission_timeout = 100;
 
@@ -38,37 +37,42 @@ TEST(functional, decode_sent_frames)
         int sent;
         arq_err_t const e = arq_send(&arq, send_wnd_buf.data(), send_wnd_buf.size(), &sent);
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-        std::printf("\t%d / %d bytes in send window.\n", sent, (int)send_wnd_buf.size());
     }
 
     std::vector< unsigned char > recv;
-    int bytes_to_drain;
-    unsigned char decode_buf[256];
     for (;;) {
-        arq_event_t event;
-        arq_time_t next_poll;
-        arq_err_t e = arq_backend_poll(&arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-        if (bytes_to_drain == 0) {
-            break;
+        unsigned char decode_buf[256];
+        {
+            arq_event_t event;
+            arq_time_t next_poll;
+            int bytes_to_drain;
+            arq_err_t e = arq_backend_poll(&arq, 0, &bytes_to_drain, &event, &next_poll);
+            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            if (bytes_to_drain == 0) {
+                break;
+            }
         }
 
-        void const *p;
         int size;
-        e = arq_backend_send_ptr_get(&arq, &p, &size);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-        std::memcpy(decode_buf, p, size);
-        e = arq_backend_send_ptr_release(&arq);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+        {
+            void const *p;
+            arq_err_t e = arq_backend_send_ptr_get(&arq, &p, &size);
+            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            std::memcpy(decode_buf, p, size);
+            e = arq_backend_send_ptr_release(&arq);
+            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+        }
 
-        void const *seg;
-        arq__frame_hdr_t h;
-        arq__frame_read_result_t const r =
-            arq__frame_read(decode_buf, size, arq.cfg.checksum_cb, &h, &seg);
-        CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
-        recv.insert(std::end(recv), (unsigned char const *)seg, (unsigned char const *)seg + h.seg_len);
+        {
+            void const *seg;
+            arq__frame_hdr_t h;
+            arq__frame_read_result_t const r =
+                arq__frame_read(decode_buf, size, arq.cfg.checksum_cb, &h, &seg);
+            CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
+            recv.insert(std::end(recv), (unsigned char const *)seg, (unsigned char const *)seg + h.seg_len);
+        }
     }
-    std::printf("\tdrained %d bytes from backend.\n", (int)recv.size());
+    MEMCMP_EQUAL(send_wnd_buf.data(), recv.data(), send_wnd_buf.size());
 }
 
 }

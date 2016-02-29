@@ -803,6 +803,9 @@ int ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t
     for (i = 0; i < w->size; ++i) {
         unsigned const idx = (i + w->base_idx) % w->cap;
         arq__msg_t const *m = &w->msg[idx];
+        if (p->valid && (p->msg == idx)) {
+            continue;
+        }
         if ((m->rtx == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
             p->msg = idx;
             p->valid = 1;
