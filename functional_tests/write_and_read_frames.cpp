@@ -12,6 +12,7 @@ TEST(functional, write_and_read_frames)
     }
 
     arq__frame_hdr_t write_hdr;
+    arq__frame_hdr_init(&write_hdr);
     write_hdr.seg_len = 220;
     int const frame_len = arq__frame_write(&write_hdr, seg, arq_crc32, frame, sizeof(frame));
 

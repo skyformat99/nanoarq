@@ -14,6 +14,7 @@
     ARQ_MOCK(arq__send_wnd_ptr_next) \
     ARQ_MOCK(arq__send_poll) \
     ARQ_MOCK(arq__frame_len) \
+    ARQ_MOCK(arq__frame_hdr_init) \
     ARQ_MOCK(arq__frame_hdr_read) \
     ARQ_MOCK(arq__frame_hdr_write) \
     ARQ_MOCK(arq__frame_seg_write) \

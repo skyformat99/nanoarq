@@ -1,5 +1,6 @@
 #include "nanoarq_in_test_project.h"
 #include <CppUTest/TestHarness.h>
+#include <cstring>
 
 TEST_GROUP(frame_hdr) {};
 
@@ -16,6 +17,23 @@ enum
     AckNumber = 0x814,      // 1000 0001 0100
     AckSegmentMask = 0x235  // 0010 0011 0101
 };
+
+TEST(frame_hdr, init_sets_all_fields_to_zero)
+{
+    arq__frame_hdr_t h;
+    std::memset(&h, 0xFF, sizeof(h));
+    arq__frame_hdr_init(&h);
+    CHECK_EQUAL(0, h.version);
+    CHECK_EQUAL(0, h.seg_len);
+    CHECK_EQUAL(0, h.win_size);
+    CHECK_EQUAL(0, h.seq_num);
+    CHECK_EQUAL(0, h.msg_len);
+    CHECK_EQUAL(0, h.seg_id);
+    CHECK_EQUAL(0, h.ack_num);
+    CHECK_EQUAL(0, h.cur_ack_vec);
+    CHECK_EQUAL(0, h.rst);
+    CHECK_EQUAL(0, h.fin);
+}
 
 struct ReadFixture
 {

@@ -60,14 +60,13 @@ TEST(functional, decode_sent_frames)
         std::memcpy(decode_buf, p, size);
         e = arq_backend_send_ptr_release(&arq);
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-/*
+
         void const *seg;
         arq__frame_hdr_t h;
         arq__frame_read_result_t const r =
             arq__frame_read(decode_buf, size, arq.cfg.checksum_cb, &h, &seg);
-//        CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
+        CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
         recv.insert(std::end(recv), (unsigned char const *)seg, (unsigned char const *)seg + h.seg_len);
-        */
     }
     std::printf("\tdrained %d bytes from backend.\n", (int)recv.size());
 }
