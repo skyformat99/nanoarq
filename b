@@ -2,7 +2,13 @@
 set -e
 
 SCRIPT_PATH=$(cd $(dirname $0) ; pwd -P)
-BUILD_PATH=$SCRIPT_PATH/build/ninja
+
+BUILD_TYPE=DEBUG
+if [ -n "$1" ]; then
+    BUILD_TYPE=$1; shift
+fi
+
+BUILD_PATH=$SCRIPT_PATH/build/ninja/$BUILD_TYPE
 
 #### grab cmake
 
@@ -45,6 +51,7 @@ fi
 #### everything builds inside of 'build' subdirectory
 
 [ ! -d $BUILD_PATH ] && mkdir -p $BUILD_PATH
-[ ! -d $BUILD_PATH/CMakeFiles ] && (cd $BUILD_PATH; "$CMAKE" -G "$BUILD_GENERATOR" $SCRIPT_PATH)
+[ ! -d $BUILD_PATH/CMakeFiles ] &&
+    (cd $BUILD_PATH; "$CMAKE" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G "$BUILD_GENERATOR" $SCRIPT_PATH)
 (cd $BUILD_PATH; "$CMAKE" --build . -- "$@")
 
