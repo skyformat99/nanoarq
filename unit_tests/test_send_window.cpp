@@ -364,17 +364,15 @@ TEST(window, ack_sliding_increments_base_seq)
     CHECK_EQUAL(1, f.wnd.base_seq);
 }
 
-TEST(window, ack_resets_message_when_sliding)
+TEST(window, ack_resets_len_and_cur_ack_vec_when_sliding)
 {
     Fixture f;
     f.wnd.size = 1;
     f.wnd.msg[0].cur_ack_vec = f.wnd.full_ack_vec;
     f.wnd.msg[0].len = 1234;
-    f.wnd.msg[0].rtx = 93;
     arq__send_wnd_ack(&f.wnd, 0, f.wnd.full_ack_vec);
     CHECK_EQUAL(0, f.wnd.msg[0].cur_ack_vec);
     CHECK_EQUAL(0, f.wnd.msg[0].len);
-    CHECK_EQUAL(0, f.wnd.msg[0].rtx);
 }
 
 TEST(window, ack_resets_full_ack_vec_when_sliding)

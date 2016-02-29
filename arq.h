@@ -728,7 +728,6 @@ void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t c
         if (m->cur_ack_vec != m->full_ack_vec) {
             break;
         }
-        m->rtx = 0;
         m->len = 0;
         m->cur_ack_vec = 0;
         m->full_ack_vec = w->full_ack_vec;
