@@ -56,7 +56,6 @@ TEST(send_wnd_ptr, next_ptr_msg_is_zero_if_first_msg_is_at_index_zero)
 {
     Fixture f;
     f.w.msg[0].len = 4;
-    f.w.base_idx = 0;
     f.p.msg = 1;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.msg);
@@ -195,11 +194,11 @@ TEST(send_wnd_ptr, next_wraps_msg_index_to_first_zero_rtx_msg_in_window_if_point
 {
     Fixture f;
     f.w.size = 2;
-    f.w.base_idx = f.w.cap - 1;
-    f.w.msg[f.w.base_idx].len = (f.w.seg_len * 2) + 1;
-    f.w.msg[f.w.base_idx].full_ack_vec = 0b111;
-    f.w.msg[f.w.base_idx].rtx = 1;
-    f.p.msg = f.w.base_idx;
+    f.w.base_seq = f.w.cap - 1;
+    f.w.msg[f.w.base_seq].len = (f.w.seg_len * 2) + 1;
+    f.w.msg[f.w.base_seq].full_ack_vec = 0b111;
+    f.w.msg[f.w.base_seq].rtx = 1;
+    f.p.msg = f.w.base_seq;
     f.p.seg = 2;
     f.p.valid = 1;
     f.w.msg[0].len = 1;
