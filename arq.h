@@ -709,6 +709,7 @@ int ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, int le
     ARQ_MEMCPY(w->buf, (arq_uchar_t const *)buf + pre_wrap_copy_len, len - pre_wrap_copy_len);
     for (i = 0; i < len / w->msg_len; ++i) {
         w->msg[cur_msg_idx].len = w->msg_len;
+        w->msg[cur_msg_idx].rtx = 0;
         cur_msg_idx = (cur_msg_idx + 1) % w->cap;
     }
     w->msg[cur_msg_idx].len += (len % w->msg_len);

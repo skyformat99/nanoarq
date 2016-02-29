@@ -158,7 +158,7 @@ TEST(window, send_with_partially_full_window_updates_message_length)
     CHECK_EQUAL(12 + 15, f.msg[0].len);
 }
 
-TEST(window, send_more_than_one_message_updates_sizes_in_first_two_messages)
+TEST(window, send_more_than_one_message_updates_lengths_in_first_two_messages)
 {
     Fixture f;
     f.snd.resize(f.wnd.msg_len + 7);
@@ -168,7 +168,25 @@ TEST(window, send_more_than_one_message_updates_sizes_in_first_two_messages)
     CHECK_EQUAL(0, f.msg[2].len);
 }
 
-TEST(window, send_more_than_two_messages_updates_sizes_in_first_three_messages)
+TEST(window, send_one_full_message_sets_rtx_to_zero)
+{
+    Fixture f;
+    f.snd.resize(f.wnd.msg_len);
+    f.wnd.msg[0].rtx = 1;
+    arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
+    CHECK_EQUAL(0, f.wnd.msg[0].rtx);
+}
+
+TEST(window, send_two_messages_sets_rtx_to_zero_for_full_message)
+{
+    Fixture f;
+    f.snd.resize(f.wnd.msg_len + 1);
+    f.wnd.msg[0].rtx = 1;
+    arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
+    CHECK_EQUAL(0, f.wnd.msg[0].rtx);
+}
+
+TEST(window, send_more_than_two_messages_updates_lengths_in_first_three_messages)
 {
     Fixture f;
     f.snd.resize(f.wnd.msg_len * 2 + 7);
@@ -177,6 +195,16 @@ TEST(window, send_more_than_two_messages_updates_sizes_in_first_three_messages)
     CHECK_EQUAL(f.wnd.msg_len, f.msg[1].len);
     CHECK_EQUAL((int)f.snd.size() % f.wnd.msg_len, f.msg[2].len);
     CHECK_EQUAL(0, f.msg[3].len);
+}
+
+TEST(window, send_three_messages_sets_rtx_to_zero_for_first_two_messages)
+{
+    Fixture f;
+    f.snd.resize(f.wnd.msg_len * 2 + 1);
+    f.msg[0].rtx = f.msg[1].rtx = 1;
+    arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
+    CHECK_EQUAL(0, f.msg[0].rtx);
+    CHECK_EQUAL(0, f.msg[1].rtx);
 }
 
 TEST(window, send_more_than_one_messages_increments_size_by_number_of_messages)

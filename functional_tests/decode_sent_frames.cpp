@@ -40,6 +40,8 @@ TEST(functional, decode_sent_frames)
     }
 
     std::vector< unsigned char > recv;
+    recv.reserve(send_wnd_buf.size());
+
     for (;;) {
         unsigned char decode_buf[256];
         {
