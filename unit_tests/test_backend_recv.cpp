@@ -3,8 +3,7 @@
 
 TEST_GROUP(backend_recv) {};
 
-namespace
-{
+namespace {
 
 TEST(backend_recv, recv_decode_buf_starts_empty)
 {

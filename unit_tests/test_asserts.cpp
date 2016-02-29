@@ -3,8 +3,7 @@
 
 TEST_GROUP(arq_assert) {};
 
-namespace
-{
+namespace {
 
 #if ARQ_ASSERTS_ENABLED == 1
 TEST(arq_assert, set_and_get_assert)

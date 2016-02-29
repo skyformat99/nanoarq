@@ -149,6 +149,8 @@ enum
     ARQ__FRAME_MAX_SEQ_NUM = (1 << 12) - 1
 };
 
+int arq__frame_len(int seg_len);
+
 typedef struct arq__frame_hdr_t
 {
     int version;
@@ -163,16 +165,16 @@ typedef struct arq__frame_hdr_t
     char fin;
 } arq__frame_hdr_t;
 
-int arq__frame_len(int seg_len);
+void arq__frame_hdr_init(arq__frame_hdr_t *h);
+int  arq__frame_hdr_write(arq__frame_hdr_t const *h, void *out_frame);
+void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
+int  arq__frame_seg_write(void const *seg, void *out_frame, int len);
 
 int arq__frame_write(arq__frame_hdr_t const *h,
                      void const *seg,
                      arq_checksum_cb_t checksum,
                      void *out_frame,
                      int frame_max);
-int  arq__frame_hdr_write(arq__frame_hdr_t const *h, void *out_frame);
-int  arq__frame_seg_write(void const *seg, void *out_frame, int len);
-void arq__frame_checksum_write(arq_checksum_cb_t checksum, void *checksum_seat, void *frame, int len);
 
 typedef enum
 {
@@ -186,7 +188,8 @@ arq__frame_read_result_t arq__frame_read(void *frame,
                                          arq_checksum_cb_t checksum,
                                          arq__frame_hdr_t *out_hdr,
                                          void const **out_seg);
-void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
+
+void arq__frame_checksum_write(arq_checksum_cb_t checksum, void *checksum_seat, void *frame, int len);
 arq__frame_read_result_t arq__frame_checksum_read(void const *frame,
                                                   int frame_len,
                                                   int seg_len,
@@ -386,6 +389,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
     if (!arq || !out_backend_send_size || !out_event || !out_next_poll) {
         return ARQ_ERR_INVALID_PARAM;
     }
+    arq__frame_hdr_init(&h);
     *out_backend_send_size =
         arq__send_poll(&arq->send_wnd, &arq->send_wnd_ptr, &arq->send_frame, &h, arq->cfg.checksum_cb, dt);
     return ARQ_OK_COMPLETED;
@@ -503,6 +507,20 @@ void ARQ_MOCKABLE(arq__frame_hdr_read)(void const *buf, arq__frame_hdr_t *out_fr
     ARQ_ASSERT((src - (arq_uchar_t const *)buf) == ARQ__FRAME_HEADER_SIZE);
 }
 
+void ARQ_MOCKABLE(arq__frame_hdr_init)(arq__frame_hdr_t *h)
+{
+    h->version = 0;
+    h->seg_len = 0;
+    h->win_size = 0;
+    h->seq_num = 0;
+    h->msg_len = 0;
+    h->seg_id = 0;
+    h->ack_num = 0;
+    h->cur_ack_vec = 0;
+    h->rst = 0;
+    h->fin = 0;
+}
+
 int ARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *h, void *out_buf)
 {
     arq_uchar_t *dst = (arq_uchar_t *)out_buf;
@@ -554,7 +572,7 @@ int ARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *h,
     ARQ_ASSERT((seg || (h->seg_len == 0)) && (frame_max >= frame_len));
     dst += arq__frame_hdr_write(h, dst);
     dst += arq__frame_seg_write(seg, dst, h->seg_len);
-    arq__frame_checksum_write(checksum, dst, out_frame, frame_len);
+    arq__frame_checksum_write(checksum, dst, out_frame, h->seg_len);
     arq__cobs_encode(out_frame, frame_len);
     return frame_len;
 }
@@ -562,14 +580,12 @@ int ARQ_MOCKABLE(arq__frame_write)(arq__frame_hdr_t const *h,
 void ARQ_MOCKABLE(arq__frame_checksum_write)(arq_checksum_cb_t checksum,
                                              void *checksum_seat,
                                              void *frame,
-                                             int len)
+                                             int seg_len)
 {
     arq_uint32_t c;
-    arq_uchar_t const *src = (arq_uchar_t const *)&c;
-    arq_uchar_t *dst = (arq_uchar_t *)checksum_seat;
-    ARQ_ASSERT(checksum && checksum_seat && frame && (len > 0));
-    c = arq__hton32(checksum((arq_uchar_t const *)frame + 1, len - 1 - 4));
-    ARQ_MEMCPY(dst, src, 4);
+    ARQ_ASSERT(checksum && checksum_seat && frame);
+    c = arq__hton32(checksum((arq_uchar_t const *)frame + 1, ARQ__FRAME_HEADER_SIZE + seg_len));
+    ARQ_MEMCPY(checksum_seat, &c, 4);
 }
 
 arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_read)(void *frame,
@@ -592,14 +608,13 @@ arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_checksum_read)(void const *fram
                                                                 arq_checksum_cb_t checksum)
 {
     arq_uint32_t frame_checksum, computed_checksum;
-    arq_uchar_t *dst = (arq_uchar_t *)&frame_checksum;
     arq_uchar_t const *src;
     ARQ_ASSERT(frame && checksum);
     if (seg_len + ARQ__FRAME_COBS_OVERHEAD + ARQ__FRAME_HEADER_SIZE + 4 > frame_len) {
         return ARQ__FRAME_READ_RESULT_ERR_MALFORMED;
     }
     src = (arq_uchar_t const *)frame + 1 + ARQ__FRAME_HEADER_SIZE + seg_len;
-    ARQ_MEMCPY(dst, src, 4);
+    ARQ_MEMCPY(&frame_checksum, src, 4);
     computed_checksum = checksum((arq_uchar_t const *)frame + 1, ARQ__FRAME_HEADER_SIZE + seg_len);
     frame_checksum = arq__ntoh32(frame_checksum);
     if (frame_checksum != computed_checksum) {
@@ -788,6 +803,9 @@ int ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t
     for (i = 0; i < w->size; ++i) {
         unsigned const idx = (i + w->base_idx) % w->cap;
         arq__msg_t const *m = &w->msg[idx];
+        if (p->valid && (p->msg == idx)) {
+            continue;
+        }
         if ((m->rtx == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
             p->msg = idx;
             p->valid = 1;

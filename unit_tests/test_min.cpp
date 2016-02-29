@@ -3,8 +3,7 @@
 
 TEST_GROUP(min) {};
 
-namespace
-{
+namespace {
 
 TEST(min, x_less_than_y)
 {

@@ -5,8 +5,7 @@
 
 TEST_GROUP(cobs) {};
 
-namespace
-{
+namespace {
 
 TEST(cobs, encode_one_nonzero_byte)
 {

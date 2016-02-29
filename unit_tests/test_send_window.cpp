@@ -10,8 +10,7 @@
 
 TEST_GROUP(window) {};
 
-namespace
-{
+namespace {
 
 struct UninitializedWindowFixture
 {

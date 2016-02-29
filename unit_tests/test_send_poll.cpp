@@ -6,8 +6,7 @@
 
 TEST_GROUP(send_poll) {};
 
-namespace
-{
+namespace {
 
 arq_uint32_t StubChecksum(void const *, int)
 {

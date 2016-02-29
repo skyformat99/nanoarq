@@ -4,8 +4,7 @@
 
 TEST_GROUP(crc32) {};
 
-namespace
-{
+namespace {
 
 // http://www.lammertbies.nl/comm/info/crc-calculation.html
 

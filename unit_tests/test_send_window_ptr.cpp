@@ -5,8 +5,7 @@
 
 TEST_GROUP(send_wnd_ptr) {};
 
-namespace
-{
+namespace {
 
 TEST(send_wnd_ptr, init_sets_valid_to_zero)
 {
@@ -243,7 +242,20 @@ TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_seg_of_last_m
     CHECK_EQUAL(0, f.p.valid);
 }
 
-TEST(send_wnd_ptr, returns_zero_if_the_pointer_stays_inside_of_current_msg)
+TEST(send_wnd_ptr, next_skips_current_message_when_advancing)
+{
+    Fixture f;
+    f.w.size = 2;
+    f.w.msg[0].len = 1;
+    f.w.msg[0].full_ack_vec = 1;
+    f.w.msg[1].len = 1;
+    f.w.msg[1].full_ack_vec = 1;
+    f.p.valid = 1;
+    arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, f.p.msg);
+}
+
+TEST(send_wnd_ptr, next_returns_zero_if_the_pointer_stays_inside_of_current_msg)
 {
     Fixture f;
     f.w.msg[0].len = f.w.seg_len * 3;
@@ -252,7 +264,7 @@ TEST(send_wnd_ptr, returns_zero_if_the_pointer_stays_inside_of_current_msg)
     CHECK_EQUAL(0, new_msg);
 }
 
-TEST(send_wnd_ptr, returns_zero_when_pointer_goes_to_last_seg_in_longer_msg)
+TEST(send_wnd_ptr, next_returns_zero_when_pointer_goes_to_last_seg_in_longer_msg)
 {
     Fixture f;
     f.w.msg[0].len = f.w.seg_len * 3;
@@ -261,7 +273,7 @@ TEST(send_wnd_ptr, returns_zero_when_pointer_goes_to_last_seg_in_longer_msg)
     CHECK_EQUAL(0, new_msg);
 }
 
-TEST(send_wnd_ptr, returns_zero_when_moving_to_first_msg_from_invalid)
+TEST(send_wnd_ptr, next_returns_zero_when_moving_to_first_msg_from_invalid)
 {
     Fixture f;
     f.w.msg[0].len = 1;
@@ -270,7 +282,7 @@ TEST(send_wnd_ptr, returns_zero_when_moving_to_first_msg_from_invalid)
     CHECK_EQUAL(0, new_msg);
 }
 
-TEST(send_wnd_ptr, returns_one_when_ptr_moves_past_msg_with_one_seg)
+TEST(send_wnd_ptr, next_returns_one_when_ptr_moves_past_msg_with_one_seg)
 {
     Fixture f;
     f.w.size = 2;
@@ -281,7 +293,7 @@ TEST(send_wnd_ptr, returns_one_when_ptr_moves_past_msg_with_one_seg)
     CHECK_EQUAL(1, new_msg);
 }
 
-TEST(send_wnd_ptr, returns_one_when_ptr_moves_past_last_seg_in_msg)
+TEST(send_wnd_ptr, next_returns_one_when_ptr_moves_past_last_seg_in_msg)
 {
     Fixture f;
     f.w.size = 2;
@@ -295,7 +307,7 @@ TEST(send_wnd_ptr, returns_one_when_ptr_moves_past_last_seg_in_msg)
     CHECK_EQUAL(1, new_msg);
 }
 
-TEST(send_wnd_ptr, returns_one_when_finishing_only_msg)
+TEST(send_wnd_ptr, next_returns_one_when_finishing_only_msg)
 {
     Fixture f;
     f.w.msg[0].len = f.w.msg[0].full_ack_vec = 1;
@@ -304,7 +316,7 @@ TEST(send_wnd_ptr, returns_one_when_finishing_only_msg)
     CHECK_EQUAL(1, new_msg);
 }
 
-TEST(send_wnd_ptr, returns_one_when_finishing_final_msg)
+TEST(send_wnd_ptr, next_returns_one_when_finishing_final_msg)
 {
     Fixture f;
     f.w.size = 2;

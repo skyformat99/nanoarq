@@ -3,8 +3,7 @@
 
 TEST_GROUP(sub_sat) {};
 
-namespace
-{
+namespace {
 
 TEST(sub_sat, x_greater_than_y_yields_natural_difference)
 {
