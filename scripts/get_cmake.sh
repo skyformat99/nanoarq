@@ -22,7 +22,7 @@ if [ ! -f "$CMAKE_DIR/cmake" ]; then
     CMAKE_URL=https://cmake.org/files/v3.4/$CMAKE_ARCHIVE
 
     if [ "$HOST_OS" == "Darwin" ]; then
-        curl -o "$CMAKE_DIR/$CMAKE_ARCHIVE" $CMAKE_URL
+        curl -L -o "$CMAKE_DIR/$CMAKE_ARCHIVE" $CMAKE_URL
     else
         wget --no-check-certificate -P "$CMAKE_DIR" $CMAKE_URL
     fi

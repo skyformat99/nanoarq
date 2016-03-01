@@ -4,21 +4,20 @@ set -e
 SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 
 (exec scripts/get_cmake.sh)
-CMAKE="$SCRIPT_PATH/external/cmake/cmake"
+(exec scripts/get_ninja.sh)
 
-BUILD_TYPE=DEBUG
+CMAKE="$SCRIPT_PATH/external/cmake/cmake"
+NINJA="$SCRIPT_PATH/external/ninja/ninja"
+
+BUILD_TYPE=debug
 if [ -n "$1" ]; then
     BUILD_TYPE=$1; shift
 fi
 
 BUILD_PATH=$SCRIPT_PATH/build/ninja/$BUILD_TYPE
-BUILD_GENERATOR="Unix Makefiles"
-if command -v ninja >/dev/null 2>&1; then
-    BUILD_GENERATOR=Ninja
-fi
 
 [ ! -d $BUILD_PATH ] && mkdir -p $BUILD_PATH
 [ ! -d $BUILD_PATH/CMakeFiles ] &&
-    (cd $BUILD_PATH; "$CMAKE" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G "$BUILD_GENERATOR" $SCRIPT_PATH)
-(cd $BUILD_PATH; "$CMAKE" --build . -- "$@")
+    (cd $BUILD_PATH; "$CMAKE" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Ninja -DCMAKE_MAKE_PROGRAM="$NINJA" $SCRIPT_PATH)
+(cd $BUILD_PATH; $NINJA $@)
 
