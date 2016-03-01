@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.2)
 project(nanoarq C CXX)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED on)
-
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_RELEASE "-Os")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-Os -g")
@@ -61,10 +58,11 @@ endfunction()
 
 set(NANOARQ_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
 set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wshadow -Wcast-align -Wcast-qual -Wstrict-aliasing=2 -march=native)
-include_directories(${CMAKE_SOURCE_DIR}) # arq.h
+include_directories(${CMAKE_SOURCE_DIR})
 
 ################ Targets
 
+add_subdirectory(compilation_tests)
 add_subdirectory(unit_tests)
 add_subdirectory(functional_tests)
 

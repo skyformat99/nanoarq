@@ -1,4 +1,4 @@
-#include "nanoarq_in_test_project.h"
+#include "nanoarq_unit_test.h"
 #include <CppUTest/TestHarness.h>
 
 TEST_GROUP(arq_assert) {};

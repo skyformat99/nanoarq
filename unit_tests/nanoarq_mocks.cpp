@@ -1,4 +1,4 @@
-#include "nanoarq_in_test_project.h"
+#include "nanoarq_unit_test.h"
 
 #ifdef __APPLE__
 #define ARQ_SYMBOL_PREFIX "_"

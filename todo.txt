@@ -2,7 +2,6 @@ no cstdlib unit / compilation tests
 optional checksums
 hooks keyed purely on function being replaced, hide the thunk target
 clean api for pure hooks, separate from cpputest plugin
-./b downloads and unpacks ninja binaries
 metrics on crc failures, bad frames (too long before cobs 0)
 send_ptr_release() errors if the send pointer isn't owned by the user? new error enum?
 more descriptive return values for send_ptr_get and send_ptr_release (you already have ptr, there's nothing to send, etc)

@@ -1,9 +1,7 @@
-#include "nanoarq_in_test_project.h"
+#include "nanoarq_unit_test.h"
 #include "nanoarq_hook_plugin.h"
-
 #include <CppUTestExt/MockSupport.h>
 #include <CppUTest/TestHarness.h>
-
 #include <cstring>
 #include <vector>
 #include <array>
