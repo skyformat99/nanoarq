@@ -2,21 +2,37 @@ cmake_minimum_required(VERSION 3.4)
 project(compilation_tests C CXX)
 
 function(add_nanoarq_lib TARGET_NAME TARGET_FLAGS TARGET_SOURCE)
-    string(REPLACE " " ";" REPLACED_FLAGS ${TARGET_FLAGS})
-
     add_library(${TARGET_NAME} STATIC ${CMAKE_SOURCE_DIR}/arq.h ${TARGET_SOURCE})
     target_compile_options(${TARGET_NAME} PRIVATE
+                           -DARQ_ASSERTS_ENABLED=1
+                           -DARQ_USE_C_STDLIB=1
                            ${NANOARQ_FLAGS}
                            ${NANOARQ_COMMON_FLAGS}
-                           ${REPLACED_FLAGS}
-                           -DARQ_ASSERTS_ENABLED=1)
+                           ${TARGET_FLAGS})
 
     add_library(${TARGET_NAME}_no_asserts STATIC ${CMAKE_SOURCE_DIR}/arq.h ${TARGET_SOURCE})
     target_compile_options(${TARGET_NAME}_no_asserts PRIVATE
+                           -DARQ_ASSERTS_ENABLED=0
+                           -DARQ_USE_C_STDLIB=1
                            ${NANOARQ_FLAGS}
                            ${NANOARQ_COMMON_FLAGS}
-                           ${REPLACED_FLAGS}
-                           -DARQ_ASSERTS_ENABLED=0)
+                           ${TARGET_FLAGS})
+
+    add_library(${TARGET_NAME}_no_cstdlib STATIC ${CMAKE_SOURCE_DIR}/arq.h ${TARGET_SOURCE})
+    target_compile_options(${TARGET_NAME}_no_cstdlib PRIVATE
+                           -DARQ_ASSERTS_ENABLED=1
+                           -DARQ_USE_C_STDLIB=0
+                           ${NANOARQ_FLAGS}
+                           ${NANOARQ_COMMON_FLAGS}
+                           ${TARGET_FLAGS})
+
+    add_library(${TARGET_NAME}_no_asserts_no_cstdlib STATIC ${CMAKE_SOURCE_DIR}/arq.h ${TARGET_SOURCE})
+    target_compile_options(${TARGET_NAME}_no_asserts_no_cstdlib PRIVATE
+                           -DARQ_ASSERTS_ENABLED=0
+                           -DARQ_USE_C_STDLIB=0
+                           ${NANOARQ_FLAGS}
+                           ${NANOARQ_COMMON_FLAGS}
+                           ${TARGET_FLAGS})
 endfunction()
 
 add_nanoarq_lib(nanoarq_c90 -std=c90 nanoarq_compilation_test.c)
