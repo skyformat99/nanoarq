@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.4)
 project(compilation_tests C CXX)
 
 function(add_nanoarq_lib TARGET_NAME TARGET_FLAGS TARGET_SOURCE)

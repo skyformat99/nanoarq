@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.4)
 project(functional_tests C CXX)
 
 set(CMAKE_C_STANDARD 99)

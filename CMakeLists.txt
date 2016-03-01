@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.4)
 project(nanoarq C CXX)
 
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
