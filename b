@@ -15,7 +15,6 @@ if [ -n "$1" ]; then
 fi
 
 BUILD_PATH="$SCRIPT_PATH/build/ninja/$BUILD_TYPE"
-
 [ ! -d "$BUILD_PATH" ] && mkdir -p "$BUILD_PATH"
 [ ! -d "$BUILD_PATH"/CMakeFiles ] &&
     (cd "$BUILD_PATH";
