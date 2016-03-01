@@ -3,7 +3,6 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
-#include <array>
 #include <map>
 #include <set>
 #include <deque>
@@ -16,8 +15,9 @@
 #include <memory>
 #include <algorithm>
 #include <iterator>
-#include <cstdint>
 #include <cstddef>
+
+#include <stdint.h>
 
 using namespace std;
 
