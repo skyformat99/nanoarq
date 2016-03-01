@@ -14,10 +14,11 @@ if [ -n "$1" ]; then
     BUILD_TYPE=$1; shift
 fi
 
-BUILD_PATH=$SCRIPT_PATH/build/ninja/$BUILD_TYPE
+BUILD_PATH="$SCRIPT_PATH/build/ninja/$BUILD_TYPE"
 
-[ ! -d $BUILD_PATH ] && mkdir -p $BUILD_PATH
-[ ! -d $BUILD_PATH/CMakeFiles ] &&
-    (cd $BUILD_PATH; "$CMAKE" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Ninja -DCMAKE_MAKE_PROGRAM="$NINJA" $SCRIPT_PATH)
-(cd $BUILD_PATH; $NINJA $@)
+[ ! -d "$BUILD_PATH" ] && mkdir -p "$BUILD_PATH"
+[ ! -d "$BUILD_PATH"/CMakeFiles ] &&
+    (cd "$BUILD_PATH";
+     "$CMAKE" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Ninja -DCMAKE_MAKE_PROGRAM="$NINJA" "$SCRIPT_PATH")
+(cd "$BUILD_PATH"; "$NINJA" $@)
 

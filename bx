@@ -11,9 +11,9 @@ if [ -n "$1" ]; then
     BUILD_TYPE=$1; shift
 fi
 
-BUILD_PATH=$SCRIPT_PATH/build/xcode/$BUILD_TYPE
-[ ! -d $BUILD_PATH ] && mkdir -p $BUILD_PATH
-[ ! -d $BUILD_PATH/CMakeFiles ] &&
-    (cd $BUILD_PATH; "$CMAKE" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Xcode $SCRIPT_PATH)
-(cd $BUILD_PATH; xcodebuild $@)
+BUILD_PATH="$SCRIPT_PATH/build/xcode/$BUILD_TYPE"
+[ ! -d "$BUILD_PATH" ] && mkdir -p "$BUILD_PATH"
+[ ! -d "$BUILD_PATH/CMakeFiles" ] &&
+    (cd "$BUILD_PATH"; "$CMAKE" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -G Xcode "$SCRIPT_PATH")
+(cd "$BUILD_PATH"; xcodebuild $@)
 
