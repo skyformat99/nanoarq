@@ -6,7 +6,7 @@ SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 (exec scripts/get_cmake.sh)
 CMAKE="$SCRIPT_PATH/external/cmake/cmake"
 
-BUILD_TYPE=DEBUG
+BUILD_TYPE=debug
 if [ -n "$1" ]; then
     BUILD_TYPE=$1; shift
 fi
