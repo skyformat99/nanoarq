@@ -47,6 +47,7 @@ TEST(send_wnd_ptr, next_remains_invalid_if_invalid_and_nothing_to_send)
 TEST(send_wnd_ptr, next_changes_to_valid_if_invalid_and_message_in_window)
 {
     Fixture f;
+    f.w.size = 1;
     f.w.msg[0].len = f.w.seg_len;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(1, f.p.valid);
@@ -55,6 +56,7 @@ TEST(send_wnd_ptr, next_changes_to_valid_if_invalid_and_message_in_window)
 TEST(send_wnd_ptr, next_ptr_msg_is_zero_if_first_msg_is_at_index_zero)
 {
     Fixture f;
+    f.w.size = 1;
     f.w.msg[0].len = 4;
     f.p.msg = 1;
     arq__send_wnd_ptr_next(&f.p, &f.w);
@@ -64,6 +66,7 @@ TEST(send_wnd_ptr, next_ptr_msg_is_zero_if_first_msg_is_at_index_zero)
 TEST(send_wnd_ptr, next_ptr_seg_is_zero_if_ptr_was_invalid)
 {
     Fixture f;
+    f.w.size = 1;
     f.w.msg[0].len = 1;
     f.p.seg = 1;
     arq__send_wnd_ptr_next(&f.p, &f.w);
@@ -116,6 +119,7 @@ TEST(send_wnd_ptr, next_increments_segment_if_not_at_final_seg)
 TEST(send_wnd_ptr, next_can_iterate_across_entire_message)
 {
     Fixture f;
+    f.w.size = 1;
     f.w.msg[0].len = f.w.msg_len;
     f.w.msg[0].full_ack_vec = (1 << (f.w.msg_len / f.w.seg_len)) - 1;
     f.p.valid = 0;
@@ -147,6 +151,7 @@ TEST(send_wnd_ptr, next_skips_msg_if_all_segs_are_already_acked)
 TEST(send_wnd_ptr, next_invalid_ptr_skips_acked_segs_in_new_msg)
 {
     Fixture f;
+    f.w.size = 1;
     f.w.msg[0].len = f.w.seg_len * 3;
     f.w.msg[0].rtx = 0;
     f.w.msg[0].full_ack_vec = 0b111;

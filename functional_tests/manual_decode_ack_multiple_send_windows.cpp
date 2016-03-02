@@ -2,18 +2,28 @@
 
 namespace {
 
+void print(arq__send_wnd_t const *w)
+{
+    printf("w\n");
+    printf("\tsize %d\n\tcap %d seq %d\n", w->size, w->cap, w->base_seq);
+    for (int i = 0; i < w->cap; ++i) {
+        printf("\tidx %d seq %d len %d\n", i, (w->base_seq + i) % w->cap, w->msg[i].len);
+    }
+}
+
 TEST(functional, manual_decode_ack_multiple_send_windows)
 {
+    return;
     arq_t arq;
-    std::array< arq__msg_t, 64 > send_wnd_msgs;
+    std::array< arq__msg_t, 4 > send_wnd_msgs;
     std::array< unsigned char, 256 > send_frame;
     std::vector< unsigned char > send_wnd_buf;
 
-    int const segment_length_in_bytes = 230;
-    int const message_length_in_segments = 10;
+    int const segment_length_in_bytes = 16;
+    int const message_length_in_segments = 2;
     arq_time_t const retransmission_timeout = 100;
 
-    send_wnd_buf.resize((send_wnd_msgs.size() * segment_length_in_bytes * message_length_in_segments));
+    send_wnd_buf.resize(send_wnd_msgs.size() * segment_length_in_bytes * message_length_in_segments);
 
     arq.cfg.checksum_cb = &arq_crc32;
     arq.send_wnd.msg = send_wnd_msgs.data();
@@ -28,35 +38,43 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
     arq__send_frame_init(&arq.send_frame, send_frame.size());
     arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
 
-    std::vector< unsigned char > send_test_data(send_wnd_buf.size());
+    std::vector< unsigned char > send_test_data(send_wnd_buf.size() * 3);
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
         uint16_t const v = i;
         std::memcpy(&send_test_data[i * 2], &v, sizeof(v));
     }
+    auto sent = 0u;
 
     std::vector< unsigned char > recv_test_data;
     recv_test_data.reserve(send_test_data.size());
 
-    {
-        int sent;
-        arq_err_t const e = arq_send(&arq, send_test_data.data(), send_test_data.size(), &sent);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-    }
+    printf("\n");
+    while (sent < send_test_data.size()) {
+        printf("================ SENT %d / %d\n", sent, (int)send_test_data.size());
+        {
+            int sent_this_time;
+            printf("=== BEFORE ===\n");
+            print(&arq.send_wnd);
+            arq_err_t const e =
+                arq_send(&arq, &send_test_data[sent], send_test_data.size() - sent, &sent_this_time);
+            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            printf("=== AFTER ===\n");
+            print(&arq.send_wnd);
+            printf("sent %d bytes\n", sent_this_time);
+            sent += sent_this_time;
+        }
 
-    for (;;) {
         unsigned char decode_buf[256];
+        int bytes_to_drain;
         {
             arq_event_t event;
             arq_time_t next_poll;
-            int bytes_to_drain;
             arq_err_t e = arq_backend_poll(&arq, 0, &bytes_to_drain, &event, &next_poll);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-            if (bytes_to_drain == 0) {
-                break;
-            }
         }
 
         int size;
+        if (bytes_to_drain)
         {
             void const *p;
             arq_err_t e = arq_backend_send_ptr_get(&arq, &p, &size);
@@ -64,9 +82,7 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
             std::memcpy(decode_buf, p, size);
             e = arq_backend_send_ptr_release(&arq);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-        }
 
-        {
             void const *seg;
             arq__frame_hdr_t h;
             arq__frame_read_result_t const r =
@@ -82,5 +98,4 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
 }
 
 }
-
 
