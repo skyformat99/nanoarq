@@ -5,6 +5,7 @@
 #include <cstring>
 #include <vector>
 #include <array>
+#include <algorithm>
 
 TEST_GROUP(window) {};
 
