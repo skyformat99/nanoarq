@@ -43,3 +43,7 @@ doc/*.out
 doc/*.1
 doc/*.mps
 doc/*.toc
+
+# hooray for osx
+.DS_Store
+
