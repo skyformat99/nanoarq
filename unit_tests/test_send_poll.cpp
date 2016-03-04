@@ -26,11 +26,11 @@ int MockSendWndPtrNext(arq__send_wnd_ptr_t *p, arq__send_wnd_t *w)
                  .returnIntValue();
 }
 
-void MockSendWndSeg(arq__send_wnd_t *w, int msg, int seg, void const **out_seg, int *out_seg_len)
+void MockSendWndSeg(arq__send_wnd_t *w, int seq, int seg, void const **out_seg, int *out_seg_len)
 {
     mock().actualCall("arq__send_wnd_seg")
           .withParameter("w", w)
-          .withParameter("msg", msg)
+          .withParameter("seq", seq)
           .withParameter("seg", seg)
           .withOutputParameter("out_seg", (void *)out_seg)
           .withOutputParameter("out_seg_len", out_seg_len);
@@ -165,11 +165,11 @@ TEST(send_poll, gets_segment_pointer_from_send_wnd_seg_if_sending_next_seg)
     ExpectSendWndPtrNextFixture f;
     f.p.valid = 1;
     f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
-    f.p.msg = 123;
+    f.p.seq = 123;
     f.p.seg = 456;
     mock().expectOneCall("arq__send_wnd_seg")
           .withParameter("w", &f.w)
-          .withParameter("msg", f.p.msg)
+          .withParameter("seq", f.p.seq)
           .withParameter("seg", f.p.seg)
           .ignoreOtherParameters();
     mock().ignoreOtherCalls();

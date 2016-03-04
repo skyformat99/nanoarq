@@ -229,7 +229,7 @@ void arq__send_wnd_seg(arq__send_wnd_t *w, int msg, int seg, void const **out_se
 
 typedef struct arq__send_wnd_ptr_t
 {
-    arq_uint16_t msg;
+    arq_uint16_t seq;
     arq_uint16_t seg;
     arq_uchar_t valid;
 } arq__send_wnd_ptr_t;
@@ -773,7 +773,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ptr_init)(arq__send_wnd_ptr_t *p)
 {
     ARQ_ASSERT(p);
     p->valid = 0;
-    p->msg = 0;
+    p->seq = 0;
     p->seg = 0;
 }
 
@@ -791,7 +791,7 @@ int ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t
     int fin = 0;
     ARQ_ASSERT(p && w);
     if (p->valid) {
-        arq__msg_t const *m = &w->msg[p->msg];
+        arq__msg_t const *m = &w->msg[p->seq % w->cap];
         unsigned const rem = (unsigned)m->cur_ack_vec >> (unsigned)(p->seg + 1);
         p->seg += (1 + __builtin_ctz(~rem));
         if (((1 << p->seg) - 1) < m->full_ack_vec) {
@@ -800,13 +800,13 @@ int ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t
         fin = 1;
     }
     for (i = 0; i < w->size; ++i) {
-        unsigned const idx = (i + w->base_seq) % w->cap;
-        arq__msg_t const *m = &w->msg[idx];
-        if (p->valid && (p->msg == idx)) {
+        unsigned const seq = (i + w->base_seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
+        arq__msg_t const *m = &w->msg[seq % w->cap];
+        if (p->valid && (p->seq == seq)) {
             continue;
         }
         if ((m->rtx == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
-            p->msg = idx;
+            p->seq = seq;
             p->valid = 1;
             p->seg = __builtin_ctz(~(unsigned)m->cur_ack_vec);
             return fin;
@@ -823,21 +823,21 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
                                  arq_checksum_cb_t checksum,
                                  arq_time_t dt)
 {
-    unsigned orig_msg;
+    unsigned p_seq;
     ARQ_ASSERT(w && p && f && checksum);
     arq__send_wnd_step(w, dt);
     if (p->valid && (f->state != ARQ__SEND_FRAME_STATE_RELEASED)) {
         return 0;
     }
-    orig_msg = p->msg;
+    p_seq = p->seq;
     if (arq__send_wnd_ptr_next(p, w)) {
-        w->msg[orig_msg].rtx = w->rtx;
+        w->msg[p_seq % w->cap].rtx = w->rtx;
     }
     f->len = 0;
     f->state = ARQ__SEND_FRAME_STATE_FREE;
     if (p->valid) {
         void const *seg;
-        arq__send_wnd_seg(w, p->msg, p->seg, &seg, &h->seg_len);
+        arq__send_wnd_seg(w, p->seq, p->seg, &seg, &h->seg_len);
         f->len = arq__frame_write(h, seg, checksum, f->buf, f->cap);
     }
     return f->len;
