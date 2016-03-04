@@ -759,14 +759,15 @@ void ARQ_MOCKABLE(arq__send_wnd_step)(arq__send_wnd_t *w, arq_time_t dt)
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_seg)(arq__send_wnd_t *w,
-                                     int msg,
+                                     int seq,
                                      int seg,
                                      void const **out_seg,
                                      int *out_seg_len)
 {
+    int const idx = seq % w->cap;
     ARQ_ASSERT(w && out_seg && out_seg_len);
-    *out_seg = (void const *)&w->buf[(w->msg_len * msg) + (w->seg_len * seg)];
-    *out_seg_len = (int)arq__min(w->seg_len, (unsigned)(w->msg[msg].len - (w->seg_len * seg)));
+    *out_seg = (void const *)&w->buf[(w->msg_len * idx) + (w->seg_len * seg)];
+    *out_seg_len = (int)arq__min(w->seg_len, (unsigned)(w->msg[idx].len - (w->seg_len * seg)));
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_ptr_init)(arq__send_wnd_ptr_t *p)
