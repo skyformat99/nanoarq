@@ -195,7 +195,7 @@ TEST(send_wnd_ptr, next_increments_msg_index_if_ptr_was_pointing_at_last_segment
     CHECK_EQUAL(1, f.p.valid);
 }
 
-TEST(send_wnd_ptr, next_wraps_msg_index_to_first_zero_rtx_msg_in_window_if_seq_number_is_max)
+TEST(send_wnd_ptr, next_wraps_seq_to_zero_from_max)
 {
     Fixture f;
     f.w.size = 2;
@@ -210,6 +210,29 @@ TEST(send_wnd_ptr, next_wraps_msg_index_to_first_zero_rtx_msg_in_window_if_seq_n
     f.w.msg[(f.w.base_seq + 1) % f.w.cap].full_ack_vec = 1;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.seq);
+    CHECK_EQUAL(0, f.p.seg);
+    CHECK_EQUAL(1, f.p.valid);
+}
+
+TEST(send_wnd_ptr, next_wraps_seq_past_zero_to_first_sendable_message_from_max)
+{
+    Fixture f;
+    f.w.size = 3;
+    f.w.base_seq = ARQ__FRAME_MAX_SEQ_NUM;
+    f.w.msg[f.w.base_seq % f.w.cap].len = (f.w.seg_len * 2) + 1;
+    f.w.msg[f.w.base_seq % f.w.cap].full_ack_vec = 0b111;
+    f.w.msg[f.w.base_seq % f.w.cap].rtx = 1;
+    f.p.seq = f.w.base_seq;
+    f.p.seg = 2;
+    f.p.valid = 1;
+    f.w.msg[(f.w.base_seq + 1) % f.w.cap].len = 1;
+    f.w.msg[(f.w.base_seq + 1) % f.w.cap].full_ack_vec = 1;
+    f.w.msg[(f.w.base_seq + 1) % f.w.cap].rtx = 1;
+    f.w.msg[(f.w.base_seq + 2) % f.w.cap].len = 1;
+    f.w.msg[(f.w.base_seq + 2) % f.w.cap].full_ack_vec = 1;
+    f.w.msg[(f.w.base_seq + 2) % f.w.cap].rtx = 0;
+    arq__send_wnd_ptr_next(&f.p, &f.w);
+    CHECK_EQUAL(1, f.p.seq);
     CHECK_EQUAL(0, f.p.seg);
     CHECK_EQUAL(1, f.p.valid);
 }
