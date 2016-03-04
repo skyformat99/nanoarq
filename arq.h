@@ -711,7 +711,7 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, u
         last_msg_idx = (last_msg_idx + 1) % w->cap;
     }
     w->msg[last_msg_idx].len += (len % w->msg_len);
-    w->size = (wnd_size_in_bytes + len + (w->msg_len - 1)) / w->msg_len;
+    w->size = (wnd_size_in_bytes + len + (w->msg_len - 1u)) / w->msg_len;
     return len;
 }
 
