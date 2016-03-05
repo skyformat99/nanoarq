@@ -720,8 +720,8 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, u
 
 void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, unsigned seq, arq_uint16_t cur_ack_vec)
 {
-    int ack_msg_idx, i;
-    ARQ_ASSERT(w && (seq >= 0));
+    unsigned ack_msg_idx, i;
+    ARQ_ASSERT(w);
     if ((w->size == 0) || (w->base_seq > seq) || ((w->base_seq + arq__sub_sat(w->size, 1)) < seq)) {
         return;
     }
