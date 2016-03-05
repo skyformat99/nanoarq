@@ -352,6 +352,37 @@ TEST(window, send_payload_is_message_size_wrap_window)
     CHECK_EQUAL(32, f.wnd.msg[0].len);
 }
 
+TEST(window, ack_seq_outside_of_send_wnd_greater_does_nothing)
+{
+    Fixture f;
+    f.wnd.size = 1;
+    f.wnd.cap = 2;
+    f.wnd.base_seq = 0;
+    arq__send_wnd_ack(&f.wnd, 1, 1);
+    CHECK_EQUAL(0, f.msg[1].cur_ack_vec);
+    CHECK_EQUAL(0, f.wnd.base_seq);
+}
+
+TEST(window, ack_seq_outside_of_send_wnd_less_does_nothing)
+{
+    Fixture f;
+    f.wnd.size = 4;
+    f.wnd.base_seq = 16;
+    arq__send_wnd_ack(&f.wnd, 15, 1);
+    CHECK_EQUAL(0, f.msg[15].cur_ack_vec);
+    CHECK_EQUAL(16, f.wnd.base_seq);
+}
+
+TEST(window, ack_empty_window_does_nothing)
+{
+    Fixture f;
+    f.wnd.size = 0;
+    f.wnd.base_seq = 5;
+    arq__send_wnd_ack(&f.wnd, 5, 1);
+    CHECK_EQUAL(0, f.msg[5].cur_ack_vec);
+    CHECK_EQUAL(0, f.wnd.size);
+}
+
 TEST(window, ack_partial_ack_vec_doesnt_slide_window)
 {
     Fixture f;

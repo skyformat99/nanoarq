@@ -222,7 +222,7 @@ typedef struct arq__send_wnd_t
 void arq__send_wnd_init(arq__send_wnd_t *w, int wnd_cap, int msg_len, int seg_len, arq_time_t rtx);
 void arq__send_wnd_rst(arq__send_wnd_t *w);
 unsigned arq__send_wnd_send(arq__send_wnd_t *w, void const *seg, unsigned len);
-void arq__send_wnd_ack(arq__send_wnd_t *w, int seq, arq_uint16_t cur_ack_vec);
+void arq__send_wnd_ack(arq__send_wnd_t *w, unsigned seq, arq_uint16_t cur_ack_vec);
 void arq__send_wnd_flush(arq__send_wnd_t *w);
 void arq__send_wnd_step(arq__send_wnd_t *w, arq_time_t dt);
 void arq__send_wnd_seg(arq__send_wnd_t *w, unsigned msg, unsigned seg, void const **out_seg, int *out_seg_len);
@@ -718,10 +718,13 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, u
     return len;
 }
 
-void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, int seq, arq_uint16_t cur_ack_vec)
+void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *w, unsigned seq, arq_uint16_t cur_ack_vec)
 {
     int ack_msg_idx, i;
     ARQ_ASSERT(w && (seq >= 0));
+    if ((w->size == 0) || (w->base_seq > seq) || ((w->base_seq + arq__sub_sat(w->size, 1)) < seq)) {
+        return;
+    }
     ack_msg_idx = seq % w->cap;
     w->msg[ack_msg_idx].cur_ack_vec = cur_ack_vec;
     for (i = 0; i < w->size; ++i) {

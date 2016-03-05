@@ -41,7 +41,6 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
     recv_test_data.reserve(send_test_data.size());
 
     int seq = 0;
-    printf("\n");
     while (recv_test_data.size() < send_test_data.size()) {
         if (sent < send_test_data.size()) {
             int sent_this_time;
