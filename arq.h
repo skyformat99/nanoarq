@@ -693,8 +693,8 @@ void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *w)
 
 unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, unsigned len)
 {
-    unsigned last_msg_len, last_msg_idx, cur_byte_idx;
-    unsigned wnd_cap_in_bytes, wnd_size_in_bytes, i, pre_wrap_copy_len;
+    unsigned last_msg_len, last_msg_idx, cur_byte_idx, bytes_rem;
+    unsigned wnd_cap_in_bytes, wnd_size_in_bytes, pre_wrap_copy_len;
     ARQ_ASSERT(w && buf);
     last_msg_idx = (w->base_seq + arq__sub_sat(w->size, 1)) % w->cap;
     last_msg_len = w->msg[last_msg_idx].len;
@@ -705,12 +705,14 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *w, void const *buf, u
     pre_wrap_copy_len = arq__min(len, wnd_cap_in_bytes - cur_byte_idx);
     ARQ_MEMCPY(w->buf + cur_byte_idx, buf, pre_wrap_copy_len);
     ARQ_MEMCPY(w->buf, (arq_uchar_t const *)buf + pre_wrap_copy_len, len - pre_wrap_copy_len);
-    for (i = 0; i < len / w->msg_len; ++i) {
-        w->msg[last_msg_idx].len = w->msg_len;
+    bytes_rem = len;
+    while (bytes_rem) {
+        unsigned const cur_msg_len = arq__min(bytes_rem, w->msg_len - w->msg[last_msg_idx].len);
+        w->msg[last_msg_idx].len += cur_msg_len;
         w->msg[last_msg_idx].rtx = 0;
         last_msg_idx = (last_msg_idx + 1) % w->cap;
+        bytes_rem -= cur_msg_len;
     }
-    w->msg[last_msg_idx].len += (len % w->msg_len);
     w->size = (wnd_size_in_bytes + len + (w->msg_len - 1u)) / w->msg_len;
     return len;
 }

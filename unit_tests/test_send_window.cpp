@@ -148,8 +148,9 @@ TEST(window, send_with_partially_full_window_appends)
 TEST(window, send_with_partially_full_window_updates_message_length)
 {
     Fixture f;
-    f.snd.resize(15);
+    f.wnd.size = 1;
     f.wnd.msg[0].len = 12;
+    f.snd.resize(15);
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(12 + 15, f.msg[0].len);
 }
@@ -168,6 +169,7 @@ TEST(window, send_one_full_message_sets_rtx_to_zero)
 {
     Fixture f;
     f.snd.resize(f.wnd.msg_len);
+    f.wnd.size = 1;
     f.wnd.msg[0].rtx = 1;
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(0, f.wnd.msg[0].rtx);
@@ -177,6 +179,7 @@ TEST(window, send_two_messages_sets_rtx_to_zero_for_full_message)
 {
     Fixture f;
     f.snd.resize(f.wnd.msg_len + 1);
+    f.wnd.size = 1;
     f.wnd.msg[0].rtx = 1;
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     CHECK_EQUAL(0, f.wnd.msg[0].rtx);
@@ -330,6 +333,23 @@ TEST(window, send_wraps_copy_around_and_respects_partially_filled_starting_messa
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
     MEMCMP_EQUAL(f.snd.data(), &f.buf[(orig_msg_idx * f.wnd.msg_len) + 3], f.wnd.msg_len - 3);
     MEMCMP_EQUAL(&f.snd[f.wnd.msg_len - 3], f.buf.data(), 3);
+}
+
+TEST(window, send_payload_is_message_size_wrap_window)
+{
+    // this edge case teased out a bug in arq__send_wnd_send
+    Fixture f;
+    f.wnd.cap = 4;
+    f.wnd.size = 3;
+    f.wnd.base_seq = 1;
+    f.wnd.msg_len = 32;
+    f.wnd.full_ack_vec = 0b11111;
+    f.wnd.msg[1].len = 32;
+    f.wnd.msg[2].len = 32;
+    f.wnd.msg[3].len = 32;
+    f.snd.resize(32);
+    arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
+    CHECK_EQUAL(32, f.wnd.msg[0].len);
 }
 
 TEST(window, ack_partial_ack_vec_doesnt_slide_window)
