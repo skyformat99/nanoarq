@@ -25,8 +25,7 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
     arq__send_wnd_init(&arq.send_wnd,
                        send_wnd_msgs.size(),
                        arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
-                       arq.cfg.segment_length_in_bytes,
-                       arq.cfg.retransmission_timeout);
+                       arq.cfg.segment_length_in_bytes);
     arq__send_frame_init(&arq.send_frame, send_frame.size());
     arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
 

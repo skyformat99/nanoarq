@@ -29,6 +29,7 @@ int MockSendPoll(arq__send_wnd_t *w,
                  arq__send_frame_t *f,
                  arq__frame_hdr_t *h,
                  arq_checksum_cb_t checksum_cb,
+                 arq_time_t rtx,
                  arq_time_t dt)
 {
     return mock().actualCall("arq__send_poll").withParameter("w", w)
@@ -36,6 +37,7 @@ int MockSendPoll(arq__send_wnd_t *w,
                                               .withParameter("f", f)
                                               .withParameter("h", h)
                                               .withParameter("checksum_cb", (void *)checksum_cb)
+                                              .withParameter("rtx", rtx)
                                               .withParameter("dt", dt)
                                               .returnIntValue();
 }
@@ -44,11 +46,13 @@ TEST(poll, calls_send_poll_with_arq_context)
 {
     Fixture f;
     f.arq.cfg.checksum_cb = (arq_checksum_cb_t)0x12345678;
+    f.arq.cfg.retransmission_timeout = 7654;
     int const dt = 1234;
     mock().expectOneCall("arq__send_poll").withParameter("w", &f.arq.send_wnd)
                                           .withParameter("p", &f.arq.send_wnd_ptr)
                                           .withParameter("f", &f.arq.send_frame)
                                           .withParameter("checksum_cb", (void *)f.arq.cfg.checksum_cb)
+                                          .withParameter("rtx", f.arq.cfg.retransmission_timeout)
                                           .withParameter("dt", dt)
                                           .ignoreOtherParameters();
     ARQ_MOCK_HOOK(arq__send_poll, MockSendPoll);

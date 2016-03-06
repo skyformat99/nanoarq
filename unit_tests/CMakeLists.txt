@@ -29,6 +29,7 @@ set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h
                               test_send_window_ptr.cpp
                               test_send_frame.cpp
                               test_send_poll.cpp
+                              test_recv_window.cpp
                               test_frame.cpp
                               test_cobs.cpp
                               test_min.cpp

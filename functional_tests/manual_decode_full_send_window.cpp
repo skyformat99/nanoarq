@@ -11,11 +11,11 @@ TEST(functional, manual_decode_full_send_window)
 
     int const segment_length_in_bytes = 230;
     int const message_length_in_segments = 10;
-    arq_time_t const retransmission_timeout = 100;
 
     send_wnd_buf.resize((send_wnd_msgs.size() * segment_length_in_bytes * message_length_in_segments));
 
     arq.cfg.checksum_cb = &arq_crc32;
+    arq.cfg.retransmission_timeout = 100;
     arq.send_wnd.msg = send_wnd_msgs.data();
     arq.send_wnd.buf = send_wnd_buf.data();
     arq.send_frame.buf = send_frame.data();
@@ -23,8 +23,7 @@ TEST(functional, manual_decode_full_send_window)
     arq__send_wnd_init(&arq.send_wnd,
                        send_wnd_msgs.size(),
                        message_length_in_segments * segment_length_in_bytes,
-                       segment_length_in_bytes,
-                       retransmission_timeout);
+                       segment_length_in_bytes);
     arq__send_frame_init(&arq.send_frame, send_frame.size());
     arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
 

@@ -25,24 +25,23 @@ struct UninitializedSendWindowFixture
 TEST(send_wnd, init_writes_params_to_struct)
 {
     UninitializedSendWindowFixture f;
-    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8, 1234);
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8);
     CHECK_EQUAL(f.msg.size(), f.wnd.cap);
     CHECK_EQUAL(16, f.wnd.msg_len);
     CHECK_EQUAL(8, f.wnd.seg_len);
-    CHECK_EQUAL(1234, f.wnd.rtx);
 }
 
 TEST(send_wnd, init_full_ack_vec_is_one_if_seg_len_equals_msg_len)
 {
     UninitializedSendWindowFixture f;
-    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 16, 10);
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 16);
     CHECK_EQUAL(0b1, f.wnd.full_ack_vec);
 }
 
 TEST(send_wnd, init_calculates_full_ack_vector_from_msg_len_and_seg_len)
 {
     UninitializedSendWindowFixture f;
-    arq__send_wnd_init(&f.wnd, f.msg.size(), 32, 8, 10);
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 32, 8);
     CHECK_EQUAL(0b1111, f.wnd.full_ack_vec);
 }
 
@@ -56,14 +55,14 @@ TEST(send_wnd, init_calls_rst)
     UninitializedSendWindowFixture f;
     ARQ_MOCK_HOOK(arq__send_wnd_rst, MockSendWndRst);
     mock().expectOneCall("arq__send_wnd_rst").withParameter("w", &f.wnd);
-    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8, 10);
+    arq__send_wnd_init(&f.wnd, f.msg.size(), 16, 8);
 }
 
 struct Fixture : UninitializedSendWindowFixture
 {
     Fixture()
     {
-        arq__send_wnd_init(&wnd, msg.size(), 128, 16, 100);
+        arq__send_wnd_init(&wnd, msg.size(), 128, 16);
         buf.resize(wnd.msg_len * wnd.cap);
         wnd.buf = buf.data();
     }
