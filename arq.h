@@ -703,8 +703,9 @@ void ARQ_MOCKABLE(arq__wnd_seg)(arq__wnd_t *w,
                                 void const **out_seg,
                                 int *out_seg_len)
 {
-    unsigned const idx = seq % w->cap;
+    unsigned idx;
     ARQ_ASSERT(w && out_seg && out_seg_len);
+    idx = seq % w->cap;
     *out_seg = (void const *)&w->buf[(w->msg_len * idx) + (w->seg_len * seg)];
     *out_seg_len = (int)arq__min(w->seg_len, w->msg[idx].len - (w->seg_len * seg));
 }

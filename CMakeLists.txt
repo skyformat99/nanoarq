@@ -45,13 +45,13 @@ add_dependencies(libCppUTestExt CppUTest_external)
 
 ################ Test support
 
-function(nanoarq_add_test TARGET_NAME TEST_EXECUTABLE)
-    set(TEST_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}_tests.timestamp)
-    add_custom_target(RUN_${TARGET_NAME}_TESTS ALL DEPENDS ${TEST_TIMESTAMP_FILE})
+function(nanoarq_add_test TEST_TARGET_EXECUTABLE)
+    set(TEST_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET_EXECUTABLE}_tests.timestamp)
+    add_custom_target(RUN_${TEST_TARGET_EXECUTABLE}_TESTS ALL DEPENDS ${TEST_TIMESTAMP_FILE})
     add_custom_command(OUTPUT ${TEST_TIMESTAMP_FILE}
-                       COMMAND ${TEST_EXECUTABLE} && touch ${TEST_TIMESTAMP_FILE}
-                       DEPENDS ${TEST_EXECUTABLE}
-                       COMMENT "Running ${TEST_EXECUTABLE}")
+                       COMMAND ${TEST_TARGET_EXECUTABLE} && touch ${TEST_TIMESTAMP_FILE}
+                       DEPENDS ${TEST_TARGET_EXECUTABLE}
+                       COMMENT "Running ${TEST_TARGET_EXECUTABLE}")
 endfunction()
 
 ################ Nanoarq
