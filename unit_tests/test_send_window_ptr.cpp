@@ -29,12 +29,14 @@ struct Fixture
     Fixture()
     {
         w.msg = m.data();
+        w.rtx = rtx.data();
         arq__send_wnd_ptr_init(&p);
         arq__send_wnd_init(&w, m.size(), 128, 16);
     }
     arq__send_wnd_ptr_t p;
     arq__send_wnd_t w;
     std::array< arq__msg_t, 16 > m;
+    std::array< arq_time_t, 16 > rtx;
 };
 
 TEST(send_wnd_ptr, next_remains_invalid_if_invalid_and_nothing_to_send)
@@ -77,7 +79,7 @@ TEST(send_wnd_ptr, next_ptr_remains_invalid_if_rtx_of_only_message_is_nonzero)
 {
     Fixture f;
     f.w.msg[0].len = 1;
-    f.w.msg[0].rtx = 100;
+    f.w.rtx[0] = 100;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.valid);
 }
@@ -88,7 +90,7 @@ TEST(send_wnd_ptr, next_ptr_remains_invalid_if_all_messages_have_nonzero_rtx)
     f.w.size = 4;
     for (int i = 0; i < f.w.size; ++i) {
         f.w.msg[i].len = 1;
-        f.w.msg[i].rtx = 1;
+        f.w.rtx[i] = 1;
     }
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.valid);
@@ -98,9 +100,9 @@ TEST(send_wnd_ptr, next_sets_invalid_ptr_to_first_zero_rtx_msg)
 {
     Fixture f;
     f.w.size = 2;
-    f.w.msg[0].rtx = 1;
+    f.w.rtx[0] = 1;
     f.w.msg[0].len = 16;
-    f.w.msg[1].rtx = 0;
+    f.w.rtx[1] = 0;
     f.w.msg[1].len = 16;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(1, f.p.seq);
@@ -136,13 +138,13 @@ TEST(send_wnd_ptr, next_skips_msg_if_all_segs_are_already_acked)
     Fixture f;
     f.w.size = 2;
     f.w.msg[0].len = 1; // being retransmitted
-    f.w.msg[0].rtx = 1;
+    f.w.rtx[0] = 1;
     f.w.msg[0].full_ack_vec = 1;
     f.w.msg[0].cur_ack_vec = 0;
     f.w.msg[1].len = f.w.msg_len; // already fully ACK'd
     f.w.msg[1].full_ack_vec = 0xFF;
     f.w.msg[1].cur_ack_vec = 0xFF;
-    f.w.msg[1].rtx = 0;
+    f.w.rtx[1] = 0;
     f.p.valid = 1;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.valid);
@@ -153,7 +155,7 @@ TEST(send_wnd_ptr, next_invalid_ptr_skips_acked_segs_in_new_msg)
     Fixture f;
     f.w.size = 1;
     f.w.msg[0].len = f.w.seg_len * 3;
-    f.w.msg[0].rtx = 0;
+    f.w.rtx[0] = 0;
     f.w.msg[0].full_ack_vec = 0b111;
     f.w.msg[0].cur_ack_vec = 0b101;
     f.p.valid = 0;
@@ -166,7 +168,7 @@ TEST(send_wnd_ptr, next_valid_ptr_skips_acked_segs_in_current_msg)
 {
     Fixture f;
     f.w.msg[0].len = f.w.seg_len * 4;
-    f.w.msg[0].rtx = 0;
+    f.w.rtx[0] = 0;
     f.w.msg[0].full_ack_vec = 0b1111;
     f.w.msg[0].cur_ack_vec = 0b1010;
     f.p.valid = 1;
@@ -183,7 +185,7 @@ TEST(send_wnd_ptr, next_increments_msg_index_if_ptr_was_pointing_at_last_segment
     f.w.size = 2;
     f.w.msg[0].len = (f.w.seg_len * 2) + 1;
     f.w.msg[0].full_ack_vec = 0b111;
-    f.w.msg[0].rtx = 1;
+    f.w.rtx[0] = 1;
     f.w.msg[1].len = 1;
     f.w.msg[1].full_ack_vec = 1;
     f.p.seq = 0;
@@ -202,7 +204,7 @@ TEST(send_wnd_ptr, next_wraps_seq_to_zero_from_max)
     f.w.seq = ARQ__FRAME_MAX_SEQ_NUM;
     f.w.msg[f.w.seq % f.w.cap].len = (f.w.seg_len * 2) + 1;
     f.w.msg[f.w.seq % f.w.cap].full_ack_vec = 0b111;
-    f.w.msg[f.w.seq % f.w.cap].rtx = 1;
+    f.w.rtx[f.w.seq % f.w.cap] = 1;
     f.p.seq = f.w.seq;
     f.p.seg = 2;
     f.p.valid = 1;
@@ -221,16 +223,16 @@ TEST(send_wnd_ptr, next_wraps_seq_past_zero_to_first_sendable_message_from_max)
     f.w.seq = ARQ__FRAME_MAX_SEQ_NUM;
     f.w.msg[f.w.seq % f.w.cap].len = (f.w.seg_len * 2) + 1;
     f.w.msg[f.w.seq % f.w.cap].full_ack_vec = 0b111;
-    f.w.msg[f.w.seq % f.w.cap].rtx = 1;
+    f.w.rtx[f.w.seq % f.w.cap] = 1;
     f.p.seq = f.w.seq;
     f.p.seg = 2;
     f.p.valid = 1;
     f.w.msg[(f.w.seq + 1) % f.w.cap].len = 1;
     f.w.msg[(f.w.seq + 1) % f.w.cap].full_ack_vec = 1;
-    f.w.msg[(f.w.seq + 1) % f.w.cap].rtx = 1;
+    f.w.rtx[(f.w.seq + 1) % f.w.cap] = 1;
     f.w.msg[(f.w.seq + 2) % f.w.cap].len = 1;
     f.w.msg[(f.w.seq + 2) % f.w.cap].full_ack_vec = 1;
-    f.w.msg[(f.w.seq + 2) % f.w.cap].rtx = 0;
+    f.w.rtx[(f.w.seq + 2) % f.w.cap] = 0;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(1, f.p.seq);
     CHECK_EQUAL(0, f.p.seg);
@@ -243,10 +245,10 @@ TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_segment_of_la
     f.w.size = 2;
     f.w.msg[0].len = 1;
     f.w.msg[0].full_ack_vec = 0b1;
-    f.w.msg[0].rtx = 1;
+    f.w.rtx[0] = 1;
     f.w.msg[1].len = f.w.seg_len + 1;
     f.w.msg[1].full_ack_vec = 0b11;
-    f.w.msg[1].rtx = 1;
+    f.w.rtx[1] = 1;
     f.p.seq = f.p.seg = f.p.valid = 1;
     arq__send_wnd_ptr_next(&f.p, &f.w);
     CHECK_EQUAL(0, f.p.valid);
@@ -258,10 +260,10 @@ TEST(send_wnd_ptr, next_changes_to_invalid_if_was_pointing_at_last_seg_of_last_m
     f.w.size = 1;
     f.w.msg[0].len = 1;
     f.w.msg[0].full_ack_vec = 1;
-    f.w.msg[0].rtx = 1;
+    f.w.rtx[0] = 1;
     f.w.msg[1].len = 1; // out of bounds, f.w.size == 1
     f.w.msg[1].full_ack_vec = 1;
-    f.w.msg[1].rtx = 0;
+    f.w.rtx[1] = 0;
     f.p.valid = 1;
     f.p.seq = 0;
     f.p.seg = 0;
@@ -325,7 +327,7 @@ TEST(send_wnd_ptr, next_returns_one_when_ptr_moves_past_last_seg_in_msg)
     Fixture f;
     f.w.size = 2;
     f.w.msg[0].len = f.w.seg_len * 3;
-    f.w.msg[0].rtx = 1;
+    f.w.rtx[0] = 1;
     f.w.msg[0].full_ack_vec = 0b111;
     f.w.msg[1].len = 1;
     f.p.seg = 2;
@@ -347,7 +349,7 @@ TEST(send_wnd_ptr, next_returns_one_when_finishing_final_msg)
 {
     Fixture f;
     f.w.size = 2;
-    f.w.msg[0].len = f.w.msg[0].rtx = f.w.msg[0].full_ack_vec = 1;
+    f.w.msg[0].len = f.w.rtx[0] = f.w.msg[0].full_ack_vec = 1;
     f.w.msg[1].len = f.w.msg[1].full_ack_vec = 1;
     f.p.valid = 1;
     f.p.seq = 1;

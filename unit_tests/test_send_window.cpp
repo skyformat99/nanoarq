@@ -17,9 +17,11 @@ struct UninitializedSendWindowFixture
     {
         wnd.buf = nullptr;
         wnd.msg = msg.data();
+        wnd.rtx = rtx.data();
     }
     arq__send_wnd_t wnd;
     std::array< arq__msg_t, 64 > msg;
+    std::array< arq_time_t, 64 > rtx;
 };
 
 TEST(send_wnd, init_writes_params_to_struct)
@@ -87,7 +89,6 @@ TEST(send_wnd, rst_resets_messages_to_default)
         m.len = 1234;
         m.cur_ack_vec = 100;
         m.full_ack_vec = 123;
-        m.rtx = 9000;
     }
     f.wnd.full_ack_vec = 0xABCD;
     arq__send_wnd_rst(&f.wnd);
@@ -95,7 +96,18 @@ TEST(send_wnd, rst_resets_messages_to_default)
         CHECK_EQUAL(0, m.len);
         CHECK_EQUAL(0, m.cur_ack_vec);
         CHECK_EQUAL(f.wnd.full_ack_vec, m.full_ack_vec);
-        CHECK_EQUAL(0, m.rtx);
+    }
+}
+
+TEST(send_wnd, rst_resets_rtx_to_default)
+{
+    Fixture f;
+    for (auto &t : f.rtx) {
+        t = 1234;
+    }
+    arq__send_wnd_rst(&f.wnd);
+    for (auto const &t : f.rtx) {
+        CHECK_EQUAL(0, t);
     }
 }
 
@@ -169,9 +181,9 @@ TEST(send_wnd, send_one_full_message_sets_rtx_to_zero)
     Fixture f;
     f.snd.resize(f.wnd.msg_len);
     f.wnd.size = 1;
-    f.wnd.msg[0].rtx = 1;
+    f.wnd.rtx[0] = 1;
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    CHECK_EQUAL(0, f.wnd.msg[0].rtx);
+    CHECK_EQUAL(0, f.wnd.rtx[0]);
 }
 
 TEST(send_wnd, send_two_messages_sets_rtx_to_zero_for_full_message)
@@ -179,9 +191,9 @@ TEST(send_wnd, send_two_messages_sets_rtx_to_zero_for_full_message)
     Fixture f;
     f.snd.resize(f.wnd.msg_len + 1);
     f.wnd.size = 1;
-    f.wnd.msg[0].rtx = 1;
+    f.wnd.rtx[0] = 1;
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    CHECK_EQUAL(0, f.wnd.msg[0].rtx);
+    CHECK_EQUAL(0, f.wnd.rtx[0]);
 }
 
 TEST(send_wnd, send_more_than_two_messages_updates_lengths_in_first_three_messages)
@@ -199,10 +211,10 @@ TEST(send_wnd, send_three_messages_sets_rtx_to_zero_for_first_two_messages)
 {
     Fixture f;
     f.snd.resize(f.wnd.msg_len * 2 + 1);
-    f.msg[0].rtx = f.msg[1].rtx = 1;
+    f.wnd.rtx[0] = f.wnd.rtx[1] = 1;
     arq__send_wnd_send(&f.wnd, f.snd.data(), f.snd.size());
-    CHECK_EQUAL(0, f.msg[0].rtx);
-    CHECK_EQUAL(0, f.msg[1].rtx);
+    CHECK_EQUAL(0, f.wnd.rtx[0]);
+    CHECK_EQUAL(0, f.wnd.rtx[1]);
 }
 
 TEST(send_wnd, send_more_than_one_messages_increments_size_by_number_of_messages)
@@ -556,33 +568,33 @@ TEST(send_wnd, step_decrements_first_timer_in_window_by_dt)
 {
     Fixture f;
     f.wnd.size = 1;
-    f.msg[0].rtx = 100;
+    f.wnd.rtx[0] = 100;
     arq__send_wnd_step(&f.wnd, 10);
-    CHECK_EQUAL(90, f.msg[0].rtx);
+    CHECK_EQUAL(90, f.wnd.rtx[0]);
 }
 
 TEST(send_wnd, step_saturates_rtx_to_zero)
 {
     Fixture f;
     f.wnd.size = 1;
-    f.msg[0].rtx = 100;
-    arq__send_wnd_step(&f.wnd, f.msg[0].rtx + 1);
-    CHECK_EQUAL(0, f.msg[0].rtx);
+    f.wnd.rtx[0] = 100;
+    arq__send_wnd_step(&f.wnd, f.wnd.rtx[0] + 1);
+    CHECK_EQUAL(0, f.wnd.rtx[0]);
 }
 
 TEST(send_wnd, step_decrements_all_timers_in_window)
 {
     Fixture f;
     f.wnd.size = 3;
-    f.msg[0].rtx = 100;
-    f.msg[1].rtx = 90;
-    f.msg[2].rtx = 80;
-    f.msg[3].rtx = 1000;
+    f.wnd.rtx[0] = 100;
+    f.wnd.rtx[1] = 90;
+    f.wnd.rtx[2] = 80;
+    f.wnd.rtx[3] = 1000;
     arq__send_wnd_step(&f.wnd, 80);
-    CHECK_EQUAL(20, f.msg[0].rtx);
-    CHECK_EQUAL(10, f.msg[1].rtx);
-    CHECK_EQUAL(0, f.msg[2].rtx);
-    CHECK_EQUAL(1000, f.msg[3].rtx);
+    CHECK_EQUAL(20, f.wnd.rtx[0]);
+    CHECK_EQUAL(10, f.wnd.rtx[1]);
+    CHECK_EQUAL(0, f.wnd.rtx[2]);
+    CHECK_EQUAL(1000, f.wnd.rtx[3]);
 }
 
 TEST(send_wnd, step_operates_on_messages_in_window)
@@ -590,9 +602,9 @@ TEST(send_wnd, step_operates_on_messages_in_window)
     Fixture f;
     f.wnd.size = 1;
     f.wnd.seq = f.wnd.cap / 2;
-    f.msg[f.wnd.seq].rtx = 100;
+    f.wnd.rtx[f.wnd.seq] = 100;
     arq__send_wnd_step(&f.wnd, 10);
-    CHECK_EQUAL(90, f.msg[f.wnd.seq].rtx);
+    CHECK_EQUAL(90, f.wnd.rtx[f.wnd.seq]);
 }
 
 TEST(send_wnd, step_wraps_around_when_window_wraps)
@@ -600,15 +612,15 @@ TEST(send_wnd, step_wraps_around_when_window_wraps)
     Fixture f;
     f.wnd.seq = f.wnd.cap - 2;
     f.wnd.size = 4;
-    f.msg[f.wnd.seq].rtx = 100;
-    f.msg[f.wnd.seq + 1].rtx = 90;
-    f.msg[0].rtx = 80;
-    f.msg[1].rtx = 70;
+    f.wnd.rtx[f.wnd.seq] = 100;
+    f.wnd.rtx[f.wnd.seq + 1] = 90;
+    f.wnd.rtx[0] = 80;
+    f.wnd.rtx[1] = 70;
     arq__send_wnd_step(&f.wnd, 10);
-    CHECK_EQUAL(90, f.msg[f.wnd.seq].rtx);
-    CHECK_EQUAL(80, f.msg[f.wnd.seq + 1].rtx);
-    CHECK_EQUAL(70, f.msg[0].rtx);
-    CHECK_EQUAL(60, f.msg[1].rtx);
+    CHECK_EQUAL(90, f.wnd.rtx[f.wnd.seq]);
+    CHECK_EQUAL(80, f.wnd.rtx[f.wnd.seq + 1]);
+    CHECK_EQUAL(70, f.wnd.rtx[0]);
+    CHECK_EQUAL(60, f.wnd.rtx[1]);
 }
 
 struct SegFixture : Fixture

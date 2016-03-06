@@ -56,6 +56,7 @@ struct Fixture
     Fixture()
     {
         w.msg = m.data();
+        w.rtx = rtx.data();
         arq__send_wnd_init(&w, m.size(), 128, 16);
         arq__send_frame_init(&f, 128);
         arq__send_wnd_ptr_init(&p);
@@ -65,12 +66,13 @@ struct Fixture
         ARQ_MOCK_HOOK(arq__frame_write, MockFrameWrite);
     }
 
-    arq_time_t const rtx = 37;
+    arq_time_t const rtx_timeout = 37;
     arq__send_wnd_t w;
     arq__send_frame_t f;
     arq__send_wnd_ptr_t p;
     arq__frame_hdr_t h;
     std::array< arq__msg_t, 16 > m;
+    std::array< arq_time_t, 16 > rtx;
 };
 
 TEST(send_poll, calls_step_with_dt)
@@ -79,7 +81,7 @@ TEST(send_poll, calls_step_with_dt)
     arq_time_t const dt = 1234;
     mock().expectOneCall("arq__send_wnd_step").withParameter("w", &f.w).withParameter("dt", dt);
     mock().ignoreOtherCalls();
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, dt);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, dt);
 }
 
 TEST(send_poll, returns_zero_after_stepping_if_send_ptr_held_by_user_and_ptr_valid)
@@ -88,7 +90,7 @@ TEST(send_poll, returns_zero_after_stepping_if_send_ptr_held_by_user_and_ptr_val
     f.p.valid = 1;
     f.f.state = ARQ__SEND_FRAME_STATE_HELD;
     mock().expectOneCall("arq__send_wnd_step").ignoreOtherParameters();
-    int const written = arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 10);
+    int const written = arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 10);
     CHECK_EQUAL(0, written);
 }
 
@@ -98,7 +100,7 @@ TEST(send_poll, returns_zero_after_stepping_if_send_ptr_not_acquired_and_ptr_val
     f.p.valid = 1;
     f.f.state = ARQ__SEND_FRAME_STATE_FREE;
     mock().expectOneCall("arq__send_wnd_step").ignoreOtherParameters();
-    int const written = arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 10);
+    int const written = arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 10);
     CHECK_EQUAL(0, written);
 }
 
@@ -114,26 +116,26 @@ TEST(send_poll, advances_send_wnd_ptr_if_frame_is_ready)
 {
     ExpectSendWndStepFixture f;
     mock().expectOneCall("arq__send_wnd_ptr_next").withParameter("p", &f.p).withParameter("w", &f.w);
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
 }
 
 TEST(send_poll, doesnt_reset_message_retransmission_timer_if_havent_finished_message)
 {
     ExpectSendWndStepFixture f;
-    f.w.msg[0].rtx = 1234;
+    f.w.rtx[0] = 1234;
     mock().expectOneCall("arq__send_wnd_ptr_next").ignoreOtherParameters().andReturnValue(0);
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
-    CHECK_EQUAL(1234, f.w.msg[0].rtx);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
+    CHECK_EQUAL(1234, f.w.rtx[0]);
 
 }
 
 TEST(send_poll, resets_message_retransmission_timer_if_finished_sending_message)
 {
     ExpectSendWndStepFixture f;
-    f.w.msg[0].rtx = 0;
+    f.w.rtx[0] = 0;
     mock().expectOneCall("arq__send_wnd_ptr_next").ignoreOtherParameters().andReturnValue(1);
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
-    CHECK_EQUAL(f.rtx, f.w.msg[0].rtx);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
+    CHECK_EQUAL(f.rtx_timeout, f.w.rtx[0]);
 }
 
 struct ExpectSendWndPtrNextFixture : ExpectSendWndStepFixture
@@ -149,7 +151,7 @@ TEST(send_poll, resets_send_frame)
     ExpectSendWndPtrNextFixture f;
     f.f.len = 1;
     f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
     CHECK_EQUAL(0, f.f.len);
     CHECK_EQUAL(ARQ__SEND_FRAME_STATE_FREE, f.f.state);
 }
@@ -157,7 +159,7 @@ TEST(send_poll, resets_send_frame)
 TEST(send_poll, returns_zero_if_no_new_data_to_send)
 {
     ExpectSendWndPtrNextFixture f;
-    int const written = arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
+    int const written = arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
     CHECK_EQUAL(0, written);
 }
 
@@ -174,7 +176,7 @@ TEST(send_poll, gets_segment_pointer_from_send_wnd_seg_if_sending_next_seg)
           .withParameter("seg", f.p.seg)
           .ignoreOtherParameters();
     mock().ignoreOtherCalls();
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
 }
 
 TEST(send_poll, calls_frame_write_if_sending_next_seg)
@@ -195,7 +197,7 @@ TEST(send_poll, calls_frame_write_if_sending_next_seg)
           .withParameter("out_frame", f.f.buf)
           .withParameter("frame_max", f.f.cap);
     mock().ignoreOtherCalls();
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
     CHECK_EQUAL(seg_len, f.h.seg_len);
 }
 
@@ -206,7 +208,7 @@ TEST(send_poll, sets_frame_length_if_sending_next_seg)
     f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
     mock().expectOneCall("arq__frame_write").ignoreOtherParameters().andReturnValue(123);
     mock().ignoreOtherCalls();
-    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx, 1);
+    arq__send_poll(&f.w, &f.p, &f.f, &f.h, &StubChecksum, f.rtx_timeout, 1);
     CHECK_EQUAL(123, f.f.len);
 }
 
