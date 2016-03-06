@@ -19,8 +19,8 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
                         arq.cfg.message_length_in_segments);
 
     arq.cfg.checksum_cb = &arq_crc32;
-    arq.send_wnd.msg = send_wnd_msgs.data();
-    arq.send_wnd.buf = send_wnd_buf.data();
+    arq.send_wnd.w.msg = send_wnd_msgs.data();
+    arq.send_wnd.w.buf = send_wnd_buf.data();
     arq.send_frame.buf = send_frame.data();
     arq.send_wnd.rtx = rtx_timers.data();
 

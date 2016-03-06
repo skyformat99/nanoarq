@@ -55,7 +55,7 @@ struct Fixture
 {
     Fixture()
     {
-        w.msg = m.data();
+        w.w.msg = m.data();
         w.rtx = rtx.data();
         arq__send_wnd_init(&w, m.size(), 128, 16);
         arq__send_frame_init(&f, 128);
