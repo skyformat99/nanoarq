@@ -6,6 +6,7 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
 {
     arq_t arq;
     std::array< arq__msg_t, 4 > send_wnd_msgs;
+    std::array< arq_time_t, 64 > rtx_timers;
     std::array< unsigned char, 256 > send_frame;
     std::vector< unsigned char > send_wnd_buf;
 
@@ -18,15 +19,15 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
                         arq.cfg.message_length_in_segments);
 
     arq.cfg.checksum_cb = &arq_crc32;
-    arq.send_wnd.msg = send_wnd_msgs.data();
-    arq.send_wnd.buf = send_wnd_buf.data();
+    arq.send_wnd.w.msg = send_wnd_msgs.data();
+    arq.send_wnd.w.buf = send_wnd_buf.data();
     arq.send_frame.buf = send_frame.data();
+    arq.send_wnd.rtx = rtx_timers.data();
 
-    arq__send_wnd_init(&arq.send_wnd,
-                       send_wnd_msgs.size(),
-                       arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
-                       arq.cfg.segment_length_in_bytes,
-                       arq.cfg.retransmission_timeout);
+    arq__wnd_init(&arq.send_wnd.w,
+                  send_wnd_msgs.size(),
+                  arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
+                  arq.cfg.segment_length_in_bytes);
     arq__send_frame_init(&arq.send_frame, send_frame.size());
     arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
 

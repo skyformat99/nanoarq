@@ -29,6 +29,7 @@ set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h
                               test_send_window_ptr.cpp
                               test_send_frame.cpp
                               test_send_poll.cpp
+                              test_recv_window.cpp
                               test_frame.cpp
                               test_cobs.cpp
                               test_min.cpp
@@ -42,10 +43,10 @@ set_source_files_properties(nanoarq_unit_test.c PROPERTIES COMPILE_FLAGS "${NANO
 add_executable(nanoarq_unit_tests ${NANOARQ_UNIT_TEST_SOURCES})
 target_compile_options(nanoarq_unit_tests PRIVATE ${NANOARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=1)
 target_link_libraries(nanoarq_unit_tests libCppUTest libCppUTestExt)
-nanoarq_add_test(nanoarq_c99 nanoarq_unit_tests)
+nanoarq_add_test(nanoarq_unit_tests)
 
 add_executable(nanoarq_no_asserts_unit_tests ${NANOARQ_UNIT_TEST_SOURCES})
 target_compile_options(nanoarq_no_asserts_unit_tests PRIVATE ${NANOARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=0)
 target_link_libraries(nanoarq_no_asserts_unit_tests libCppUTest libCppUTestExt)
-nanoarq_add_test(nanoarq_c99_no_asserts nanoarq_no_asserts_unit_tests)
+nanoarq_add_test(nanoarq_no_asserts_unit_tests)
 
