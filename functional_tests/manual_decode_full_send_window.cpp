@@ -22,12 +22,13 @@ TEST(functional, manual_decode_full_send_window)
     arq.send_frame.buf = send_frame.data();
     arq.send_wnd.rtx = rtx_timers.data();
 
-    arq__send_wnd_init(&arq.send_wnd,
-                       send_wnd_msgs.size(),
-                       message_length_in_segments * segment_length_in_bytes,
-                       segment_length_in_bytes);
+    arq__wnd_init(&arq.send_wnd.w,
+                  send_wnd_msgs.size(),
+                  message_length_in_segments * segment_length_in_bytes,
+                  segment_length_in_bytes);
     arq__send_frame_init(&arq.send_frame, send_frame.size());
     arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
+    arq__send_wnd_rst(&arq.send_wnd);
 
     std::vector< unsigned char > send_test_data(send_wnd_buf.size());
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {

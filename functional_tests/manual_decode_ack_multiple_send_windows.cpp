@@ -24,10 +24,10 @@ TEST(functional, manual_decode_ack_multiple_send_windows)
     arq.send_frame.buf = send_frame.data();
     arq.send_wnd.rtx = rtx_timers.data();
 
-    arq__send_wnd_init(&arq.send_wnd,
-                       send_wnd_msgs.size(),
-                       arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
-                       arq.cfg.segment_length_in_bytes);
+    arq__wnd_init(&arq.send_wnd.w,
+                  send_wnd_msgs.size(),
+                  arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
+                  arq.cfg.segment_length_in_bytes);
     arq__send_frame_init(&arq.send_frame, send_frame.size());
     arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
 
