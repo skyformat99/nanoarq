@@ -374,6 +374,15 @@ arq_err_t arq_connect(struct arq_t *arq)
     return ARQ_OK_COMPLETED;
 }
 
+arq_err_t arq_recv(struct arq_t *arq, void *recv, int recv_max, int *out_recv_size)
+{
+    if (!arq || !recv || !out_recv_size) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    (void)recv_max;
+    return ARQ_OK_COMPLETED;
+}
+
 arq_err_t arq_send(struct arq_t *arq, void const *send, int send_max, int *out_sent_size)
 {
     if (!arq || !send || !out_sent_size || (send_max < 0)) {

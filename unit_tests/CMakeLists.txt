@@ -17,6 +17,7 @@ set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h
                               nanoarq_hook_plugin.cpp
                               test_mock_hooks.cpp
                               test_send.cpp
+                              test_recv.cpp
                               test_flush.cpp
                               test_asserts.cpp
                               test_lin_alloc.cpp
