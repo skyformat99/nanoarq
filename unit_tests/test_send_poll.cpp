@@ -18,12 +18,12 @@ void MockSendWndStep(arq__send_wnd_t *sw, arq_time_t dt)
     mock().actualCall("arq__send_wnd_step").withParameter("sw", sw).withParameter("dt", dt);
 }
 
-int MockSendWndPtrNext(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *sw)
+arq__send_wnd_ptr_next_result_t MockSendWndPtrNext(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *sw)
 {
-    return mock().actualCall("arq__send_wnd_ptr_next")
-                 .withParameter("p", p)
-                 .withParameter("sw", sw)
-                 .returnIntValue();
+    return (arq__send_wnd_ptr_next_result_t)mock().actualCall("arq__send_wnd_ptr_next")
+                                                  .withParameter("p", p)
+                                                  .withParameter("sw", sw)
+                                                  .returnIntValue();
 }
 
 void MockWndSeg(arq__wnd_t *w, int seq, int seg, void const **out_seg, int *out_seg_len)
