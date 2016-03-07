@@ -24,7 +24,7 @@ TEST(poll, invalid_params)
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_poll(&f.arq,  0, &f.send_size, &f.event,  nullptr));
 }
 
-int MockSendPoll(arq__send_wnd_t *w,
+int MockSendPoll(arq__send_wnd_t *sw,
                  arq__send_wnd_ptr_t *p,
                  arq__send_frame_t *f,
                  arq__frame_hdr_t *h,
@@ -32,7 +32,7 @@ int MockSendPoll(arq__send_wnd_t *w,
                  arq_time_t rtx,
                  arq_time_t dt)
 {
-    return mock().actualCall("arq__send_poll").withParameter("w", w)
+    return mock().actualCall("arq__send_poll").withParameter("sw", sw)
                                               .withParameter("p", p)
                                               .withParameter("f", f)
                                               .withParameter("h", h)
@@ -48,7 +48,7 @@ TEST(poll, calls_send_poll_with_arq_context)
     f.arq.cfg.checksum_cb = (arq_checksum_cb_t)0x12345678;
     f.arq.cfg.retransmission_timeout = 7654;
     int const dt = 1234;
-    mock().expectOneCall("arq__send_poll").withParameter("w", &f.arq.send_wnd)
+    mock().expectOneCall("arq__send_poll").withParameter("sw", &f.arq.send_wnd)
                                           .withParameter("p", &f.arq.send_wnd_ptr)
                                           .withParameter("f", &f.arq.send_frame)
                                           .withParameter("checksum_cb", (void *)f.arq.cfg.checksum_cb)

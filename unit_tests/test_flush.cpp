@@ -13,16 +13,16 @@ TEST(flush, invalid_params)
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_flush(nullptr));
 }
 
-void MockSendWndFlush(arq__send_wnd_t *w)
+void MockSendWndFlush(arq__send_wnd_t *sw)
 {
-    mock().actualCall("arq__send_wnd_flush").withParameter("w", w);
+    mock().actualCall("arq__send_wnd_flush").withParameter("sw", sw);
 }
 
 TEST(flush, forwards_send_window_to_send_wnd_flush)
 {
     arq_t arq;
     ARQ_MOCK_HOOK(arq__send_wnd_flush, MockSendWndFlush);
-    mock().expectOneCall("arq__send_wnd_flush").withParameter("w", &arq.send_wnd);
+    mock().expectOneCall("arq__send_wnd_flush").withParameter("sw", &arq.send_wnd);
     arq_flush(&arq);
 }
 

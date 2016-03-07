@@ -817,13 +817,13 @@ void arq__send_frame_init(arq__send_frame_t *f, int cap)
 }
 
 arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p,
-                                                                     arq__send_wnd_t const *w)
+                                                                     arq__send_wnd_t const *sw)
 {
     unsigned i;
     arq__send_wnd_ptr_next_result_t rv = ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG;
-    ARQ_ASSERT(p && w);
+    ARQ_ASSERT(p && sw);
     if (p->valid) {
-        arq__msg_t const *m = &w->w.msg[p->seq % w->w.cap];
+        arq__msg_t const *m = &sw->w.msg[p->seq % sw->w.cap];
         unsigned const rem = (unsigned)m->cur_ack_vec >> (p->seg + 1u);
         p->seg += (1 + __builtin_ctz(~rem));
         if (((1 << p->seg) - 1) < m->full_ack_vec) {
@@ -831,13 +831,13 @@ arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_w
         }
         rv = ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG;
     }
-    for (i = 0; i < w->w.size; ++i) {
-        unsigned const seq = (i + w->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
-        arq__msg_t const *m = &w->w.msg[seq % w->w.cap];
+    for (i = 0; i < sw->w.size; ++i) {
+        unsigned const seq = (i + sw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
+        arq__msg_t const *m = &sw->w.msg[seq % sw->w.cap];
         if (p->valid && (p->seq == seq)) {
             continue;
         }
-        if ((w->rtx[seq % w->w.cap] == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
+        if ((sw->rtx[seq % sw->w.cap] == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
             p->seq = seq;
             p->valid = 1;
             p->seg = __builtin_ctz(~(unsigned)m->cur_ack_vec);
@@ -848,7 +848,7 @@ arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_w
     return rv;
 }
 
-int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
+int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
                                  arq__send_wnd_ptr_t *p,
                                  arq__send_frame_t *f,
                                  arq__frame_hdr_t *h,
@@ -857,20 +857,20 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
                                  arq_time_t dt)
 {
     unsigned p_seq;
-    ARQ_ASSERT(w && p && f && checksum);
-    arq__send_wnd_step(w, dt);
+    ARQ_ASSERT(sw && p && f && checksum);
+    arq__send_wnd_step(sw, dt);
     if (p->valid && (f->state != ARQ__SEND_FRAME_STATE_RELEASED)) {
         return 0;
     }
     p_seq = p->seq;
-    if (arq__send_wnd_ptr_next(p, w)) {
-        w->rtx[p_seq % w->w.cap] = rtx;
+    if (arq__send_wnd_ptr_next(p, sw)) {
+        sw->rtx[p_seq % sw->w.cap] = rtx;
     }
     f->len = 0;
     f->state = ARQ__SEND_FRAME_STATE_FREE;
     if (p->valid) {
         void const *seg;
-        arq__wnd_seg(&w->w, p->seq, p->seg, &seg, &h->seg_len);
+        arq__wnd_seg(&sw->w, p->seq, p->seg, &seg, &h->seg_len);
         f->len = arq__frame_write(h, seg, checksum, f->buf, f->cap);
     }
     return f->len;
