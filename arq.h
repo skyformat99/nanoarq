@@ -275,12 +275,12 @@ int arq__send_poll(arq__send_wnd_t *sw,
                    arq_time_t rtx,
                    arq_time_t dt);
 
-unsigned arq__recv_wnd_recv(arq__wnd_t *w,
-                            unsigned seq,
-                            unsigned seg,
-                            unsigned seg_cnt,
-                            void const *p,
-                            unsigned len);
+unsigned arq__recv_wnd_frame(arq__wnd_t *w,
+                             unsigned seq,
+                             unsigned seg,
+                             unsigned seg_cnt,
+                             void const *p,
+                             unsigned len);
 
 typedef struct arq_t
 {
@@ -892,24 +892,27 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
     return f->len;
 }
 
-unsigned ARQ_MOCKABLE(arq__recv_wnd_recv)(arq__wnd_t *w,
-                                          unsigned seq,
-                                          unsigned seg,
-                                          unsigned seg_cnt,
-                                          void const *p,
-                                          unsigned len)
+unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
+                                           unsigned seq,
+                                           unsigned seg,
+                                           unsigned seg_cnt,
+                                           void const *p,
+                                           unsigned len)
 {
-    void *seg_dst;
-    unsigned seg_dst_len;
     arq__msg_t *m;
+    void *seg_dst;
+    unsigned const full_ack_vec = (1 << seg_cnt) - 1;
+    int unused;
     ARQ_ASSERT(w && p);
-    arq__wnd_seg(w, seq, seg, &seg_dst, &seg_dst_len);
-    seg_dst_len = arq__min(seg_dst_len, len);
-    ARQ_MEMCPY(seg_dst, p, seg_dst_len);
+    len = arq__min(len, w->seg_len);
     m = &w->msg[seq % w->cap];
+    ARQ_ASSERT((m->full_ack_vec == w->full_ack_vec) || (m->full_ack_vec == full_ack_vec));
+    arq__wnd_seg(w, seq, seg, &seg_dst, &unused);
+    ARQ_MEMCPY(seg_dst, p, len);
+    m->full_ack_vec = full_ack_vec;
     m->cur_ack_vec |= (1 << seg);
-    m->full_ack_vec = (1 << seg_cnt) - 1;
-    return seg_dst_len;
+    m->len += len;
+    return len;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
