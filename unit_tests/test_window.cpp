@@ -69,14 +69,14 @@ struct Fixture : UninitializedWindowFixture
     std::vector< unsigned char > buf;
     std::vector< unsigned char > snd;
     int n = 0;
-    void const *p = nullptr;
+    void *p = nullptr;
 };
 
 TEST(wnd, seg_with_base_idx_zero_returns_buf)
 {
     Fixture f;
     arq__wnd_seg(&f.w, 0, 0, &f.p, &f.n);
-    CHECK_EQUAL((void const *)f.buf.data(), f.p);
+    CHECK_EQUAL((void *)f.buf.data(), f.p);
 }
 
 TEST(wnd, seg_message_less_than_one_segment_returns_message_size)
@@ -100,7 +100,7 @@ TEST(wnd, seg_points_at_segment_len_times_segment_index)
     Fixture f;
     f.w.msg[0].len = f.w.msg_len;
     arq__wnd_seg(&f.w, 0, 3, &f.p, &f.n);
-    CHECK_EQUAL((void const *)&f.buf[3 * f.w.seg_len], f.p);
+    CHECK_EQUAL((void *)&f.buf[3 * f.w.seg_len], f.p);
 }
 
 TEST(wnd, seg_returns_msg_len_remainder_for_final_segment)
@@ -126,7 +126,7 @@ TEST(wnd, seg_buf_looks_up_message_by_message_index)
     f.w.size = 2;
     f.w.msg[1].len = 5;
     arq__wnd_seg(&f.w, 1, 0, &f.p, &f.n);
-    CHECK_EQUAL((void const *)&f.buf[f.w.msg_len], f.p);
+    CHECK_EQUAL((void *)&f.buf[f.w.msg_len], f.p);
 }
 
 TEST(wnd, seg_buf_pointer_is_message_offset_plus_segment_offset)
@@ -135,7 +135,7 @@ TEST(wnd, seg_buf_pointer_is_message_offset_plus_segment_offset)
     f.w.size = 3;
     f.w.msg[2].len = f.w.seg_len + 1;
     arq__wnd_seg(&f.w, 2, 1, &f.p, &f.n);
-    CHECK_EQUAL((void const *)&f.buf[(f.w.msg_len * 2) + f.w.seg_len], f.p);
+    CHECK_EQUAL((void *)&f.buf[(f.w.msg_len * 2) + f.w.seg_len], f.p);
 }
 
 }
