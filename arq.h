@@ -901,7 +901,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
 {
     arq__msg_t *m;
     void *seg_dst;
-    unsigned const full_ack_vec = (1 << seg_cnt) - 1u;
+    unsigned const full_ack_vec = (1u << seg_cnt) - 1;
     int unused;
     ARQ_ASSERT(w && p);
     len = arq__min(len, w->seg_len);
