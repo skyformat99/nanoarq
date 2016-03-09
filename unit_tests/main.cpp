@@ -1,5 +1,6 @@
 #include "nanoarq_unit_test.h"
 #include "nanoarq_hook_plugin.h"
+#include "strict_mock_plugin.h"
 #include <CppUTest/CommandLineTestRunner.h>
 #include <CppUTest/TestRegistry.h>
 #include <CppUTestExt/MemoryReporterPlugin.h>
@@ -24,6 +25,9 @@ int main(int argc, char *argv[])
 
     MockSupportPlugin mockSupportPlugin;
     TestRegistry::getCurrentRegistry()->installPlugin(&mockSupportPlugin);
+
+    StrictMockPlugin strictMockPlugin;
+    TestRegistry::getCurrentRegistry()->installPlugin(&strictMockPlugin);
 
     NanoArqHookPlugin nanoArqHookPlugin;
     NanoArqHookPlugin::WellKnownInstance() = &nanoArqHookPlugin;

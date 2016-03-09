@@ -291,8 +291,8 @@ TEST(frame, checksum_read_returns_success_if_computed_checksum_matches_frame_che
     MockFixture f;
     ARQ_MOCK_UNHOOK(arq__frame_checksum_read);
     uint32_t const checksum = 0x11223344;
-    mock().expectOneCall("arq__ntoh32").ignoreOtherParameters().andReturnValue(checksum);
     mock().expectOneCall("checksum").ignoreOtherParameters().andReturnValue(checksum);
+    mock().expectOneCall("arq__ntoh32").ignoreOtherParameters().andReturnValue(checksum);
     mock().ignoreOtherCalls();
     arq__frame_read_result_t const r =
         arq__frame_checksum_read(f.frame, f.frame_len, f.h.seg_len, MockChecksum);

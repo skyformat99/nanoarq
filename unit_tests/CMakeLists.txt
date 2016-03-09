@@ -15,6 +15,8 @@ set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h
                               nanoarq_mocks.cpp
                               nanoarq_hook_plugin.h
                               nanoarq_hook_plugin.cpp
+                              strict_mock_plugin.h
+                              strict_mock_plugin.cpp
                               test_mock_hooks.cpp
                               test_send.cpp
                               test_recv.cpp
