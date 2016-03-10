@@ -36,7 +36,7 @@ set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h
                               test_recv_window.cpp
                               test_frame.cpp
                               test_cobs.cpp
-                              test_min.cpp
+                              test_minmax.cpp
                               test_saturated_subtraction.cpp
                               test_crc32.cpp
                               main.cpp)

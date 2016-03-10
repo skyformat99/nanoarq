@@ -80,5 +80,73 @@ TEST(recv_wnd, frame_copies_data_into_seat_provided_by_seg_call)
     MEMCMP_EQUAL(f.seg.data(), seat, f.seg.size());
 }
 
+TEST(recv_wnd, frame_writes_full_ack_vec_to_msg)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.msg[0].full_ack_vec = 0;
+    arq__recv_wnd_frame(&f.w, 0, 0, 7, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(0b1111111, f.msg[0].full_ack_vec);
+}
+
+TEST(recv_wnd, frame_ors_in_current_seg_to_cur_ack_vector)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.msg[0].full_ack_vec = 0b1111;
+    f.msg[0].cur_ack_vec = 0b0101;
+    arq__recv_wnd_frame(&f.w, 0, 3, 4, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(0b1101, f.msg[0].cur_ack_vec);
+}
+
+TEST(recv_wnd, frame_does_not_update_window_size_if_segment_in_existing_message)
+{
+    Fixture f;
+    f.w.size = 1;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.w, f.w.seq, 1, 2, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(1, f.w.size);
+}
+
+TEST(recv_wnd, frame_increments_window_size_for_first_segment_in_next_message)
+{
+    Fixture f;
+    f.w.size = 1;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.w, f.w.seq + 1, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(2, f.w.size);
+}
+
+TEST(recv_wnd, frame_increments_window_size_for_non_first_segment_in_next_message)
+{
+    Fixture f;
+    f.w.size = 1;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.w, f.w.seq + 1, 1, 2, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(2, f.w.size);
+}
+
+TEST(recv_wnd, frame_updates_window_size_for_first_segment_in_non_adjacent_message)
+{
+    Fixture f;
+    f.w.size = 0;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.w, f.w.seq + 4, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(5, f.w.size);
+}
+
+TEST(recv_wnd, frame_updates_window_size_for_non_first_segment_in_non_adjacent_message)
+{
+    Fixture f;
+    f.w.size = 0;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.w, f.w.seq + 4, 2, 4, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(5, f.w.size);
+}
+
+TEST(recv_wnd, frame_ignores_input_outside_of_recv_window)
+{
+}
+
 }
 

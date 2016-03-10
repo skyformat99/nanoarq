@@ -11,9 +11,6 @@
 #ifndef ARQ_COMPILE_CRC32
     #error You must define ARQ_COMPILE_CRC32 to 0 or 1 before including arq.h
 #endif
-#ifndef ARQ_ASSERTS_ENABLED
-    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h
-#endif
 
 #if ARQ_USE_C_STDLIB == 1
     #include <stdint.h>
@@ -293,6 +290,7 @@ typedef struct arq_t
 } arq_t;
 
 unsigned arq__min(unsigned x, unsigned y);
+unsigned arq__max(unsigned x, unsigned y);
 arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y);
 arq_uint16_t arq__hton16(arq_uint16_t x);
 arq_uint16_t arq__ntoh16(arq_uint16_t x);
@@ -302,7 +300,7 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 #if defined(__cplusplus)
 }
 #endif
-#endif
+#endif /* ARQ_H_INCLUDED */
 
 #ifdef ARQ_IMPLEMENTATION
 
@@ -311,6 +309,10 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 #endif
 
 #define ARQ_IMPLEMENTATION_INCLUDED
+
+#ifndef ARQ_ASSERTS_ENABLED
+    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h with ARQ_IMPLEMENTATION
+#endif
 
 #if ARQ_USE_C_STDLIB == 1
     #include <stdint.h>
@@ -692,9 +694,14 @@ unsigned arq__min(unsigned x, unsigned y)
     return (x < y) ? x : y;
 }
 
+unsigned arq__max(unsigned x, unsigned y)
+{
+    return (x > y) ? x : y;
+}
+
 arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y)
 {
-    return (x - y) & (arq_uint32_t)-((x - y) <= x);
+    return (x > y) ? (x - y) : 0;
 }
 
 void ARQ_MOCKABLE(arq__wnd_init)(arq__wnd_t *w, int wnd_cap, int msg_len, int seg_len)
@@ -903,8 +910,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
     void *seg_dst;
     unsigned const full_ack_vec = (1u << seg_cnt) - 1;
     int unused;
-    ARQ_ASSERT(w && p);
-    len = arq__min(len, w->seg_len);
+    ARQ_ASSERT(w && p && (len <= w->seg_len));
     m = &w->msg[seq % w->cap];
     ARQ_ASSERT((m->full_ack_vec == w->full_ack_vec) || (m->full_ack_vec == full_ack_vec));
     arq__wnd_seg(w, seq, seg, &seg_dst, &unused);
@@ -912,6 +918,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
     m->full_ack_vec = full_ack_vec;
     m->cur_ack_vec |= (1 << seg);
     m->len += len;
+    w->size = arq__max(w->size, arq__sub_sat(seq, w->seq) + 1);
     return len;
 }
 
