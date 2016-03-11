@@ -5,14 +5,8 @@
 #ifndef ARQ_USE_C_STDLIB
     #error You must define ARQ_USE_C_STDLIB to 0 or 1 before including arq.h
 #endif
-#ifndef ARQ_LITTLE_ENDIAN_CPU
-    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h
-#endif
 #ifndef ARQ_COMPILE_CRC32
     #error You must define ARQ_COMPILE_CRC32 to 0 or 1 before including arq.h
-#endif
-#ifndef ARQ_ASSERTS_ENABLED
-    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h
 #endif
 
 #if ARQ_USE_C_STDLIB == 1
@@ -219,7 +213,7 @@ typedef struct arq__wnd_t
 
 void arq__wnd_init(arq__wnd_t *w, int wnd_cap, int msg_len, int seg_len);
 void arq__wnd_rst(arq__wnd_t *w);
-void arq__wnd_seg(arq__wnd_t *w, unsigned msg, unsigned seg, void const **out_seg, int *out_seg_len);
+void arq__wnd_seg(arq__wnd_t *w, unsigned msg, unsigned seg, void **out_seg, int *out_seg_len);
 
 typedef struct arq__send_wnd_t
 {
@@ -241,7 +235,14 @@ typedef struct arq__send_wnd_ptr_t
 } arq__send_wnd_ptr_t;
 
 void arq__send_wnd_ptr_init(arq__send_wnd_ptr_t *p);
-int arq__send_wnd_ptr_next(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *sw);
+
+typedef enum
+{
+    ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG,
+    ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG
+} arq__send_wnd_ptr_next_result_t;
+
+arq__send_wnd_ptr_next_result_t arq__send_wnd_ptr_next(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *sw);
 
 typedef enum
 {
@@ -268,6 +269,13 @@ int arq__send_poll(arq__send_wnd_t *sw,
                    arq_time_t rtx,
                    arq_time_t dt);
 
+unsigned arq__recv_wnd_frame(arq__wnd_t *w,
+                             unsigned seq,
+                             unsigned seg,
+                             unsigned seg_cnt,
+                             void const *p,
+                             unsigned len);
+
 typedef struct arq_t
 {
     arq_cfg_t cfg;
@@ -279,6 +287,7 @@ typedef struct arq_t
 } arq_t;
 
 unsigned arq__min(unsigned x, unsigned y);
+unsigned arq__max(unsigned x, unsigned y);
 arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y);
 arq_uint16_t arq__hton16(arq_uint16_t x);
 arq_uint16_t arq__ntoh16(arq_uint16_t x);
@@ -288,7 +297,7 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 #if defined(__cplusplus)
 }
 #endif
-#endif
+#endif /* ARQ_H_INCLUDED */
 
 #ifdef ARQ_IMPLEMENTATION
 
@@ -297,6 +306,13 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 #endif
 
 #define ARQ_IMPLEMENTATION_INCLUDED
+
+#ifndef ARQ_ASSERTS_ENABLED
+    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h with ARQ_IMPLEMENTATION
+#endif
+#ifndef ARQ_LITTLE_ENDIAN_CPU
+    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h with ARQ_IMPLEMENTATION
+#endif
 
 #if ARQ_USE_C_STDLIB == 1
     #include <stdint.h>
@@ -364,6 +380,15 @@ arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
 arq_err_t arq_connect(struct arq_t *arq)
 {
     (void)arq;
+    return ARQ_OK_COMPLETED;
+}
+
+arq_err_t arq_recv(struct arq_t *arq, void *recv, int recv_max, int *out_recv_size)
+{
+    if (!arq || !recv || !out_recv_size) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    (void)recv_max;
     return ARQ_OK_COMPLETED;
 }
 
@@ -669,9 +694,14 @@ unsigned arq__min(unsigned x, unsigned y)
     return (x < y) ? x : y;
 }
 
+unsigned arq__max(unsigned x, unsigned y)
+{
+    return (x > y) ? x : y;
+}
+
 arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y)
 {
-    return (x - y) & (arq_uint32_t)-((x - y) <= x);
+    return (x > y) ? (x - y) : 0;
 }
 
 void ARQ_MOCKABLE(arq__wnd_init)(arq__wnd_t *w, int wnd_cap, int msg_len, int seg_len)
@@ -700,13 +730,13 @@ void ARQ_MOCKABLE(arq__wnd_rst)(arq__wnd_t *w)
 void ARQ_MOCKABLE(arq__wnd_seg)(arq__wnd_t *w,
                                 unsigned seq,
                                 unsigned seg,
-                                void const **out_seg,
+                                void **out_seg,
                                 int *out_seg_len)
 {
     unsigned idx;
     ARQ_ASSERT(w && out_seg && out_seg_len);
     idx = seq % w->cap;
-    *out_seg = (void const *)&w->buf[(w->msg_len * idx) + (w->seg_len * seg)];
+    *out_seg = &w->buf[(w->msg_len * idx) + (w->seg_len * seg)];
     *out_seg_len = (int)arq__min(w->seg_len, w->msg[idx].len - (w->seg_len * seg));
 }
 
@@ -809,38 +839,39 @@ void arq__send_frame_init(arq__send_frame_t *f, int cap)
     f->state = ARQ__SEND_FRAME_STATE_FREE;
 }
 
-int ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *w)
+arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_wnd_ptr_t *p,
+                                                                     arq__send_wnd_t const *sw)
 {
     unsigned i;
-    int fin = 0;
-    ARQ_ASSERT(p && w);
+    arq__send_wnd_ptr_next_result_t rv = ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG;
+    ARQ_ASSERT(p && sw);
     if (p->valid) {
-        arq__msg_t const *m = &w->w.msg[p->seq % w->w.cap];
+        arq__msg_t const *m = &sw->w.msg[p->seq % sw->w.cap];
         unsigned const rem = (unsigned)m->cur_ack_vec >> (p->seg + 1u);
         p->seg += (1 + __builtin_ctz(~rem));
         if (((1 << p->seg) - 1) < m->full_ack_vec) {
-            return 0;
+            return ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG;
         }
-        fin = 1;
+        rv = ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG;
     }
-    for (i = 0; i < w->w.size; ++i) {
-        unsigned const seq = (i + w->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
-        arq__msg_t const *m = &w->w.msg[seq % w->w.cap];
+    for (i = 0; i < sw->w.size; ++i) {
+        unsigned const seq = (i + sw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
+        arq__msg_t const *m = &sw->w.msg[seq % sw->w.cap];
         if (p->valid && (p->seq == seq)) {
             continue;
         }
-        if ((w->rtx[seq % w->w.cap] == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
+        if ((sw->rtx[seq % sw->w.cap] == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
             p->seq = seq;
             p->valid = 1;
             p->seg = __builtin_ctz(~(unsigned)m->cur_ack_vec);
-            return fin;
+            return rv;
         }
     }
     p->valid = 0;
-    return fin;
+    return rv;
 }
 
-int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
+int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
                                  arq__send_wnd_ptr_t *p,
                                  arq__send_frame_t *f,
                                  arq__frame_hdr_t *h,
@@ -849,23 +880,49 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *w,
                                  arq_time_t dt)
 {
     unsigned p_seq;
-    ARQ_ASSERT(w && p && f && checksum);
-    arq__send_wnd_step(w, dt);
+    ARQ_ASSERT(sw && p && f && checksum);
+    arq__send_wnd_step(sw, dt);
     if (p->valid && (f->state != ARQ__SEND_FRAME_STATE_RELEASED)) {
         return 0;
     }
     p_seq = p->seq;
-    if (arq__send_wnd_ptr_next(p, w)) {
-        w->rtx[p_seq % w->w.cap] = rtx;
+    if (arq__send_wnd_ptr_next(p, sw)) {
+        sw->rtx[p_seq % sw->w.cap] = rtx;
     }
     f->len = 0;
     f->state = ARQ__SEND_FRAME_STATE_FREE;
     if (p->valid) {
-        void const *seg;
-        arq__wnd_seg(&w->w, p->seq, p->seg, &seg, &h->seg_len);
+        void *seg;
+        arq__wnd_seg(&sw->w, p->seq, p->seg, &seg, &h->seg_len);
         f->len = arq__frame_write(h, seg, checksum, f->buf, f->cap);
     }
     return f->len;
+}
+
+unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
+                                           unsigned seq,
+                                           unsigned seg,
+                                           unsigned seg_cnt,
+                                           void const *p,
+                                           unsigned len)
+{
+    arq__msg_t *m;
+    void *seg_dst;
+    unsigned const full_ack_vec = (1u << seg_cnt) - 1;
+    int unused;
+    ARQ_ASSERT(w && p && (len <= w->seg_len));
+    if ((seq - w->seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1) > w->cap) {
+        return 0;
+    }
+    m = &w->msg[seq % w->cap];
+    ARQ_ASSERT((m->full_ack_vec == w->full_ack_vec) || (m->full_ack_vec == full_ack_vec));
+    arq__wnd_seg(w, seq, seg, &seg_dst, &unused);
+    ARQ_MEMCPY(seg_dst, p, len);
+    w->size = arq__max(w->size, ((seq - w->seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1)) + 1);
+    m->full_ack_vec = full_ack_vec;
+    m->cur_ack_vec |= (1u << seg);
+    m->len += len;
+    return len;
 }
 
 #if ARQ_COMPILE_CRC32 == 1

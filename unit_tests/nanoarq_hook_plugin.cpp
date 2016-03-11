@@ -2,6 +2,8 @@
 #include <vector>
 #include <algorithm>
 
+using namespace std;
+
 struct HookRecord
 {
     explicit HookRecord(void **thunkAddr_) : thunkAddr(thunkAddr_), orig(*thunkAddr_) {}
@@ -39,13 +41,12 @@ void NanoArqHookPlugin::Hook(void **thunkAddress, void *newFunction)
 
 void NanoArqHookPlugin::Unhook(void **thunkAddr)
 {
-    auto hr = std::find_if(std::begin(m->hooks), std::end(m->hooks),
-        [=](HookRecord const &h){ return h.thunkAddr == thunkAddr; });
+    auto hr = find_if(begin(m->hooks), end(m->hooks), [=](HookRecord &h){ return h.thunkAddr == thunkAddr; });
 
-    if (hr == std::end(m->hooks)) {
-        std::fprintf(stderr,
-                     "NanoArqHookPlugin::Unhook(): No function matches '%p', nothing to unhook.\n",
-                     thunkAddr);
+    if (hr == end(m->hooks)) {
+        fprintf(stderr,
+                "NanoArqHookPlugin::Unhook(): No function matches '%p', nothing to unhook.\n",
+                thunkAddr);
         return;
     }
 
@@ -55,7 +56,7 @@ void NanoArqHookPlugin::Unhook(void **thunkAddr)
 
 void NanoArqHookPlugin::postTestAction(UtestShell&, TestResult&)
 {
-    std::for_each(std::begin(m->hooks), std::end(m->hooks), [](HookRecord& h) { *h.thunkAddr = h.orig; });
+    for_each(begin(m->hooks), end(m->hooks), [](HookRecord& h) { *h.thunkAddr = h.orig; });
     m->hooks.clear();
 }
 

@@ -11,63 +11,20 @@ TEST_GROUP(send_wnd) {};
 
 namespace {
 
-struct UninitializedSendWindowFixture
-{
-    UninitializedSendWindowFixture()
-    {
-        sw.w.buf = nullptr;
-        sw.w.msg = msg.data();
-        sw.rtx = rtx.data();
-    }
-    arq__send_wnd_t sw;
-    std::array< arq__msg_t, 64 > msg;
-    std::array< arq_time_t, 64 > rtx;
-};
-
-TEST(send_wnd, init_writes_params_to_struct)
-{
-    UninitializedSendWindowFixture f;
-    arq__wnd_init(&f.sw.w, f.msg.size(), 16, 8);
-    CHECK_EQUAL(f.msg.size(), f.sw.w.cap);
-    CHECK_EQUAL(16, f.sw.w.msg_len);
-    CHECK_EQUAL(8, f.sw.w.seg_len);
-}
-
-TEST(send_wnd, init_full_ack_vec_is_one_if_seg_len_equals_msg_len)
-{
-    UninitializedSendWindowFixture f;
-    arq__wnd_init(&f.sw.w, f.msg.size(), 16, 16);
-    CHECK_EQUAL(0b1, f.sw.w.full_ack_vec);
-}
-
-TEST(send_wnd, init_calculates_full_ack_vector_from_msg_len_and_seg_len)
-{
-    UninitializedSendWindowFixture f;
-    arq__wnd_init(&f.sw.w, f.msg.size(), 32, 8);
-    CHECK_EQUAL(0b1111, f.sw.w.full_ack_vec);
-}
-
-void MockWndRst(arq__send_wnd_t *w)
-{
-    mock().actualCall("arq__wnd_rst").withParameter("w", w);
-}
-
-TEST(send_wnd, init_calls_rst)
-{
-    UninitializedSendWindowFixture f;
-    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
-    mock().expectOneCall("arq__wnd_rst").withParameter("w", &f.sw.w);
-    arq__wnd_init(&f.sw.w, f.msg.size(), 16, 8);
-}
-
-struct Fixture : UninitializedSendWindowFixture
+struct Fixture
 {
     Fixture()
     {
+        sw.rtx = rtx.data();
+        sw.w.msg = msg.data();
         arq__wnd_init(&sw.w, msg.size(), 128, 16);
         buf.resize(sw.w.msg_len * sw.w.cap);
         sw.w.buf = buf.data();
     }
+
+    arq__send_wnd_t sw;
+    std::array< arq__msg_t, 64 > msg;
+    std::array< arq_time_t, 64 > rtx;
     std::vector< unsigned char > buf;
     std::vector< unsigned char > snd;
 };
@@ -621,78 +578,6 @@ TEST(send_wnd, step_wraps_around_when_window_wraps)
     CHECK_EQUAL(80, f.sw.rtx[f.sw.w.seq + 1]);
     CHECK_EQUAL(70, f.sw.rtx[0]);
     CHECK_EQUAL(60, f.sw.rtx[1]);
-}
-
-struct SegFixture : Fixture
-{
-    int n = 0;
-    void const *p = nullptr;
-};
-
-TEST(send_wnd, seg_with_base_idx_zero_returns_buf)
-{
-    SegFixture f;
-    arq__wnd_seg(&f.sw.w, 0, 0, &f.p, &f.n);
-    CHECK_EQUAL((void const *)f.buf.data(), f.p);
-}
-
-TEST(send_wnd, seg_message_less_than_one_segment_returns_message_size)
-{
-    SegFixture f;
-    f.sw.w.msg_len = f.sw.w.msg[0].len = 13;
-    arq__wnd_seg(&f.sw.w, 0, 0, &f.p, &f.n);
-    CHECK_EQUAL(f.sw.w.msg[0].len, f.n);
-}
-
-TEST(send_wnd, seg_message_greater_than_one_segment_returns_seg_len_for_non_final_segment_index)
-{
-    SegFixture f;
-    f.sw.w.msg[0].len = f.sw.w.msg_len;
-    arq__wnd_seg(&f.sw.w, 0, 0, &f.p, &f.n);
-    CHECK_EQUAL(f.sw.w.seg_len, f.n);
-}
-
-TEST(send_wnd, seg_points_at_segment_len_times_segment_index)
-{
-    SegFixture f;
-    f.sw.w.msg[0].len = f.sw.w.msg_len;
-    arq__wnd_seg(&f.sw.w, 0, 3, &f.p, &f.n);
-    CHECK_EQUAL((void const *)&f.buf[3 * f.sw.w.seg_len], f.p);
-}
-
-TEST(send_wnd, seg_returns_msg_len_remainder_for_final_segment)
-{
-    SegFixture f;
-    f.sw.w.msg[0].len = f.sw.w.msg_len - (f.sw.w.seg_len / 2);
-    arq__wnd_seg(&f.sw.w, 0, (f.sw.w.msg_len / f.sw.w.seg_len) - 1, &f.p, &f.n);
-    CHECK_EQUAL(f.sw.w.seg_len / 2, f.n);
-}
-
-TEST(send_wnd, seg_size_looks_up_message_by_message_index)
-{
-    SegFixture f;
-    f.sw.w.size = 2;
-    f.sw.w.msg[1].len = 5;
-    arq__wnd_seg(&f.sw.w, 1, 0, &f.p, &f.n);
-    CHECK_EQUAL(5, f.n);
-}
-
-TEST(send_wnd, seg_buf_looks_up_message_by_message_index)
-{
-    SegFixture f;
-    f.sw.w.size = 2;
-    f.sw.w.msg[1].len = 5;
-    arq__wnd_seg(&f.sw.w, 1, 0, &f.p, &f.n);
-    CHECK_EQUAL((void const *)&f.buf[f.sw.w.msg_len], f.p);
-}
-
-TEST(send_wnd, seg_buf_pointer_is_message_offset_plus_segment_offset)
-{
-    SegFixture f;
-    f.sw.w.size = 3;
-    f.sw.w.msg[2].len = f.sw.w.seg_len + 1;
-    arq__wnd_seg(&f.sw.w, 2, 1, &f.p, &f.n);
-    CHECK_EQUAL((void const *)&f.buf[(f.sw.w.msg_len * 2) + f.sw.w.seg_len], f.p);
 }
 
 }
