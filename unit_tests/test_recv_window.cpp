@@ -46,6 +46,7 @@ TEST(recv_wnd, frame_indexes_msg_by_seq)
 {
     Fixture f;
     f.seg.resize(1);
+    f.w.seq = 12344;
     arq__recv_wnd_frame(&f.w, 12345, 0, 1, f.seg.data(), f.seg.size());
     CHECK_EQUAL(1, f.msg[12345 % f.w.cap].len);
 }
@@ -63,6 +64,7 @@ void MockWndSeg(arq__wnd_t *w, int seq, int seg, void const **out_seg, int *out_
 TEST(recv_wnd, frame_copies_data_into_seat_provided_by_seg_call)
 {
     Fixture f;
+    f.w.seq = 120;
     int const seq = 123;
     int const seg = 456;
     for (auto i = 0; i < 7; ++i) {
@@ -144,8 +146,25 @@ TEST(recv_wnd, frame_updates_window_size_for_non_first_segment_in_non_adjacent_m
     CHECK_EQUAL(5, f.w.size);
 }
 
-TEST(recv_wnd, frame_ignores_input_outside_of_recv_window)
+TEST(recv_wnd, frame_updates_window_size_correctly_when_new_segment_wraps_sequence_number_space)
 {
+    Fixture f;
+    f.w.size = 1;
+    f.w.seq = ARQ__FRAME_MAX_SEQ_NUM;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.w, 0, 1, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(2, f.w.size);
+}
+
+TEST(recv_wnd, frame_ignores_sequence_numbers_outside_of_window_capacity)
+{
+    Fixture f;
+    f.w.cap = 10;
+    f.w.seq = 100;
+    f.w.size = 2;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.w, 2000, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(2, f.w.size);
 }
 
 }

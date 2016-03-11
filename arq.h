@@ -5,9 +5,6 @@
 #ifndef ARQ_USE_C_STDLIB
     #error You must define ARQ_USE_C_STDLIB to 0 or 1 before including arq.h
 #endif
-#ifndef ARQ_LITTLE_ENDIAN_CPU
-    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h
-#endif
 #ifndef ARQ_COMPILE_CRC32
     #error You must define ARQ_COMPILE_CRC32 to 0 or 1 before including arq.h
 #endif
@@ -312,6 +309,9 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 
 #ifndef ARQ_ASSERTS_ENABLED
     #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h with ARQ_IMPLEMENTATION
+#endif
+#ifndef ARQ_LITTLE_ENDIAN_CPU
+    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h with ARQ_IMPLEMENTATION
 #endif
 
 #if ARQ_USE_C_STDLIB == 1
@@ -911,14 +911,17 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
     unsigned const full_ack_vec = (1u << seg_cnt) - 1;
     int unused;
     ARQ_ASSERT(w && p && (len <= w->seg_len));
+    if ((seq - w->seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1) > w->cap) {
+        return 0;
+    }
     m = &w->msg[seq % w->cap];
     ARQ_ASSERT((m->full_ack_vec == w->full_ack_vec) || (m->full_ack_vec == full_ack_vec));
     arq__wnd_seg(w, seq, seg, &seg_dst, &unused);
     ARQ_MEMCPY(seg_dst, p, len);
+    w->size = arq__max(w->size, ((seq - w->seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1)) + 1);
     m->full_ack_vec = full_ack_vec;
-    m->cur_ack_vec |= (1 << seg);
+    m->cur_ack_vec |= (1u << seg);
     m->len += len;
-    w->size = arq__max(w->size, arq__sub_sat(seq, w->seq) + 1);
     return len;
 }
 
