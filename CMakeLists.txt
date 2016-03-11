@@ -14,12 +14,12 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 include(ExternalProject)
 
 set(CPPUTEST_ROOT_DIR ${CMAKE_SOURCE_DIR}/external/CppUTest)
-set(CPPUTEST_LIB_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/lib)
-set(CPPUTEST_INCLUDE_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}/include)
+set(CPPUTEST_LIB_DIR ${CMAKE_BINARY_DIR}/CppUTest/lib)
+set(CPPUTEST_INCLUDE_DIR ${CMAKE_BINARY_DIR}/CppUTest/include)
 set(CPPUTEST_CMAKE_ARGS -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
                         -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/${PROJECT_NAME}
+                        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/CppUTest
                         -DTESTS=OFF
                         -DC++11=ON)
 
@@ -31,8 +31,12 @@ ExternalProject_Add(CppUTest_external
                     PATCH_COMMAND ""
                     TEST_COMMAND ""
                     CMAKE_ARGS ${CPPUTEST_CMAKE_ARGS}
-                    BINARY_DIR ${CMAKE_BINARY_DIR}/${PROJECT_NAME}
-                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a ${CPPUTEST_LIB_DIR}/libCppUTestExt.a)
+                    BINARY_DIR ${CMAKE_BINARY_DIR}/CppUTest
+                    INSTALL_DIR ${CMAKE_BINARY_DIR}/CppUTest
+                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a
+                                     ${CPPUTEST_LIB_DIR}/libCppUTestExt.a
+                                     ${CPPUTEST_INCLUDE_DIR}/CppUTest/TestHarness.h
+                                     ${CPPUTEST_INCLUDE_DIR}/CppUTestExt/MockSupport.h)
 
 add_library(libCppUTest STATIC IMPORTED)
 set_target_properties(libCppUTest PROPERTIES IMPORTED_LOCATION ${CPPUTEST_LIB_DIR}/libCppUTest.a)
