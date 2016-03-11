@@ -9,6 +9,29 @@ TEST_GROUP(recv_wnd) {};
 
 namespace {
 
+void MockWndRst(arq__wnd_t *w)
+{
+    mock().actualCall("arq__wnd_rst").withParameter("w", w);
+}
+
+TEST(recv_wnd, rst_calls_wnd_rst)
+{
+    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
+    arq__recv_wnd_t rw;
+    mock().expectOneCall("arq__wnd_rst").withParameter("w", &rw.w);
+    arq__recv_wnd_rst(&rw);
+}
+
+TEST(recv_wnd, rst_sets_recv_ptr_to_zero)
+{
+    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
+    mock().ignoreOtherCalls();
+    arq__recv_wnd_t rw;
+    rw.recv_ptr = 1234;
+    arq__recv_wnd_rst(&rw);
+    CHECK_EQUAL(0, rw.recv_ptr);
+}
+
 struct Fixture
 {
     Fixture()

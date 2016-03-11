@@ -10,3 +10,6 @@ hide __builtin_ctz() behind ARQ_COUNT_TRAILING_ZEROES()
 (compile-time selection?) only allow power-of-two-sized windows, replace div/mod
 pull out mock functions into common header
 send tinygram timer
+arq__send_wnd_init
+arq__recv_wnd_init
+

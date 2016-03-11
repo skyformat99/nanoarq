@@ -275,6 +275,8 @@ typedef struct arq__recv_wnd_t
     unsigned recv_ptr;
 } arq__recv_wnd_t;
 
+void arq__recv_wnd_rst(arq__recv_wnd_t *rw);
+
 unsigned arq__recv_wnd_frame(arq__recv_wnd_t *rw,
                              unsigned seq,
                              unsigned seg,
@@ -906,6 +908,13 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
         f->len = arq__frame_write(h, seg, checksum, f->buf, f->cap);
     }
     return f->len;
+}
+
+void ARQ_MOCKABLE(arq__recv_wnd_rst)(arq__recv_wnd_t *rw)
+{
+    ARQ_ASSERT(rw);
+    arq__wnd_rst(&rw->w);
+    rw->recv_ptr = 0;
 }
 
 unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
