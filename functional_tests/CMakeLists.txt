@@ -19,7 +19,7 @@ set_source_files_properties(nanoarq_in_test_project.c PROPERTIES COMPILE_FLAGS "
 
 add_executable(nanoarq_functional_tests ${NANOARQ_FUNCTIONAL_TEST_SOURCES})
 target_compile_options(nanoarq_functional_tests PRIVATE ${NANOARQ_COMMON_FLAGS})
-add_dependencies(nanoarq_functional_tests CppUTest_external)
+add_dependencies(nanoarq_functional_tests CppUTest_external all_unit_tests)
 target_link_libraries(nanoarq_functional_tests libCppUTest libCppUTestExt)
 nanoarq_add_test(nanoarq_functional_tests)
 

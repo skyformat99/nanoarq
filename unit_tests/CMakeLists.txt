@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED on)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
-include_directories("${CPPUTEST_INCLUDE_DIR}")
+include_directories(${CPPUTEST_INCLUDE_DIR})
 
 add_library(nanoarq_test_support STATIC nanoarq_mocks.h
                                         nanoarq_mocks.cpp
@@ -63,3 +63,4 @@ target_compile_options(nanoarq_no_asserts_unit_tests PRIVATE ${NANOARQ_COMMON_FL
 target_link_libraries(nanoarq_no_asserts_unit_tests nanoarq_test_support libCppUTest libCppUTestExt)
 nanoarq_add_test(nanoarq_no_asserts_unit_tests)
 
+add_custom_target(all_unit_tests DEPENDS nanoarq_unit_tests nanoarq_no_asserts_unit_tests)
