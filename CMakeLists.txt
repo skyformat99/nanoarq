@@ -33,10 +33,7 @@ ExternalProject_Add(CppUTest_external
                     CMAKE_ARGS ${CPPUTEST_CMAKE_ARGS}
                     BINARY_DIR ${CMAKE_BINARY_DIR}/CppUTest
                     INSTALL_DIR ${CMAKE_BINARY_DIR}/CppUTest
-                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a
-                                     ${CPPUTEST_LIB_DIR}/libCppUTestExt.a
-                                     ${CPPUTEST_INCLUDE_DIR}/CppUTest/TestHarness.h
-                                     ${CPPUTEST_INCLUDE_DIR}/CppUTestExt/MockSupport.h)
+                    BUILD_BYPRODUCTS ${CPPUTEST_LIB_DIR}/libCppUTest.a ${CPPUTEST_LIB_DIR}/libCppUTestExt.a)
 
 add_library(libCppUTest STATIC IMPORTED)
 set_target_properties(libCppUTest PROPERTIES IMPORTED_LOCATION ${CPPUTEST_LIB_DIR}/libCppUTest.a)
