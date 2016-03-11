@@ -269,12 +269,20 @@ int arq__send_poll(arq__send_wnd_t *sw,
                    arq_time_t rtx,
                    arq_time_t dt);
 
-unsigned arq__recv_wnd_frame(arq__wnd_t *w,
+typedef struct arq__recv_wnd_t
+{
+    arq__wnd_t w;
+    unsigned recv_ptr;
+} arq__recv_wnd_t;
+
+unsigned arq__recv_wnd_frame(arq__recv_wnd_t *rw,
                              unsigned seq,
                              unsigned seg,
                              unsigned seg_cnt,
                              void const *p,
                              unsigned len);
+
+unsigned arq__recv_wnd_recv(arq__recv_wnd_t *rw, void *dst, unsigned dst_max);
 
 typedef struct arq_t
 {
@@ -284,6 +292,7 @@ typedef struct arq_t
     arq__send_wnd_t send_wnd;
     arq__send_wnd_ptr_t send_wnd_ptr;
     arq__send_frame_t send_frame;
+    arq__wnd_t recv_wnd;
 } arq_t;
 
 unsigned arq__min(unsigned x, unsigned y);
@@ -899,7 +908,7 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
     return f->len;
 }
 
-unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
+unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
                                            unsigned seq,
                                            unsigned seg,
                                            unsigned seg_cnt,
@@ -910,19 +919,29 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__wnd_t *w,
     void *seg_dst;
     unsigned const full_ack_vec = (1u << seg_cnt) - 1;
     int unused;
-    ARQ_ASSERT(w && p && (len <= w->seg_len));
-    if ((seq - w->seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1) > w->cap) {
+    ARQ_ASSERT(rw && p && (len <= rw->w.seg_len));
+    if ((seq - rw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1) > rw->w.cap) {
         return 0;
     }
-    m = &w->msg[seq % w->cap];
-    ARQ_ASSERT((m->full_ack_vec == w->full_ack_vec) || (m->full_ack_vec == full_ack_vec));
-    arq__wnd_seg(w, seq, seg, &seg_dst, &unused);
+    m = &rw->w.msg[seq % rw->w.cap];
+    if (m->cur_ack_vec & (1u << seg)) {
+        return 0;
+    }
+    ARQ_ASSERT((m->full_ack_vec == rw->w.full_ack_vec) || (m->full_ack_vec == full_ack_vec));
+    arq__wnd_seg(&rw->w, seq, seg, &seg_dst, &unused);
     ARQ_MEMCPY(seg_dst, p, len);
-    w->size = arq__max(w->size, ((seq - w->seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1)) + 1);
+    rw->w.size = arq__max(rw->w.size, ((seq - rw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1)) + 1);
     m->full_ack_vec = full_ack_vec;
     m->cur_ack_vec |= (1u << seg);
     m->len += len;
     return len;
+}
+
+unsigned ARQ_MOCKABLE(arq__recv_wnd_recv)(arq__recv_wnd_t *rw, void *dst, unsigned dst_max)
+{
+    ARQ_ASSERT(rw && dst);
+    (void)dst_max;
+    return 0;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
