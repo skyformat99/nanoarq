@@ -399,7 +399,7 @@ TEST(recv_wnd, recv_after_receiving_partial_msg_returns_resumed_partial_message_
     PopulateReceiveWindow(f, f.rw.w.msg_len);
     arq__recv_wnd_recv(&f.rw, f.recv.data(), 2);
     unsigned const recv_size = arq__recv_wnd_recv(&f.rw, f.recv.data(), f.rw.w.msg_len - 2);
-    CHECK_EQUAL(f.rw.w.msg_len - 2, recv_size);
+    CHECK_EQUAL(f.rw.w.msg_len - 2u, recv_size);
 }
 
 TEST(recv_wnd, recv_copies_message_data_when_window_wraps_around_capacity)
