@@ -68,7 +68,7 @@ add_executable(nanoarq_no_asserts_unit_tests ${NANOARQ_UNIT_TEST_SOURCES}
                                              $<TARGET_OBJECTS:nanoarq_unit_test_objs>)
 add_dependencies(nanoarq_no_asserts_unit_tests CppUTest_external)
 target_compile_options(nanoarq_no_asserts_unit_tests PRIVATE ${NANOARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=0)
-target_link_libraries(nanoarq_no_asserts_unit_tests nanoarq_test_support libCppUTest libCppUTestExt c++)
+target_link_libraries(nanoarq_no_asserts_unit_tests nanoarq_test_support libCppUTest libCppUTestExt)
 if(CMAKE_GENERATOR STREQUAL Xcode)
     target_link_libraries(nanoarq_no_asserts_unit_tests c++)
 endif()
