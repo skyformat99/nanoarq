@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.4)
 project(nanoarq C CXX)
 
+############### Global flags
+
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_RELEASE "-Os")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-Os -g")
@@ -8,6 +10,8 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-Os -g")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
+
+set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
 
 ################ CppUTest
 

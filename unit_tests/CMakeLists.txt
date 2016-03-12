@@ -54,16 +54,18 @@ set_source_files_properties(nanoarq_unit_test.c PROPERTIES COMPILE_FLAGS "${NANO
 ############# Unit tests
 
 add_executable(nanoarq_unit_tests ${NANOARQ_UNIT_TEST_SOURCES} $<TARGET_OBJECTS:nanoarq_unit_test_objs>)
+add_dependencies(nanoarq_unit_tests CppUTest_external)
 target_compile_options(nanoarq_unit_tests PRIVATE ${NANOARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=1)
-target_link_libraries(nanoarq_unit_tests nanoarq_test_support libCppUTest libCppUTestExt)
+target_link_libraries(nanoarq_unit_tests nanoarq_test_support libCppUTest libCppUTestExt c++)
 nanoarq_add_test(nanoarq_unit_tests)
 
 ############# Unit tests without asserts enabled
 
 add_executable(nanoarq_no_asserts_unit_tests ${NANOARQ_UNIT_TEST_SOURCES}
                                              $<TARGET_OBJECTS:nanoarq_unit_test_objs>)
+add_dependencies(nanoarq_no_asserts_unit_tests CppUTest_external)
 target_compile_options(nanoarq_no_asserts_unit_tests PRIVATE ${NANOARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=0)
-target_link_libraries(nanoarq_no_asserts_unit_tests nanoarq_test_support libCppUTest libCppUTestExt)
+target_link_libraries(nanoarq_no_asserts_unit_tests nanoarq_test_support libCppUTest libCppUTestExt c++)
 nanoarq_add_test(nanoarq_no_asserts_unit_tests)
 
 ############# Dummy target that depends on all unit tests
