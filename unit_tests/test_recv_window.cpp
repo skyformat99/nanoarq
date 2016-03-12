@@ -253,7 +253,9 @@ void PopulateReceiveWindow(Fixture& f, int bytes)
 {
     for (auto i = 0; i < bytes / 2; ++i) {
         arq_uint16_t const x = (arq_uint16_t)i;
-        std::memcpy(&f.buf[i * 2], &x, sizeof(x));
+        auto const offset = f.rw.w.seq * f.rw.w.msg_len;
+        auto const max = f.rw.w.cap * f.rw.w.msg_len;
+        std::memcpy(&f.buf[(offset + (i * 2)) % max], &x, sizeof(x));
     }
     f.rw.w.size = (bytes + f.rw.w.msg_len - 1) / f.rw.w.msg_len;
     int idx = 0;
@@ -431,7 +433,7 @@ TEST(recv_wnd, recv_copies_message_data_when_window_wraps_around_capacity)
     f.rw.w.seq = f.rw.w.cap - 1;
     PopulateReceiveWindow(f, f.rw.w.msg_len * 2);
     arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
-    MEMCMP_EQUAL(&f.buf[f.rw.w.cap - 1], f.recv.data(), f.rw.w.msg_len);
+    MEMCMP_EQUAL(&f.buf[(f.rw.w.cap - 1) * f.rw.w.msg_len], f.recv.data(), f.rw.w.msg_len);
     MEMCMP_EQUAL(f.buf.data(), &f.recv[f.rw.w.msg_len], f.rw.w.msg_len);
 }
 
