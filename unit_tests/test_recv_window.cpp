@@ -299,6 +299,16 @@ TEST(recv_wnd, PopulateReceiveWindow_one_full_msg_one_partial_msg)
     CHECK_EQUAL(0xFE, f.buf[size]);
 }
 
+TEST(recv_wnd, recv_dst_size_zero_does_nothing)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len);
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), 0);
+    CHECK_EQUAL(0, f.rw.w.seq);
+    CHECK_EQUAL(0, f.rw.recv_ptr);
+    CHECK_EQUAL(1, f.rw.w.size);
+}
+
 TEST(recv_wnd, recv_entire_first_message_in_window_copies_msg_to_buf)
 {
     Fixture f;
@@ -370,6 +380,7 @@ TEST(recv_wnd, recv_one_and_a_half_messages_leaves_recv_ptr_halfway_through_mess
     Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len * 2);
     arq__recv_wnd_recv(&f.rw, f.recv.data(), f.rw.w.msg_len + (f.rw.w.msg_len / 2));
+    CHECK_EQUAL(1, f.rw.w.size);
     CHECK_EQUAL(f.rw.w.msg_len / 2, f.rw.recv_ptr);
 }
 
@@ -385,7 +396,19 @@ TEST(recv_wnd, recv_after_receiving_partial_msg_resumes_copy_from_last_byte_copi
 TEST(recv_wnd, recv_entire_msg_one_byte_at_a_time)
 {
     Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len);
+    for (auto i = 0u; i < f.rw.w.msg_len; ++i) {
+        unsigned const n = arq__recv_wnd_recv(&f.rw, &f.recv[i], 1);
+        CHECK_EQUAL(1, n);
+    }
+    MEMCMP_EQUAL(f.buf.data(), f.recv.data(), f.rw.w.msg_len);
+}
+
+TEST(recv_wnd, recv_two_messages_one_byte_at_a_time)
+{
+    Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len * 2);
+    CHECK_EQUAL(2, f.rw.w.size);
     for (auto i = 0u; i < f.rw.w.msg_len * 2; ++i) {
         unsigned const n = arq__recv_wnd_recv(&f.rw, &f.recv[i], 1);
         CHECK_EQUAL(1, n);
