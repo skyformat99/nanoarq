@@ -4,6 +4,7 @@
 #include <CppUTest/TestHarness.h>
 #include <array>
 #include <vector>
+#include <cstring>
 
 TEST_GROUP(recv_wnd) {};
 
@@ -328,7 +329,7 @@ TEST(recv_wnd, recv_tinygram_returns_tinygram_size)
     Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len - 1);
     unsigned const recv_size = arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
-    CHECK_EQUAL(f.rw.w.msg_len - 1, recv_size);
+    CHECK_EQUAL(f.rw.w.msg_len - 1u, recv_size);
 }
 
 TEST(recv_wnd, recv_dst_two_full_messages_copies_both_messages_to_dst)
