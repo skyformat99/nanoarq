@@ -7,5 +7,8 @@ send_ptr_release() errors if the send pointer isn't owned by the user? new error
 more descriptive return values for send_ptr_get and send_ptr_release (you already have ptr, there's nothing to send, etc)
 big bit vector to hold 'ready' message state of entire send window? rtx == 0 => msg bit set?
 hide __builtin_ctz() behind ARQ_COUNT_TRAILING_ZEROES()
-only allow power-of-two-sized windows, replace div/mod
+(compile-time selection?) only allow power-of-two-sized windows, replace div/mod
 pull out mock functions into common header
+send tinygram timer
+arq__send_wnd_init
+arq__recv_wnd_init
