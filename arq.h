@@ -294,7 +294,7 @@ typedef struct arq_t
     arq__send_wnd_t send_wnd;
     arq__send_wnd_ptr_t send_wnd_ptr;
     arq__send_frame_t send_frame;
-    arq__wnd_t recv_wnd;
+    arq__recv_wnd_t recv_wnd;
 } arq_t;
 
 unsigned arq__min(unsigned x, unsigned y);
@@ -399,7 +399,7 @@ arq_err_t arq_recv(struct arq_t *arq, void *recv, int recv_max, int *out_recv_si
     if (!arq || !recv || !out_recv_size) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    (void)recv_max;
+    *out_recv_size = (int)arq__recv_wnd_recv(&arq->recv_wnd, recv, (unsigned)recv_max);
     return ARQ_OK_COMPLETED;
 }
 
