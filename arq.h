@@ -1017,7 +1017,7 @@ unsigned ARQ_MOCKABLE(arq__recv_frame_fill)(arq__recv_frame_t *f, void const *sr
     arq_uchar_t const *src_bytes = (arq_uchar_t const *)src;
     arq_uchar_t *dst;
     ARQ_ASSERT(f && src);
-    len = arq__min(len, f->cap - f->len);
+    len = arq__min(len, (unsigned)f->cap - (unsigned)f->len);
     dst = f->buf + f->len;
     f->len += len;
     while (len--) {
