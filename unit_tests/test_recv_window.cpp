@@ -485,5 +485,29 @@ TEST(recv_wnd, recv_doesnt_slide_if_dst_isnt_big_enough_to_hold_msg)
     CHECK_EQUAL(3, f.rw.w.size);
 }
 
+TEST(recv_wnd, recv_one_full_msg_one_tinygram_one_full_msg)
+{
+    Fixture f;
+    f.rw.w.size = 3;
+    f.rw.w.msg[0].len = f.rw.w.msg_len;
+    f.rw.w.msg[0].cur_ack_vec = f.rw.w.full_ack_vec;
+    f.rw.w.msg[1].len = 1;
+    f.rw.w.msg[1].cur_ack_vec = f.rw.w.msg[1].full_ack_vec = 1;
+    f.rw.w.msg[2].len = f.rw.w.msg_len;
+    f.rw.w.msg[2].cur_ack_vec = f.rw.w.full_ack_vec;
+    std::memset(f.buf.data(), 0x11, f.rw.w.msg_len);
+    f.buf[f.rw.w.msg_len] = 0x22;
+    std::memset(&f.buf[f.rw.w.msg_len * 2], 0x33, f.rw.w.msg_len);
+    unsigned const recvd = arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
+    CHECK_EQUAL(f.rw.w.msg_len * 2 + 1, recvd);
+    for (auto i = 0u; i < f.rw.w.msg_len; ++i) {
+        CHECK_EQUAL(0x11, f.recv[i]);
+    }
+    CHECK_EQUAL(0x22, f.recv[f.rw.w.msg_len]);
+    for (auto i = f.rw.w.msg_len + 2; i < f.rw.w.msg_len * 2 + 1; ++i) {
+        CHECK_EQUAL(0x33, f.recv[i]);
+    }
+}
+
 }
 

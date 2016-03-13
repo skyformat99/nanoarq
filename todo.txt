@@ -12,4 +12,3 @@ pull out mock functions into common header
 send tinygram timer
 arq__send_wnd_init
 arq__recv_wnd_init
-

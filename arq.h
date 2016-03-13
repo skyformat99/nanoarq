@@ -947,33 +947,34 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
 
 unsigned ARQ_MOCKABLE(arq__recv_wnd_recv)(arq__recv_wnd_t *rw, void *dst, unsigned dst_max)
 {
-    unsigned copy_len = 0, i, new_recv_ptr, new_size, new_seq, wnd_cap_in_bytes, pre_wrap_copy_len;
-    arq_uchar_t const *src;
+    unsigned len = 0, i, n, new_recv_ptr, new_size, new_seq;
     ARQ_ASSERT(rw && dst);
     new_recv_ptr = rw->recv_ptr;
     new_size = rw->w.size;
     new_seq = rw->w.seq;
-    for (i = 0; (i < rw->w.size) && dst_max; ++i) {
+    for (i = 0; i < rw->w.size; ++i) {
         arq__msg_t const *m = &rw->w.msg[(rw->w.seq + i) % rw->w.cap];
-        unsigned const bytes_this_msg = arq__min(dst_max, m->len - new_recv_ptr);
         if (m->full_ack_vec != m->cur_ack_vec) {
             break;
         }
-        copy_len += bytes_this_msg;
+    }
+    n = arq__min(i, rw->w.size);
+    for (i = 0; (i < n) && dst_max; ++i) {
+        unsigned const msg_len = rw->w.msg[(rw->w.seq + i) % rw->w.cap].len;
+        unsigned const bytes_this_msg = arq__min(dst_max, msg_len - new_recv_ptr);
+        ARQ_MEMCPY((arq_uchar_t *)dst + len,
+                   rw->w.buf + ((new_seq % rw->w.cap) * rw->w.msg_len) + new_recv_ptr,
+                   bytes_this_msg);
+        len += bytes_this_msg;
         dst_max -= bytes_this_msg;
-        new_recv_ptr = (new_recv_ptr + bytes_this_msg) % m->len;
+        new_recv_ptr = (new_recv_ptr + bytes_this_msg) % msg_len;
         new_size -= (new_recv_ptr == 0);
         new_seq += (new_recv_ptr == 0);
     }
-    src = rw->w.buf + ((rw->w.seq % rw->w.cap) * rw->w.msg_len) + rw->recv_ptr;
-    wnd_cap_in_bytes = rw->w.cap * rw->w.msg_len;
-    pre_wrap_copy_len = arq__min(copy_len, wnd_cap_in_bytes - (src - rw->w.buf));
-    ARQ_MEMCPY(dst, src, pre_wrap_copy_len);
-    ARQ_MEMCPY((arq_uchar_t *)dst + pre_wrap_copy_len, rw->w.buf, copy_len - pre_wrap_copy_len);
     rw->recv_ptr = new_recv_ptr;
     rw->w.size = new_size;
     rw->w.seq = new_seq % (ARQ__FRAME_MAX_SEQ_NUM + 1);
-    return copy_len;
+    return len;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
