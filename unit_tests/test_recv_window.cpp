@@ -499,7 +499,7 @@ TEST(recv_wnd, recv_one_full_msg_one_tinygram_one_full_msg)
     f.buf[f.rw.w.msg_len] = 0x22;
     std::memset(&f.buf[f.rw.w.msg_len * 2], 0x33, f.rw.w.msg_len);
     unsigned const recvd = arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
-    CHECK_EQUAL(f.rw.w.msg_len * 2 + 1, recvd);
+    CHECK_EQUAL(f.rw.w.msg_len * 2u + 1u, recvd);
     for (auto i = 0u; i < f.rw.w.msg_len; ++i) {
         CHECK_EQUAL(0x11, f.recv[i]);
     }
