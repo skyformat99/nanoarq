@@ -1016,14 +1016,22 @@ unsigned ARQ_MOCKABLE(arq__recv_frame_fill)(arq__recv_frame_t *f, void const *sr
 {
     arq_uchar_t const *src_bytes = (arq_uchar_t const *)src;
     arq_uchar_t *dst;
+    unsigned ret;
     ARQ_ASSERT(f && src);
-    len = arq__min(len, (unsigned)f->cap - (unsigned)f->len);
+    ret = len = arq__min(len, (unsigned)f->cap - (unsigned)f->len);
     dst = f->buf + f->len;
-    f->len += len;
-    while (len--) {
-        *dst++ = *src_bytes++;
+    while (len) {
+        *dst = *src_bytes;
+        if (*src_bytes == 0) {
+            f->state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
+            break;
+        }
+        ++src_bytes;
+        ++dst;
+        --len;
     }
-    return 0;
+    f->len += ret - len;
+    return ret - len;
 }
 
 #if ARQ_COMPILE_CRC32 == 1

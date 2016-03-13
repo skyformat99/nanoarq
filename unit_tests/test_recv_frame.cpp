@@ -2,6 +2,7 @@
 #include <CppUTest/TestHarness.h>
 #include <array>
 #include <vector>
+#include <algorithm>
 
 TEST_GROUP(recv_frame) {};
 
@@ -31,6 +32,7 @@ struct Fixture
     Fixture()
     {
         arq__recv_frame_init(&f, buf.data(), buf.size());
+        std::fill(std::begin(buf), std::end(buf), 0xFF);
     }
     arq__recv_frame_t f;
     std::array< arq_uchar_t, 254 > buf;
@@ -117,6 +119,89 @@ TEST(recv_frame, fill_multiple_buffers_without_zeroes_doesnt_overflow_buffer)
     arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
     arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
     CHECK_EQUAL(0x25, sentinel_buf[sentinel_buf.size() - 1]);
+}
+
+TEST(recv_frame, fill_returns_len_when_entire_buffer_fits_in_frame)
+{
+    Fixture f;
+    PopulateFill(f, 19, false);
+    unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(19, written);
+}
+
+TEST(recv_frame, fill_returns_bytes_written_when_buffer_partially_fits_in_frame)
+{
+    Fixture f;
+    PopulateFill(f, f.f.cap - 13, false);
+    arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(13, written);
+}
+
+TEST(recv_frame, fill_returns_zero_when_frame_is_full_before_call_occurs)
+{
+    Fixture f;
+    PopulateFill(f, 127, false);
+    f.f.len = f.f.cap;
+    unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(0, written);
+}
+
+TEST(recv_frame, fill_changes_state_to_full_frame_present_if_payload_ends_with_zero)
+{
+    Fixture f;
+    PopulateFill(f, 32, true);
+    arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT, f.f.state);
+}
+
+TEST(recv_frame, fill_len_is_accumulated_to_index_of_first_zero_in_payload)
+{
+    Fixture f;
+    PopulateFill(f, 32, true);
+    f.fill.emplace_back(0xFF);
+    f.fill.emplace_back(0xFF);
+    f.fill.emplace_back(0xFF);
+    arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(31, f.f.len);
+}
+
+TEST(recv_frame, fill_copies_terminating_zero_into_frame_buf)
+{
+    Fixture f;
+    PopulateFill(f, 32, true);
+    arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(0x00, f.f.buf[31]);
+}
+
+TEST(recv_frame, fill_changes_state_to_full_frame_present_if_payload_contains_zero)
+{
+    Fixture f;
+    PopulateFill(f, 32, true);
+    f.fill.emplace_back(0xFF);
+    f.fill.emplace_back(0xFF);
+    f.fill.emplace_back(0xFF);
+    arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT, f.f.state);
+}
+
+TEST(recv_frame, fill_returns_index_of_first_zero_found_when_payload_ends_with_zero)
+{
+    Fixture f;
+    PopulateFill(f, 32, true);
+    unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(31, written);
+}
+
+TEST(recv_frame, fill_returns_index_of_first_zero_found_when_payload_contains_zero)
+{
+    Fixture f;
+    PopulateFill(f, 32, true);
+    for (auto i = 0; i < 32; ++i) {
+        f.fill.emplace_back(0xFE);
+    }
+    unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(31, written);
 }
 
 }

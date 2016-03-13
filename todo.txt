@@ -16,5 +16,5 @@ hook the linear allocator up to the various data structures
 assert that the logical size of arq_t + buffers == the physical size (account for all padding)
 multiple frames can fit in the ingoing / outgoing frame buffers, exploit that
 pull out buf/cap/len into arq__buf_t, reuse for send/recv frame_t's
-optimize for code size
-
+optimization, instead of % and / all over the place for indexing + iterating, use 2 loops: pre-wrap, post-wrap
+maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for empty frame
