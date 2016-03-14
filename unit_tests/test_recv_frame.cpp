@@ -147,6 +147,16 @@ TEST(recv_frame, fill_returns_zero_when_frame_is_full_before_call_occurs)
     CHECK_EQUAL(0, written);
 }
 
+TEST(recv_frame, fill_returns_zero_when_full_frame_is_already_accumulated)
+{
+    Fixture f;
+    PopulateFill(f, 1, false);
+    f.f.len = 24;
+    f.f.state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
+    unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
+    CHECK_EQUAL(0, written);
+}
+
 TEST(recv_frame, fill_changes_state_to_full_frame_present_if_payload_ends_with_zero)
 {
     Fixture f;

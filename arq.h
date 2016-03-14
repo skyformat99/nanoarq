@@ -1020,6 +1020,9 @@ unsigned ARQ_MOCKABLE(arq__recv_frame_fill)(arq__recv_frame_t *f, void const *sr
     arq_uchar_t *dst;
     unsigned ret;
     ARQ_ASSERT(f && src);
+    if (f->state == ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT) {
+        return 0;
+    }
     ret = len = arq__min(len, (unsigned)f->cap - (unsigned)f->len);
     dst = f->buf + f->len;
     while (len) {
