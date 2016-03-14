@@ -24,7 +24,7 @@ TEST(recv_frame, init_zeroes_len_and_state)
     void *buf = &f;
     arq__recv_frame_init(&f, buf, 100);
     CHECK_EQUAL(0, f.len);
-    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_ACCUMULATING_FRAME, f.state);
+    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_ACCUMULATING, f.state);
 }
 
 struct Fixture
@@ -54,7 +54,7 @@ TEST(recv_frame, fill_buffer_without_zeroes_stays_in_accumulating_state)
     Fixture f;
     PopulateFill(f, 19, false);
     arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
-    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_ACCUMULATING_FRAME, f.f.state);
+    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_ACCUMULATING, f.f.state);
 }
 
 TEST(recv_frame, fill_buffer_without_zeroes_sets_len)

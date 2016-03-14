@@ -31,37 +31,39 @@ unsigned MockRecvWndRecv(arq__recv_wnd_t *rw, void *dst, unsigned dst_max)
                                                   .returnUnsignedIntValue();
 }
 
-TEST(recv, calls_wnd_recv)
+struct Fixture
 {
+    Fixture()
+    {
+        ARQ_MOCK_HOOK(arq__recv_wnd_recv, MockRecvWndRecv);
+    }
     arq_t arq;
     char recv[20];
-    ARQ_MOCK_HOOK(arq__recv_wnd_recv, MockRecvWndRecv);
-    mock().expectOneCall("arq__recv_wnd_recv").withParameter("rw", &arq.recv_wnd)
-                                              .withParameter("dst", (void *)recv)
-                                              .withParameter("dst_max", sizeof(recv));
     int recvd;
-    arq_recv(&arq, recv, sizeof(recv), &recvd);
+};
+
+TEST(recv, calls_wnd_recv)
+{
+    Fixture f;
+    mock().expectOneCall("arq__recv_wnd_recv").withParameter("rw", &f.arq.recv_wnd)
+                                              .withParameter("dst", (void *)f.recv)
+                                              .withParameter("dst_max", sizeof(f.recv));
+    arq_recv(&f.arq, f.recv, sizeof(f.recv), &f.recvd);
 }
 
 TEST(recv, wnd_recv_return_copies_into_output_size_param)
 {
-    arq_t arq;
-    char recv[20];
-    ARQ_MOCK_HOOK(arq__recv_wnd_recv, MockRecvWndRecv);
+    Fixture f;
     mock().expectOneCall("arq__recv_wnd_recv").ignoreOtherParameters().andReturnValue(4321);
-    int recvd;
-    arq_recv(&arq, recv, sizeof(recv), &recvd);
-    CHECK_EQUAL(4321, recvd);
+    arq_recv(&f.arq, f.recv, sizeof(f.recv), &f.recvd);
+    CHECK_EQUAL(4321, f.recvd);
 }
 
 TEST(recv, returns_success)
 {
-    arq_t arq;
-    char recv[20];
-    ARQ_MOCK_HOOK(arq__recv_wnd_recv, MockRecvWndRecv);
+    Fixture f;
     mock().expectOneCall("arq__recv_wnd_recv").ignoreOtherParameters();
-    int recvd;
-    arq_err_t const rv = arq_recv(&arq, recv, sizeof(recv), &recvd);
+    arq_err_t const rv = arq_recv(&f.arq, f.recv, sizeof(f.recv), &f.recvd);
     CHECK_EQUAL(ARQ_OK_COMPLETED, rv);
 }
 

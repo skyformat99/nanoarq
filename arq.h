@@ -288,7 +288,7 @@ unsigned arq__recv_wnd_recv(arq__recv_wnd_t *rw, void *dst, unsigned dst_max);
 
 typedef enum
 {
-    ARQ__RECV_FRAME_STATE_ACCUMULATING_FRAME,
+    ARQ__RECV_FRAME_STATE_ACCUMULATING,
     ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT
 } arq__recv_frame_state_t;
 
@@ -312,6 +312,7 @@ typedef struct arq_t
     arq__send_wnd_ptr_t send_wnd_ptr;
     arq__send_frame_t send_frame;
     arq__recv_wnd_t recv_wnd;
+    arq__recv_frame_t recv_frame;
 } arq_t;
 
 unsigned arq__min(unsigned x, unsigned y);
@@ -493,8 +494,9 @@ arq_err_t arq_backend_recv_fill(struct arq_t *arq, void const *recv, int recv_ma
     if (!arq || !recv || !out_recv_size) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    (void)recv_max;
-    return ARQ_OK_COMPLETED;
+    *out_recv_size = (int)arq__recv_frame_fill(&arq->recv_frame, recv, (unsigned)recv_max);
+    return (arq->recv_frame.state == ARQ__RECV_FRAME_STATE_ACCUMULATING) ?
+        ARQ_OK_COMPLETED : ARQ_OK_POLL_REQUIRED;
 }
 
 void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
@@ -1009,7 +1011,7 @@ void arq__recv_frame_init(arq__recv_frame_t *f, void *buf, int len)
     f->cap = len;
     f->buf = (arq_uchar_t *)buf;
     f->len = 0;
-    f->state = ARQ__RECV_FRAME_STATE_ACCUMULATING_FRAME;
+    f->state = ARQ__RECV_FRAME_STATE_ACCUMULATING;
 }
 
 unsigned ARQ_MOCKABLE(arq__recv_frame_fill)(arq__recv_frame_t *f, void const *src, unsigned len)
