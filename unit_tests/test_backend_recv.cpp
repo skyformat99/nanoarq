@@ -5,12 +5,14 @@ TEST_GROUP(backend_recv) {};
 
 namespace {
 
-TEST(backend_recv, recv_decode_buf_starts_empty)
+TEST(backend_recv, invalid_params)
 {
-}
-
-TEST(backend_recv, accumulates_byte_into_decode_buf)
-{
+    arq_t arq;
+    void *recv = nullptr;
+    int recv_size = 0, bytes_recvd;
+    CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_recv_fill(nullptr, recv,    recv_size, &bytes_recvd));
+    CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_recv_fill(&arq,    nullptr, recv_size, &bytes_recvd));
+    CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_recv_fill(&arq,    recv,    recv_size, nullptr));
 }
 
 }

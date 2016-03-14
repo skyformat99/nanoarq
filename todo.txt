@@ -4,7 +4,7 @@ hooks keyed purely on function being replaced, hide the thunk target
 clean api for pure hooks, separate from cpputest plugin
 metrics on crc failures, bad frames (too long before cobs 0)
 send_ptr_release() errors if the send pointer isn't owned by the user? new error enum?
-more descriptive return values for send_ptr_get and send_ptr_release (you already have ptr, there's nothing to send, etc)
+better return values for send_ptr_get and send_ptr_release (you already have ptr, there's nothing to send, etc)
 big bit vector to hold 'ready' message state of entire send window? rtx == 0 => msg bit set?
 hide __builtin_ctz() behind ARQ_COUNT_TRAILING_ZEROES()
 (compile-time selection?) only allow power-of-two-sized windows, replace div/mod
@@ -12,3 +12,9 @@ pull out mock functions into common header
 send tinygram timer
 arq__send_wnd_init
 arq__recv_wnd_init
+hook the linear allocator up to the various data structures
+assert that the logical size of arq_t + buffers == the physical size (account for all padding)
+multiple frames can fit in the ingoing / outgoing frame buffers, exploit that
+pull out buf/cap/len into arq__buf_t, reuse for send/recv frame_t's
+optimization, instead of % and / all over the place for indexing + iterating, use 2 loops: pre-wrap, post-wrap
+maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for empty frame

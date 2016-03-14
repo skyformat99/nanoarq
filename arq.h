@@ -37,10 +37,10 @@ typedef unsigned char arq_uchar_t;
 typedef enum
 {
     ARQ_OK_COMPLETED = 0,
-    ARQ_OK_MORE,
-    ARQ_ERR_INVALID_PARAM,
-    ARQ_ERR_SET_ASSERT_BEFORE_INIT,
-    ARQ_ERR_SEND_PTR_NOT_HELD
+    ARQ_OK_POLL_REQUIRED,
+    ARQ_ERR_INVALID_PARAM = -1,
+    ARQ_ERR_NO_ASSERT_HANDLER = -2,
+    ARQ_ERR_SEND_PTR_NOT_HELD = -3
 } arq_err_t;
 
 typedef enum
@@ -118,7 +118,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
 arq_err_t arq_backend_send_ptr_get(struct arq_t *arq, void const **out_send, int *out_send_size);
 arq_err_t arq_backend_send_ptr_release(struct arq_t *arq);
 
-arq_err_t arq_backend_fill_recv(struct arq_t *arq, void const *recv, int recv_max, int *out_recv_size);
+arq_err_t arq_backend_recv_fill(struct arq_t *arq, void const *recv, int recv_max, int *out_recv_size);
 
 #if ARQ_COMPILE_CRC32 == 1
 arq_uint32_t arq_crc32(void const *buf, int size);
@@ -286,6 +286,23 @@ unsigned arq__recv_wnd_frame(arq__recv_wnd_t *rw,
 
 unsigned arq__recv_wnd_recv(arq__recv_wnd_t *rw, void *dst, unsigned dst_max);
 
+typedef enum
+{
+    ARQ__RECV_FRAME_STATE_ACCUMULATING_FRAME,
+    ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT
+} arq__recv_frame_state_t;
+
+typedef struct arq__recv_frame_t
+{
+    arq_uchar_t *buf;
+    arq__recv_frame_state_t state;
+    arq_uint16_t cap;
+    arq_uint16_t len;
+} arq__recv_frame_t;
+
+void arq__recv_frame_init(arq__recv_frame_t *f, void *buf, int len);
+unsigned arq__recv_frame_fill(arq__recv_frame_t *f, void const *src, unsigned len);
+
 typedef struct arq_t
 {
     arq_cfg_t cfg;
@@ -294,7 +311,7 @@ typedef struct arq_t
     arq__send_wnd_t send_wnd;
     arq__send_wnd_ptr_t send_wnd_ptr;
     arq__send_frame_t send_frame;
-    arq__wnd_t recv_wnd;
+    arq__recv_wnd_t recv_wnd;
 } arq_t;
 
 unsigned arq__min(unsigned x, unsigned y);
@@ -399,7 +416,7 @@ arq_err_t arq_recv(struct arq_t *arq, void *recv, int recv_max, int *out_recv_si
     if (!arq || !recv || !out_recv_size) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    (void)recv_max;
+    *out_recv_size = (int)arq__recv_wnd_recv(&arq->recv_wnd, recv, (unsigned)recv_max);
     return ARQ_OK_COMPLETED;
 }
 
@@ -468,6 +485,15 @@ arq_err_t arq_backend_send_ptr_release(struct arq_t *arq)
         return ARQ_ERR_SEND_PTR_NOT_HELD;
     }
     arq->send_frame.state = ARQ__SEND_FRAME_STATE_RELEASED;
+    return ARQ_OK_COMPLETED;
+}
+
+arq_err_t arq_backend_recv_fill(struct arq_t *arq, void const *recv, int recv_max, int *out_recv_size)
+{
+    if (!arq || !recv || !out_recv_size) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    (void)recv_max;
     return ARQ_OK_COMPLETED;
 }
 
@@ -975,6 +1001,37 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_recv)(arq__recv_wnd_t *rw, void *dst, unsign
     rw->w.size = new_size;
     rw->w.seq = new_seq % (ARQ__FRAME_MAX_SEQ_NUM + 1);
     return len;
+}
+
+void arq__recv_frame_init(arq__recv_frame_t *f, void *buf, int len)
+{
+    ARQ_ASSERT(f && buf);
+    f->cap = len;
+    f->buf = (arq_uchar_t *)buf;
+    f->len = 0;
+    f->state = ARQ__RECV_FRAME_STATE_ACCUMULATING_FRAME;
+}
+
+unsigned ARQ_MOCKABLE(arq__recv_frame_fill)(arq__recv_frame_t *f, void const *src, unsigned len)
+{
+    arq_uchar_t const *src_bytes = (arq_uchar_t const *)src;
+    arq_uchar_t *dst;
+    unsigned ret;
+    ARQ_ASSERT(f && src);
+    ret = len = arq__min(len, (unsigned)f->cap - (unsigned)f->len);
+    dst = f->buf + f->len;
+    while (len) {
+        *dst = *src_bytes;
+        if (*src_bytes == 0) {
+            f->state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
+            break;
+        }
+        ++src_bytes;
+        ++dst;
+        --len;
+    }
+    f->len += ret - len;
+    return ret - len;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
