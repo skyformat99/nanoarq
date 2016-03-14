@@ -18,6 +18,7 @@
     ARQ_MOCK(arq__recv_wnd_frame) \
     ARQ_MOCK(arq__recv_wnd_recv) \
     ARQ_MOCK(arq__recv_frame_fill) \
+    ARQ_MOCK(arq__recv_poll) \
     ARQ_MOCK(arq__frame_len) \
     ARQ_MOCK(arq__frame_hdr_init) \
     ARQ_MOCK(arq__frame_hdr_read) \
