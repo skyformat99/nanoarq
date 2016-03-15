@@ -1,5 +1,7 @@
 #include "nanoarq_unit_test.h"
+#include "nanoarq_hook_plugin.h"
 #include <CppUTest/TestHarness.h>
+#include <CppUTestExt/MockSupport.h>
 #include <array>
 #include <vector>
 #include <algorithm>
@@ -7,6 +9,16 @@
 TEST_GROUP(recv_frame) {};
 
 namespace {
+
+TEST(recv_frame, reset_zeroes_len_and_state)
+{
+    arq__recv_frame_t f;
+    f.len = 1;
+    f.state = (arq__recv_frame_state_t)(ARQ__RECV_FRAME_STATE_ACCUMULATING + 1);
+    arq__recv_frame_rst(&f);
+    CHECK_EQUAL(0, f.len);
+    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_ACCUMULATING, f.state);
+}
 
 TEST(recv_frame, init_assigns_parameters)
 {
@@ -18,13 +30,17 @@ TEST(recv_frame, init_assigns_parameters)
     CHECK_EQUAL((void *)&f, (void *)f.buf);
 }
 
-TEST(recv_frame, init_zeroes_len_and_state)
+void MockFrameReset(arq__recv_frame_t *f)
 {
+    mock().actualCall("arq__recv_frame_rst").withParameter("f", f);
+}
+
+TEST(recv_frame, init_resets_frame)
+{
+    ARQ_MOCK_HOOK(arq__recv_frame_rst, MockFrameReset);
     arq__recv_frame_t f;
-    void *buf = &f;
-    arq__recv_frame_init(&f, buf, 100);
-    CHECK_EQUAL(0, f.len);
-    CHECK_EQUAL(ARQ__RECV_FRAME_STATE_ACCUMULATING, f.state);
+    mock().expectOneCall("arq__recv_frame_rst").withParameter("f", &f);
+    arq__recv_frame_rst(&f);
 }
 
 struct Fixture
@@ -173,7 +189,7 @@ TEST(recv_frame, fill_len_is_accumulated_to_index_of_first_zero_in_payload)
     f.fill.emplace_back(0xFF);
     f.fill.emplace_back(0xFF);
     arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
-    CHECK_EQUAL(31, f.f.len);
+    CHECK_EQUAL(32, f.f.len);
 }
 
 TEST(recv_frame, fill_copies_terminating_zero_into_frame_buf)
@@ -200,7 +216,7 @@ TEST(recv_frame, fill_returns_index_of_first_zero_found_when_payload_ends_with_z
     Fixture f;
     PopulateFill(f, 32, true);
     unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
-    CHECK_EQUAL(31, written);
+    CHECK_EQUAL(32, written);
 }
 
 TEST(recv_frame, fill_returns_index_of_first_zero_found_when_payload_contains_zero)
@@ -211,7 +227,7 @@ TEST(recv_frame, fill_returns_index_of_first_zero_found_when_payload_contains_ze
         f.fill.emplace_back(0xFE);
     }
     unsigned const written = arq__recv_frame_fill(&f.f, f.fill.data(), f.fill.size());
-    CHECK_EQUAL(31, written);
+    CHECK_EQUAL(32, written);
 }
 
 }

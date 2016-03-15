@@ -2,34 +2,50 @@
 
 namespace {
 
-TEST(functional, manual_decode_full_send_window)
+TEST(functional, send_full_window)
 {
     arq_t arq;
-    std::array< arq__msg_t, 64 > send_wnd_msgs;
+    std::array< arq__msg_t, 4 > send_wnd_msgs;
     std::array< arq_time_t, 64 > rtx_timers;
     std::array< unsigned char, 256 > send_frame;
     std::vector< unsigned char > send_wnd_buf;
+    std::vector< unsigned char > recv_wnd_buf;
+    std::array< unsigned char, 256 > recv_frame;
+    std::array< arq__msg_t, 4 > recv_wnd_msgs;
 
-    int const segment_length_in_bytes = 230;
-    int const message_length_in_segments = 10;
+    arq.cfg.segment_length_in_bytes = 220;
+    arq.cfg.message_length_in_segments = 4;
+    arq.cfg.retransmission_timeout = 100;
 
-    send_wnd_buf.resize((send_wnd_msgs.size() * segment_length_in_bytes * message_length_in_segments));
+    send_wnd_buf.resize(send_wnd_msgs.size() *
+                        arq.cfg.segment_length_in_bytes *
+                        arq.cfg.message_length_in_segments);
+
+    recv_wnd_buf.resize(recv_wnd_msgs.size() *
+                        arq.cfg.segment_length_in_bytes *
+                        arq.cfg.message_length_in_segments);
 
     arq.cfg.checksum_cb = &arq_crc32;
-    arq.cfg.retransmission_timeout = 100;
     arq.send_wnd.w.msg = send_wnd_msgs.data();
     arq.send_wnd.w.buf = send_wnd_buf.data();
     arq.send_frame.buf = send_frame.data();
     arq.send_wnd.rtx = rtx_timers.data();
 
+    arq.recv_wnd.w.msg = recv_wnd_msgs.data();
+    arq.recv_wnd.w.buf = recv_wnd_buf.data();
+
     arq__wnd_init(&arq.send_wnd.w,
                   send_wnd_msgs.size(),
-                  message_length_in_segments * segment_length_in_bytes,
-                  segment_length_in_bytes);
+                  arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
+                  arq.cfg.segment_length_in_bytes);
     arq__send_frame_init(&arq.send_frame, send_frame.size());
     arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
-    arq__send_wnd_rst(&arq.send_wnd);
-
+    arq__wnd_init(&arq.recv_wnd.w,
+                  recv_wnd_msgs.size(),
+                  arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
+                  arq.cfg.segment_length_in_bytes);
+    arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
+    arq__recv_wnd_rst(&arq.recv_wnd);
     std::vector< unsigned char > send_test_data(send_wnd_buf.size());
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
         uint16_t const v = i;

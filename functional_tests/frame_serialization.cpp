@@ -2,7 +2,7 @@
 
 namespace {
 
-TEST(functional, write_and_read_frames)
+TEST(functional, frame_serialization)
 {
     arq_uchar_t seg[256];
     arq_uchar_t frame[256];

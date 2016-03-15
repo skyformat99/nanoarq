@@ -1,4 +1,4 @@
-#include "nanoarq_in_test_project.h"
+#include "nanoarq_functional_test.h"
 #include <CppUTest/CommandLineTestRunner.h>
 #include <CppUTest/TestRegistry.h>
 #include <CppUTestExt/MemoryReporterPlugin.h>
