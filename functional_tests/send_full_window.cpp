@@ -2,7 +2,7 @@
 
 namespace {
 
-TEST(functional, manual_decode_full_send_window)
+TEST(functional, send_full_window)
 {
     arq_t arq;
     std::array< arq__msg_t, 4 > send_wnd_msgs;

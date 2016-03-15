@@ -2,7 +2,7 @@
 
 namespace {
 
-TEST(functional, manual_decode_ack_multiple_send_windows)
+TEST(functional, send_1mb_through_send_subsystem)
 {
     arq_t arq;
     std::array< arq__msg_t, 4 > send_wnd_msgs;
