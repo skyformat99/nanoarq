@@ -454,6 +454,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
         return ARQ_ERR_INVALID_PARAM;
     }
     arq__frame_hdr_init(&h);
+    arq__recv_poll(&arq->recv_wnd, &arq->recv_frame, &h, arq->cfg.checksum_cb);
     *out_backend_send_size = arq__send_poll(&arq->send_wnd,
                                             &arq->send_wnd_ptr,
                                             &arq->send_frame,
