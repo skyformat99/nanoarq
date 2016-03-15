@@ -37,11 +37,13 @@ typedef unsigned char arq_uchar_t;
 typedef enum
 {
     ARQ_OK_COMPLETED = 0,
-    ARQ_OK_POLL_REQUIRED,
+    ARQ_OK_POLL_REQUIRED = 1,
     ARQ_ERR_INVALID_PARAM = -1,
     ARQ_ERR_NO_ASSERT_HANDLER = -2,
     ARQ_ERR_SEND_PTR_NOT_HELD = -3
 } arq_err_t;
+
+#define ARQ_SUCCEEDED(ARQ_RESULT) ((ARQ_RESULT) >= 0)
 
 typedef enum
 {
@@ -300,6 +302,7 @@ typedef struct arq__recv_frame_t
 } arq__recv_frame_t;
 
 void arq__recv_frame_init(arq__recv_frame_t *f, void *buf, int len);
+void arq__recv_frame_rst(arq__recv_frame_t *f);
 unsigned arq__recv_frame_fill(arq__recv_frame_t *f, void const *src, unsigned len);
 
 unsigned arq__recv_poll(arq__recv_wnd_t *rw,
@@ -690,7 +693,7 @@ arq__frame_read_result_t ARQ_MOCKABLE(arq__frame_checksum_read)(void const *fram
     arq_uint32_t frame_checksum, computed_checksum;
     arq_uchar_t const *src;
     ARQ_ASSERT(frame && checksum);
-    if (seg_len + ARQ__FRAME_COBS_OVERHEAD + ARQ__FRAME_HEADER_SIZE + 4 > frame_len) {
+    if (arq__frame_len(seg_len) > frame_len) {
         return ARQ__FRAME_READ_RESULT_ERR_MALFORMED;
     }
     src = (arq_uchar_t const *)frame + 1 + ARQ__FRAME_HEADER_SIZE + seg_len;
@@ -1015,6 +1018,12 @@ void arq__recv_frame_init(arq__recv_frame_t *f, void *buf, int len)
     ARQ_ASSERT(f && buf);
     f->cap = len;
     f->buf = (arq_uchar_t *)buf;
+    arq__recv_frame_rst(f);
+}
+
+void ARQ_MOCKABLE(arq__recv_frame_rst)(arq__recv_frame_t *f)
+{
+    ARQ_ASSERT(f);
     f->len = 0;
     f->state = ARQ__RECV_FRAME_STATE_ACCUMULATING;
 }
@@ -1032,13 +1041,13 @@ unsigned ARQ_MOCKABLE(arq__recv_frame_fill)(arq__recv_frame_t *f, void const *sr
     dst = f->buf + f->len;
     while (len) {
         *dst = *src_bytes;
+        --len;
         if (*src_bytes == 0) {
             f->state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
             break;
         }
         ++src_bytes;
         ++dst;
-        --len;
     }
     f->len += ret - len;
     return ret - len;
@@ -1050,11 +1059,14 @@ unsigned ARQ_MOCKABLE(arq__recv_poll)(arq__recv_wnd_t *rw,
                                       arq_checksum_cb_t checksum)
 {
     void const *seg;
+    arq__frame_read_result_t res;
     ARQ_ASSERT(rw && f && h && checksum);
     if (f->state == ARQ__RECV_FRAME_STATE_ACCUMULATING) {
         return 0;
     }
-    if (arq__frame_read(f->buf, f->len, checksum, h, &seg) != ARQ__FRAME_READ_RESULT_SUCCESS) {
+    res = arq__frame_read(f->buf, f->len, checksum, h, &seg);
+    arq__recv_frame_rst(f);
+    if (res != ARQ__FRAME_READ_RESULT_SUCCESS) {
         return 0;
     }
     return arq__recv_wnd_frame(rw,

@@ -19,6 +19,7 @@ target_compile_options(nanoarq_test_support PRIVATE ${NANOARQ_COMMON_FLAGS})
 add_dependencies(nanoarq_test_support CppUTest_external)
 
 add_library(nanoarq_unit_test_objs OBJECT test_mock_hooks.cpp
+                                          test_succeeded.cpp
                                           test_send.cpp
                                           test_recv.cpp
                                           test_flush.cpp
