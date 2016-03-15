@@ -2,7 +2,7 @@
 
 namespace {
 
-TEST(functional, send_1mb_through_send_subsystem)
+TEST(functional, send_1mb_through_send_window)
 {
     arq_t arq;
     std::array< arq__msg_t, 4 > send_wnd_msgs;
