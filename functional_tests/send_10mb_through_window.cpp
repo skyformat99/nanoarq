@@ -47,71 +47,71 @@ TEST(functional, send_10mb_through_window)
     arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
     arq__recv_wnd_rst(&arq.recv_wnd);
 
-    std::vector< arq_uchar_t > input_test_data(1024 * 1024);
-    for (auto i = 0u; i < input_test_data.size() / 2; ++i) {
+    std::vector< arq_uchar_t > input_data(1024 * 1024 * 10);
+    for (auto i = 0u; i < input_data.size() / 2; ++i) {
         uint16_t const v = i;
-        std::memcpy(&input_test_data[i * 2], &v, sizeof(v));
+        std::memcpy(&input_data[i * 2], &v, sizeof(v));
     }
-    auto sent = 0u;
+    auto input_idx = 0u;
 
-    std::vector< arq_uchar_t > output_test_data;
-    output_test_data.reserve(input_test_data.size());
+    std::vector< arq_uchar_t > output_data;
+    output_data.reserve(input_data.size());
 
-    int seq = 0;
-    while (output_test_data.size() < input_test_data.size()) {
-        if (sent < input_test_data.size()) {
-            int sent_this_time;
-            arq_err_t e =
-                arq_send(&arq, &input_test_data[sent], input_test_data.size() - sent, &sent_this_time);
+    std::array< arq_uchar_t, 256 > frame;
+    auto seq = 0u;
+
+    while (output_data.size() < input_data.size()) {
+        {
+            int sent_this_turn;
+            arq_err_t const e =
+                arq_send(&arq, &input_data[input_idx], input_data.size() - input_idx, &sent_this_turn);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-            sent += sent_this_time;
-
-            int unused;
-            arq_event_t event;
-            arq_time_t next_poll;
-            e = arq_backend_poll(&arq, 0, &unused, &event, &next_poll);
-            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            input_idx += sent_this_turn;
         }
 
-        for (auto i = 0; i < arq.cfg.message_length_in_segments; ++i) {
-            arq_uchar_t decode_buf[256];
-
-            int size;
-            {
-                void const *p;
-                arq_err_t e = arq_backend_send_ptr_get(&arq, &p, &size);
-                CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-                std::memcpy(decode_buf, p, size);
-                if (size) {
-                    e = arq_backend_send_ptr_release(&arq);
+        while (arq.send_wnd.w.size) {
+            for (auto i = 0; i < arq.cfg.message_length_in_segments; ++i) {
+                {
+                    int unused;
+                    arq_event_t event;
+                    arq_time_t next_poll;
+                    arq_err_t const e = arq_backend_poll(&arq, 0, &unused, &event, &next_poll);
                     CHECK_EQUAL(ARQ_OK_COMPLETED, e);
                 }
-            }
 
-            {
-                arq_uchar_t const *seg;
-                arq__frame_hdr_t h;
-                arq__frame_read_result_t const r =
-                    arq__frame_read(decode_buf, size, arq.cfg.checksum_cb, &h, (void const **)&seg);
-                CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
-                std::copy(seg, seg + h.seg_len, std::back_inserter(output_test_data));
-            }
+                int frame_len;
+                {
+                    void const *p;
+                    {
+                        arq_err_t const e = arq_backend_send_ptr_get(&arq, &p, &frame_len);
+                        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                    }
+                    std::memcpy(frame.data(), p, frame_len);
+                    if (frame_len) {
+                        arq_err_t const e = arq_backend_send_ptr_release(&arq);
+                        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                    }
+                }
+                CHECK(frame_len > 0);
 
-            // poll to move more data into the send frame
-            {
-                arq_event_t event;
-                arq_time_t next_poll;
-                int bytes_to_drain;
-                arq_err_t e = arq_backend_poll(&arq, 0, &bytes_to_drain, &event, &next_poll);
-                CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                {
+                    arq_uchar_t const *seg;
+                    arq__frame_hdr_t h;
+                    arq__frame_read_result_t const r = arq__frame_read(frame.data(),
+                                                                       frame_len,
+                                                                       arq.cfg.checksum_cb,
+                                                                       &h,
+                                                                       (void const **)&seg);
+                    CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
+                    std::copy(seg, seg + h.seg_len, std::back_inserter(output_data));
+                }
             }
+            arq__send_wnd_ack(&arq.send_wnd, seq, (1 << arq.cfg.message_length_in_segments) - 1);
+            seq = (seq + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
         }
-
-        arq__send_wnd_ack(&arq.send_wnd, seq, (1 << arq.cfg.message_length_in_segments) - 1);
-        ++seq;
     }
-
-    MEMCMP_EQUAL(input_test_data.data(), output_test_data.data(), input_test_data.size());
+    CHECK_EQUAL(input_data.size(), output_data.size());
+    MEMCMP_EQUAL(input_data.data(), output_data.data(), input_data.size());
 }
 
 }
