@@ -2,7 +2,7 @@
 
 namespace {
 
-TEST(functional, send_1mb_through_send_window)
+TEST(functional, send_10mb_through_window)
 {
     arq_t arq;
     std::array< arq__msg_t, 4 > send_wnd_msgs;
@@ -47,22 +47,22 @@ TEST(functional, send_1mb_through_send_window)
     arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
     arq__recv_wnd_rst(&arq.recv_wnd);
 
-    std::vector< unsigned char > send_test_data(1024 * 1024);
-    for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
+    std::vector< arq_uchar_t > input_test_data(1024 * 1024);
+    for (auto i = 0u; i < input_test_data.size() / 2; ++i) {
         uint16_t const v = i;
-        std::memcpy(&send_test_data[i * 2], &v, sizeof(v));
+        std::memcpy(&input_test_data[i * 2], &v, sizeof(v));
     }
     auto sent = 0u;
 
-    std::vector< unsigned char > recv_test_data;
-    recv_test_data.reserve(send_test_data.size());
+    std::vector< arq_uchar_t > output_test_data;
+    output_test_data.reserve(input_test_data.size());
 
     int seq = 0;
-    while (recv_test_data.size() < send_test_data.size()) {
-        if (sent < send_test_data.size()) {
+    while (output_test_data.size() < input_test_data.size()) {
+        if (sent < input_test_data.size()) {
             int sent_this_time;
             arq_err_t e =
-                arq_send(&arq, &send_test_data[sent], send_test_data.size() - sent, &sent_this_time);
+                arq_send(&arq, &input_test_data[sent], input_test_data.size() - sent, &sent_this_time);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
             sent += sent_this_time;
 
@@ -74,7 +74,7 @@ TEST(functional, send_1mb_through_send_window)
         }
 
         for (auto i = 0; i < arq.cfg.message_length_in_segments; ++i) {
-            unsigned char decode_buf[256];
+            arq_uchar_t decode_buf[256];
 
             int size;
             {
@@ -94,7 +94,7 @@ TEST(functional, send_1mb_through_send_window)
                 arq__frame_read_result_t const r =
                     arq__frame_read(decode_buf, size, arq.cfg.checksum_cb, &h, (void const **)&seg);
                 CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
-                std::copy(seg, seg + h.seg_len, std::back_inserter(recv_test_data));
+                std::copy(seg, seg + h.seg_len, std::back_inserter(output_test_data));
             }
 
             // poll to move more data into the send frame
@@ -111,7 +111,7 @@ TEST(functional, send_1mb_through_send_window)
         ++seq;
     }
 
-    MEMCMP_EQUAL(send_test_data.data(), recv_test_data.data(), send_test_data.size());
+    MEMCMP_EQUAL(input_test_data.data(), output_test_data.data(), input_test_data.size());
 }
 
 }
