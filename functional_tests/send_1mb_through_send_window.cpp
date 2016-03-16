@@ -89,14 +89,12 @@ TEST(functional, send_1mb_through_send_window)
             }
 
             {
-                void const *seg;
+                arq_uchar_t const *seg;
                 arq__frame_hdr_t h;
                 arq__frame_read_result_t const r =
-                    arq__frame_read(decode_buf, size, arq.cfg.checksum_cb, &h, &seg);
+                    arq__frame_read(decode_buf, size, arq.cfg.checksum_cb, &h, (void const **)&seg);
                 CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
-                recv_test_data.insert(std::end(recv_test_data),
-                                      (unsigned char const *)seg,
-                                      (unsigned char const *)seg + h.seg_len);
+                std::copy(seg, seg + h.seg_len, std::back_inserter(recv_test_data));
             }
 
             // poll to move more data into the send frame

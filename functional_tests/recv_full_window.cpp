@@ -61,10 +61,13 @@ TEST(functional, recv_full_window)
     h.seq_num = 0;
     h.cur_ack_vec = 0;
 
+    std::vector< arq_uchar_t > frame;
+    frame.reserve(arq__frame_len(arq.cfg.segment_length_in_bytes));
+
     size_t test_input_offset = 0;
     while (test_input_offset < test_input.size()) {
         h.seg_len = arq__min(arq.cfg.segment_length_in_bytes, test_input.size() - test_input_offset);
-        std::vector< arq_uchar_t > frame(arq__frame_len(h.seg_len));
+        frame.resize(arq__frame_len(h.seg_len));
 
         int const frame_len =
             arq__frame_write(&h, &test_input[test_input_offset], arq_crc32, frame.data(), frame.size());

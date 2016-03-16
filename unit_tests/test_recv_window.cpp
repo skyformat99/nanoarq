@@ -324,7 +324,7 @@ TEST(recv_wnd, recv_entire_first_message_in_window_returns_msg_len)
     Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len);
     unsigned const recv_size = arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
-    CHECK_EQUAL(f.msg[0].len, recv_size);
+    CHECK_EQUAL(f.rw.w.msg_len, recv_size);
 }
 
 TEST(recv_wnd, recv_dst_less_than_one_message_len_copies_partial_msg)
