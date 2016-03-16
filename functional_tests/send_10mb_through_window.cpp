@@ -47,7 +47,7 @@ TEST(functional, send_10mb_through_window)
     arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
     arq__recv_wnd_rst(&arq.recv_wnd);
 
-    std::vector< arq_uchar_t > input_data(7 * 1024);//1024 * 1024 * 10);
+    std::vector< arq_uchar_t > input_data(1024 * 1024 * 10);
     for (auto i = 0u; i < input_data.size() / 2; ++i) {
         uint16_t const v = i;
         std::memcpy(&input_data[i * 2], &v, sizeof(v));
@@ -71,6 +71,10 @@ TEST(functional, send_10mb_through_window)
 
         while (arq.send_wnd.w.size) {
             for (auto i = 0; i < arq.cfg.message_length_in_segments; ++i) {
+                if (output_data.size() >= input_data.size()) {
+                    break;
+                }
+
                 {
                     int unused;
                     arq_event_t event;
@@ -85,12 +89,21 @@ TEST(functional, send_10mb_through_window)
                     {
                         arq_err_t const e = arq_backend_send_ptr_get(&arq, &p, &frame_len);
                         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                        CHECK(p && frame_len > 0);
                     }
                     std::memcpy(frame.data(), p, frame_len);
                     if (frame_len) {
                         arq_err_t const e = arq_backend_send_ptr_release(&arq);
                         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
                     }
+                }
+
+                {
+                    int unused;
+                    arq_event_t event;
+                    arq_time_t next_poll;
+                    arq_err_t const e = arq_backend_poll(&arq, 0, &unused, &event, &next_poll);
+                    CHECK_EQUAL(ARQ_OK_COMPLETED, e);
                 }
 
                 if (frame_len) {

@@ -933,7 +933,7 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
         return 0;
     }
     p_seq = p->seq;
-    if (arq__send_wnd_ptr_next(p, sw)) {
+    if (arq__send_wnd_ptr_next(p, sw) == ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG) {
         sw->rtx[p_seq % sw->w.cap] = rtx;
     }
     f->len = 0;

@@ -62,7 +62,8 @@ endfunction()
 ################ Nanoarq
 
 set(NANOARQ_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
-set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wshadow -Wcast-align -Wcast-qual -Wstrict-aliasing=2 -march=native)
+set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wunreachable-code -Wshadow -Wcast-align -Wcast-qual
+                         -Wstrict-aliasing -Wmissing-braces -march=native)
 include_directories(${CMAKE_SOURCE_DIR})
 
 ################ Targets

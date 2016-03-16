@@ -20,3 +20,5 @@ pull out buf/cap/len into arq__buf_t, reuse for send/recv frame_t's
 optimization, instead of % and / all over the place for indexing + iterating, use 2 loops: pre-wrap, post-wrap
 maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for empty frame
 normalize naming: size is the size of a struct / header / whatever. len is the length of a buffer.
+ARQ_ERR_NEED_POLL
+
