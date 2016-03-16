@@ -61,12 +61,9 @@ TEST(functional, recv_1mb_through_recv_window)
 
     std::vector< arq_uchar_t > frame;
     frame.reserve(arq__frame_len(arq.cfg.segment_length_in_bytes));
-int hack = 0;
     size_t test_input_offset = 0;
     while (test_output.size() < test_input.size()) {
-        printf("=== loading recv wnd: size %d cap %d\n", arq.recv_wnd.w.size, arq.recv_wnd.w.cap);
         while (arq.recv_wnd.w.size < arq.recv_wnd.w.cap) {
-            if (hack++ > 100) exit(0);
             for (int seg = 0; seg < arq.cfg.message_length_in_segments; ++seg) {
                 h.seg_len = arq__min(arq.cfg.segment_length_in_bytes, test_input.size() - test_input_offset);
                 h.seg_id = seg;
@@ -89,7 +86,6 @@ int hack = 0;
                     CHECK_EQUAL(frame_len, bytes_pushed_into_window);
                 }
 
-                // arq_backend_poll
                 {
                     int send_len;
                     arq_event_t event;
@@ -97,9 +93,6 @@ int hack = 0;
                     arq_err_t const e = arq_backend_poll(&arq, 0, &send_len, &event, &next_poll);
                     CHECK(ARQ_SUCCEEDED(e));
                 }
-
-                printf("w.size %d w.seq %d h.seq %d h.seg %d seg_len %d bytes_pushed %d offset %zu\n",
-                        arq.recv_wnd.w.size, arq.recv_wnd.w.seq, h.seq_num, h.seg_id, h.seg_len, bytes_pushed_into_window, test_input_offset);
             }
             h.seq_num = (h.seq_num + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
         }
@@ -108,7 +101,6 @@ int hack = 0;
         while (arq.recv_wnd.w.size) {
             std::array< arq_uchar_t, 256 > recv;
             arq_err_t const e = arq_recv(&arq, recv.data(), recv.size(), &bytes_recvd_from_window);
-            printf("=== recv %d bytes\n", bytes_recvd_from_window);
             CHECK(ARQ_SUCCEEDED(e));
             std::copy(&recv[0], &recv[bytes_recvd_from_window], std::back_inserter(test_output));
         }

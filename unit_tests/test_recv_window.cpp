@@ -447,6 +447,30 @@ TEST(recv_wnd, recv_slides_window_by_one_after_receiving_one_full_message)
     CHECK_EQUAL(0, f.rw.w.size);
 }
 
+TEST(recv_wnd, recv_resets_len_and_ack_vector_when_sliding)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len);
+    CHECK_EQUAL(f.rw.w.msg_len, f.msg[0].len);
+    CHECK_EQUAL(f.rw.w.full_ack_vec, f.msg[0].cur_ack_vec);
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
+    CHECK_EQUAL(0, f.msg[0].len);
+    CHECK_EQUAL(0, f.msg[0].cur_ack_vec);
+}
+
+TEST(recv_wnd, recv_resets_len_and_ack_vector_when_sliding_more_than_one_message)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len * 3);
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
+    CHECK_EQUAL(0, f.msg[0].len);
+    CHECK_EQUAL(0, f.msg[0].cur_ack_vec);
+    CHECK_EQUAL(0, f.msg[1].len);
+    CHECK_EQUAL(0, f.msg[1].cur_ack_vec);
+    CHECK_EQUAL(0, f.msg[2].len);
+    CHECK_EQUAL(0, f.msg[2].cur_ack_vec);
+}
+
 TEST(recv_wnd, recv_slides_window_by_two_after_receiving_two_full_messages)
 {
     Fixture f;
