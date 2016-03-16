@@ -324,7 +324,7 @@ TEST(recv_wnd, recv_entire_first_message_in_window_returns_msg_len)
     Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len);
     unsigned const recv_size = arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
-    CHECK_EQUAL(f.msg[0].len, recv_size);
+    CHECK_EQUAL(f.rw.w.msg_len, recv_size);
 }
 
 TEST(recv_wnd, recv_dst_less_than_one_message_len_copies_partial_msg)
@@ -382,6 +382,16 @@ TEST(recv_wnd, recv_one_and_a_half_messages_leaves_recv_ptr_halfway_through_mess
     Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len * 2);
     arq__recv_wnd_recv(&f.rw, f.recv.data(), f.rw.w.msg_len + (f.rw.w.msg_len / 2));
+    CHECK_EQUAL(1, f.rw.w.size);
+    CHECK_EQUAL(f.rw.w.msg_len / 2, f.rw.recv_ptr);
+}
+
+TEST(recv_wnd, recv_two_and_a_half_messages_leaves_recv_ptr_halfway_through_third_message)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len * 3);
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.rw.w.msg_len + (f.rw.w.msg_len / 2));
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.rw.w.msg_len);
     CHECK_EQUAL(1, f.rw.w.size);
     CHECK_EQUAL(f.rw.w.msg_len / 2, f.rw.recv_ptr);
 }
@@ -445,6 +455,30 @@ TEST(recv_wnd, recv_slides_window_by_one_after_receiving_one_full_message)
     arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
     CHECK_EQUAL(1, f.rw.w.seq);
     CHECK_EQUAL(0, f.rw.w.size);
+}
+
+TEST(recv_wnd, recv_resets_len_and_ack_vector_when_sliding)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len);
+    CHECK_EQUAL(f.rw.w.msg_len, f.msg[0].len);
+    CHECK_EQUAL(f.rw.w.full_ack_vec, f.msg[0].cur_ack_vec);
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
+    CHECK_EQUAL(0, f.msg[0].len);
+    CHECK_EQUAL(0, f.msg[0].cur_ack_vec);
+}
+
+TEST(recv_wnd, recv_resets_len_and_ack_vector_when_sliding_more_than_one_message)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len * 3);
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
+    CHECK_EQUAL(0, f.msg[0].len);
+    CHECK_EQUAL(0, f.msg[0].cur_ack_vec);
+    CHECK_EQUAL(0, f.msg[1].len);
+    CHECK_EQUAL(0, f.msg[1].cur_ack_vec);
+    CHECK_EQUAL(0, f.msg[2].len);
+    CHECK_EQUAL(0, f.msg[2].cur_ack_vec);
 }
 
 TEST(recv_wnd, recv_slides_window_by_two_after_receiving_two_full_messages)

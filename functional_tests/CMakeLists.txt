@@ -14,8 +14,9 @@ set(NANOARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                     nanoarq_functional_test.c
                                     frame_serialization.cpp
                                     send_full_window.cpp
-                                    send_1mb_through_send_window.cpp
-                                    recv_full_window.cpp)
+                                    send_10mb_through_window.cpp
+                                    recv_full_window.cpp
+                                    recv_10mb_through_window.cpp)
 
 string(REPLACE ";" " " NANOARQ_FLAGS_STR "${NANOARQ_FLAGS}")
 set_source_files_properties(nanoarq_in_test_project.c PROPERTIES COMPILE_FLAGS "${NANOARQ_FLAGS_STR}")

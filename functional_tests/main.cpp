@@ -9,8 +9,7 @@ namespace {
 
 void TestAssertHandler(char const *file, int line, char const *cond, char const *msg)
 {
-    (void)msg;
-    std::printf("Assert failure! %s(%d): (%s) %s\n", file, line, cond, msg);
+    std::printf("\nAssert failure! %s(%d): (%s) %s\n", file, line, cond, msg);
     FAIL_TEXT_C_LOCATION(cond, file, (int)line);
 }
 
