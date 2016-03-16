@@ -988,7 +988,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_recv)(arq__recv_wnd_t *rw, void *dst, unsign
     base_seq = rw->w.seq;
     while (dst_max && rw->w.size) {
         arq__msg_t *m = &rw->w.msg[(base_seq + i) % rw->w.cap];
-        unsigned const copy_len = arq__min(dst_max, m->len);
+        unsigned const copy_len = arq__min(dst_max, m->len - rw->recv_ptr);
         unsigned const src_idx = ((base_seq + i) % rw->w.cap) * rw->w.msg_len;
         if (m->cur_ack_vec != m->full_ack_vec) {
             break;

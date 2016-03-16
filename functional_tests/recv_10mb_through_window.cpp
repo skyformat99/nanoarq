@@ -2,7 +2,7 @@
 
 namespace {
 
-TEST(functional, recv_1mb_through_recv_window)
+TEST(functional, recv_10mb_through_window)
 {
     arq_t arq;
     std::array< arq__msg_t, 4 > send_wnd_msgs;
@@ -49,7 +49,7 @@ TEST(functional, recv_1mb_through_recv_window)
 
     std::vector< arq_uchar_t > test_input, test_output;
 
-    test_input.resize(1024 * 1024);
+    test_input.resize(10 * 1024 * 1024);
     for (auto i = 0u; i < test_input.size() / 2; ++i) {
         arq_uint16_t x = (arq_uint16_t)i;
         std::memcpy(&test_input[i * 2], &x, sizeof(x));

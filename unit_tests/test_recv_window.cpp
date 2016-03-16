@@ -386,6 +386,16 @@ TEST(recv_wnd, recv_one_and_a_half_messages_leaves_recv_ptr_halfway_through_mess
     CHECK_EQUAL(f.rw.w.msg_len / 2, f.rw.recv_ptr);
 }
 
+TEST(recv_wnd, recv_two_and_a_half_messages_leaves_recv_ptr_halfway_through_third_message)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len * 3);
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.rw.w.msg_len + (f.rw.w.msg_len / 2));
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.rw.w.msg_len);
+    CHECK_EQUAL(1, f.rw.w.size);
+    CHECK_EQUAL(f.rw.w.msg_len / 2, f.rw.recv_ptr);
+}
+
 TEST(recv_wnd, recv_after_receiving_partial_msg_resumes_copy_from_last_byte_copied)
 {
     Fixture f;
