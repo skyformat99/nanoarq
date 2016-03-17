@@ -1,7 +1,5 @@
 #pragma once
 
-#define ARQ_MOCKABLE(FUNCTION_NAME) FUNCTION_NAME##_ARQ_ORIG
-
 #define ARQ_MOCK_LIST() \
     ARQ_MOCK(arq__wnd_init) \
     ARQ_MOCK(arq__wnd_rst) \
@@ -33,13 +31,4 @@
     ARQ_MOCK(arq__cobs_decode) \
     ARQ_MOCK(arq__hton32) \
     ARQ_MOCK(arq__ntoh32)
-
-#ifdef __cplusplus
-    #define ARQ_MOCK(FUNCTION_NAME) extern "C" { extern void *FUNCTION_NAME##_ARQ_THUNK_TARGET; }
-#else
-    #define ARQ_MOCK(FUNCTION_NAME) extern void *FUNCTION_NAME##_ARQ_THUNK_TARGET;
-#endif
-
-ARQ_MOCK_LIST()
-#undef ARQ_MOCK
 

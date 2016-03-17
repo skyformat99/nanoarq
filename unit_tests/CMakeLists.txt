@@ -8,8 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED on)
 
 include_directories(${CPPUTEST_INCLUDE_DIR})
 
-add_library(nanoarq_test_support STATIC nanoarq_mocks.h
-                                        nanoarq_mocks.cpp
+add_library(nanoarq_test_support STATIC replace_arq_runtime_function.h
+                                        replace_arq_runtime_function.cpp
+                                        arq_mock_list.h
+                                        nanoarq_enable_mocks.h
                                         nanoarq_hook_plugin.h
                                         nanoarq_hook_plugin.cpp
                                         strict_mock_plugin.h

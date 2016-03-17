@@ -1,4 +1,5 @@
 #include "nanoarq_hook_plugin.h"
+#include "replace_arq_runtime_function.h"
 #include <vector>
 #include <algorithm>
 
@@ -6,9 +7,13 @@ using namespace std;
 
 struct HookRecord
 {
-    explicit HookRecord(void **thunkAddr_) : thunkAddr(thunkAddr_), orig(*thunkAddr_) {}
-    void **thunkAddr = nullptr;
-    void *orig = nullptr;
+    HookRecord(void *arqRuntimeFunction_, void *originalFunction_)
+        : arqRuntimeFunction(arqRuntimeFunction_)
+        , originalFunction(originalFunction_)
+    {
+    }
+    void *arqRuntimeFunction = nullptr;
+    void *originalFunction = nullptr;
 };
 
 struct NanoArqHookPlugin::Impl
@@ -33,30 +38,43 @@ NanoArqHookPlugin*& NanoArqHookPlugin::WellKnownInstance()
     return p;
 }
 
-void NanoArqHookPlugin::Hook(void **thunkAddress, void *newFunction)
+void NanoArqHookPlugin::Hook(void *arqRuntimeFunction, void *newFunction)
 {
-    m->hooks.emplace_back(HookRecord(thunkAddress));
-    *thunkAddress = newFunction;
+    void *originalFunction = nullptr;
+    bool const ok = ReplaceArqRuntimeFunction(arqRuntimeFunction, newFunction, &originalFunction);
+    if (ok) {
+        m->hooks.emplace_back(HookRecord(arqRuntimeFunction, originalFunction));
+    } else {
+        fprintf(stderr, "NanoArqHookPlugin::Hook() No function found matching '%p', nothing to hook.\n",
+                arqRuntimeFunction);
+    }
 }
 
-void NanoArqHookPlugin::Unhook(void **thunkAddr)
+void NanoArqHookPlugin::Unhook(void *arqRuntimeFunction)
 {
-    auto hr = find_if(begin(m->hooks), end(m->hooks), [=](HookRecord &h){ return h.thunkAddr == thunkAddr; });
-
-    if (hr == end(m->hooks)) {
+    auto found = std::find_if(std::begin(m->hooks), std::end(m->hooks), [&](HookRecord const &h) {
+        return h.arqRuntimeFunction == arqRuntimeFunction;
+    });
+    if (found == std::end(m->hooks)) {
         fprintf(stderr,
                 "NanoArqHookPlugin::Unhook(): No function matches '%p', nothing to unhook.\n",
-                thunkAddr);
+                arqRuntimeFunction);
         return;
     }
-
-    *hr->thunkAddr = hr->orig;
-    m->hooks.erase(hr);
+    bool const ok = ReplaceArqRuntimeFunction(found->arqRuntimeFunction, found->originalFunction, nullptr);
+    if (!ok) {
+        fprintf(stderr,
+                "NanoArqHookPlugin::Unhook(): Unhooking function at '%p' failed!\n",
+                found->arqRuntimeFunction);
+    }
+    m->hooks.erase(found);
 }
 
 void NanoArqHookPlugin::postTestAction(UtestShell&, TestResult&)
 {
-    for_each(begin(m->hooks), end(m->hooks), [](HookRecord& h) { *h.thunkAddr = h.orig; });
+    std::for_each(std::begin(m->hooks), std::end(m->hooks), [](HookRecord const& h) {
+        ReplaceArqRuntimeFunction(h.arqRuntimeFunction, h.originalFunction, nullptr);
+    });
     m->hooks.clear();
 }
 
