@@ -10,8 +10,8 @@ public:
     virtual ~NanoArqHookPlugin();
     static NanoArqHookPlugin*& WellKnownInstance();
 
-    void Hook(void **thunkAddress, void *newFunction);
-    void Unhook(void **thunkAddress);
+    void Hook(void *origFunction, void *newFunction);
+    void Unhook(void *origFunction);
     void postTestAction(UtestShell&, TestResult&) override;
 
     NanoArqHookPlugin(NanoArqHookPlugin const&) = delete;
@@ -27,7 +27,7 @@ private:
         (void)&NEW_FUNCTION; \
         NanoArqHookPlugin *hookPlugin__ = NanoArqHookPlugin::WellKnownInstance(); \
         if (hookPlugin__) { \
-            hookPlugin__->Hook(&FUNCTION_NAME##_ARQ_THUNK_TARGET, reinterpret_cast< void * >(NEW_FUNCTION)); \
+            hookPlugin__->Hook((void *)&FUNCTION_NAME, (void *)NEW_FUNCTION); \
         } \
     } while(0)
 
@@ -36,7 +36,7 @@ private:
         (void)&FUNCTION_NAME; \
         NanoArqHookPlugin *hookPlugin__ = NanoArqHookPlugin::WellKnownInstance(); \
         if (hookPlugin__) { \
-            hookPlugin__->Unhook(&FUNCTION_NAME##_ARQ_THUNK_TARGET); \
+            hookPlugin__->Unhook((void *)&FUNCTION_NAME); \
         } \
     } while(0)
 
