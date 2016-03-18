@@ -23,7 +23,7 @@ arq__frame_read_result_t MockFrameRead(void *frame,
                                            .withParameter("frame", frame)
                                            .withParameter("frame_len", frame_len)
                                            .withParameter("checksum", (void *)checksum)
-                                           .withParameter("out_hdr", out_hdr)
+                                           .withOutputParameter("out_hdr", out_hdr)
                                            .withParameter("out_seg", (void const *)out_seg)
                                            .returnIntValue();
 }
@@ -79,7 +79,6 @@ TEST(recv_poll, calls_frame_read_if_recv_frame_has_a_full_frame)
     mock().expectOneCall("arq__frame_read").withParameter("frame", f.arq.recv_frame.buf)
                                            .withParameter("frame_len", f.arq.recv_frame.len)
                                            .withParameter("checksum", (void *)StubChecksum)
-                                           .withParameter("out_hdr", &f.h)
                                            .ignoreOtherParameters();
     mock().ignoreOtherCalls();
     arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.h, StubChecksum);
@@ -116,7 +115,8 @@ TEST(recv_poll, calls_recv_wnd_frame_if_frame_read_returns_success)
     f.h.seg_id = 3;
     f.h.msg_len = 64;
     f.h.seg_len = 16;
-    mock().expectOneCall("arq__frame_read").ignoreOtherParameters()
+    mock().expectOneCall("arq__frame_read").withOutputParameterReturning("out_hdr", &f.h, sizeof(f.h))
+                                           .ignoreOtherParameters()
                                            .andReturnValue(ARQ__FRAME_READ_RESULT_SUCCESS);
     mock().expectOneCall("arq__recv_wnd_frame").withParameter("rw", &f.arq.recv_wnd)
                                                .withParameter("seq", f.h.seq_num)
