@@ -3,6 +3,8 @@ project(nanoarq C CXX)
 
 ############### Global flags
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
+
 set(CMAKE_C_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_C_FLAGS_RELEASE "-Os")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-Os -g")
