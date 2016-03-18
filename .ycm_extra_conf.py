@@ -22,7 +22,7 @@ flags = [
 ]
 
 cpp_flags = [ '-std=c++11', '-x', 'c++' ]
-c_flags = [ '-std=c99', '-x', 'c' ]
+arq_h_flags = [ '-pedantic', '-ansi', '-Wsign-conversion', '-std=c99', '-x', 'c' ]
 
 
 def DirectoryOfThisScript():
@@ -66,7 +66,7 @@ def FlagsForFile( filename, **kwargs ):
   final_flags = MakeRelativePathsInFlagsAbsolute( flags, relative_to )
 
   if ( PathLeaf(filename) == 'arq.h' ):
-      final_flags = final_flags + c_flags
+      final_flags = final_flags + arq_h_flags
   else:
       final_flags = final_flags + cpp_flags
 

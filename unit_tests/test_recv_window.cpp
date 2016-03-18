@@ -19,6 +19,7 @@ TEST(recv_wnd, rst_calls_wnd_rst)
 {
     ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
     arq__recv_wnd_t rw;
+    rw.w.cap = 0;
     mock().expectOneCall("arq__wnd_rst").withParameter("w", &rw.w);
     arq__recv_wnd_rst(&rw);
 }
@@ -28,15 +29,32 @@ TEST(recv_wnd, rst_sets_recv_ptr_to_zero)
     ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
     mock().ignoreOtherCalls();
     arq__recv_wnd_t rw;
+    rw.w.cap = 0;
     rw.recv_ptr = 1234;
     arq__recv_wnd_rst(&rw);
     CHECK_EQUAL(0, rw.recv_ptr);
+}
+
+TEST(recv_wnd, rst_clears_ack_array)
+{
+    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
+    mock().ignoreOtherCalls();
+    std::array< arq_uchar_t, 4 > ack;
+    std::fill(std::begin(ack), std::end(ack), 0xFE);
+    arq__recv_wnd_t rw;
+    rw.ack = ack.data();
+    rw.w.cap = 4;
+    arq__recv_wnd_rst(&rw);
+    for (auto const &f : ack) {
+        CHECK_EQUAL(0, f);
+    }
 }
 
 struct Fixture
 {
     Fixture()
     {
+        rw.ack = ack.data();
         rw.w.msg = msg.data();
         arq__wnd_init(&rw.w, msg.size(), 128, 32);
         buf.resize(rw.w.msg_len * rw.w.cap);
@@ -49,6 +67,7 @@ struct Fixture
 
     arq__recv_wnd_t rw;
     std::array< arq__msg_t, 64 > msg;
+    std::array< arq_uchar_t, 64 > ack;
     std::vector< arq_uchar_t > buf;
     std::vector< arq_uchar_t > seg;
     std::vector< arq_uchar_t > recv;

@@ -7,11 +7,12 @@ TEST(functional, recv_10mb_through_window)
     arq_t arq;
     std::array< arq__msg_t, 4 > send_wnd_msgs;
     std::array< arq_time_t, 64 > rtx_timers;
-    std::array< unsigned char, 256 > send_frame;
-    std::vector< unsigned char > send_wnd_buf;
-    std::vector< unsigned char > recv_wnd_buf;
-    std::array< unsigned char, 256 > recv_frame;
+    std::array< arq_uchar_t, 256 > send_frame;
+    std::vector< arq_uchar_t > send_wnd_buf;
+    std::vector< arq_uchar_t > recv_wnd_buf;
+    std::array< arq_uchar_t, 256 > recv_frame;
     std::array< arq__msg_t, 4 > recv_wnd_msgs;
+    std::array< arq_uchar_t, 4 > recv_wnd_ack;
 
     arq.cfg.segment_length_in_bytes = 220;
     arq.cfg.message_length_in_segments = 4;
@@ -33,6 +34,7 @@ TEST(functional, recv_10mb_through_window)
 
     arq.recv_wnd.w.msg = recv_wnd_msgs.data();
     arq.recv_wnd.w.buf = recv_wnd_buf.data();
+    arq.recv_wnd.ack = recv_wnd_ack.data();
 
     arq__wnd_init(&arq.send_wnd.w,
                   send_wnd_msgs.size(),

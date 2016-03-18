@@ -273,6 +273,7 @@ int arq__send_poll(arq__send_wnd_t *sw,
 typedef struct arq__recv_wnd_t
 {
     arq__wnd_t w;
+    arq_uchar_t *ack;
     unsigned recv_ptr;
 } arq__recv_wnd_t;
 
@@ -948,9 +949,13 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
 
 void ARQ_MOCKABLE(arq__recv_wnd_rst)(arq__recv_wnd_t *rw)
 {
+    unsigned i;
     ARQ_ASSERT(rw);
     arq__wnd_rst(&rw->w);
     rw->recv_ptr = 0;
+    for (i = 0; i < rw->w.cap; ++i) {
+        rw->ack[i] = 0;
+    }
 }
 
 unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
