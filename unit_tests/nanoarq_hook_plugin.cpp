@@ -52,7 +52,7 @@ void NanoArqHookPlugin::Hook(void *arqRuntimeFunction, void *newFunction)
 
 void NanoArqHookPlugin::Unhook(void *arqRuntimeFunction)
 {
-    auto found = std::find_if(std::begin(m->hooks), std::end(m->hooks), [&](HookRecord const &h) {
+    auto found = std::find_if(std::begin(m->hooks), std::end(m->hooks), [=](HookRecord const &h) {
         return h.arqRuntimeFunction == arqRuntimeFunction;
     });
     if (found == std::end(m->hooks)) {
