@@ -3,6 +3,7 @@ import ycm_core
 import ntpath
 
 flags = [
+    '-DARQ_IMPLEMENTATION',
     '-DARQ_ASSERTS_ENABLED=1',
     '-DARQ_COMPILE_CRC32=1',
     '-DARQ_USE_C_STDLIB=1',
