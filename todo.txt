@@ -20,4 +20,5 @@ maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for em
 normalize naming: size is the size of a struct / header / whatever. len is the length of a buffer.
 ARQ_ERR_NEED_POLL
 recv window ack flag array => bitfield? might not be much smaller / faster
+do we NAK sequence numbers off the top end of the recv window? or just ignore?
 

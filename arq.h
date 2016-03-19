@@ -969,6 +969,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     int unused;
     ARQ_ASSERT(rw && p && (len <= rw->w.seg_len));
     if (((seq - rw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1)) > rw->w.cap) {
+        rw->ack[seq % rw->w.cap] = 1;
         return 0;
     }
     m = &rw->w.msg[seq % rw->w.cap];
@@ -982,7 +983,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     m->cur_ack_vec |= (1u << seg);
     m->len += len;
     if (seg == seg_cnt - 1) {
-        rw->ack[seq % (ARQ__FRAME_MAX_SEQ_NUM)] = 1;
+        rw->ack[seq % rw->w.cap] = 1;
     }
     return len;
 }
