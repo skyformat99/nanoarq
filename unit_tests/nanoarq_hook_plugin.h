@@ -25,18 +25,18 @@ private:
     do { \
         (void)&FUNCTION_NAME; \
         (void)&NEW_FUNCTION; \
-        NanoArqHookPlugin *hookPlugin__ = NanoArqHookPlugin::WellKnownInstance(); \
-        if (hookPlugin__) { \
-            hookPlugin__->Hook((void *)&FUNCTION_NAME, (void *)NEW_FUNCTION); \
+        NanoArqHookPlugin *hookPlugin_ = NanoArqHookPlugin::WellKnownInstance(); \
+        if (hookPlugin_) { \
+            hookPlugin_->Hook((void *)&FUNCTION_NAME, (void *)NEW_FUNCTION); \
         } \
     } while(0)
 
 #define ARQ_MOCK_UNHOOK(FUNCTION_NAME) \
     do { \
         (void)&FUNCTION_NAME; \
-        NanoArqHookPlugin *hookPlugin__ = NanoArqHookPlugin::WellKnownInstance(); \
-        if (hookPlugin__) { \
-            hookPlugin__->Unhook((void *)&FUNCTION_NAME); \
+        NanoArqHookPlugin *hookPlugin_ = NanoArqHookPlugin::WellKnownInstance(); \
+        if (hookPlugin_) { \
+            hookPlugin_->Unhook((void *)&FUNCTION_NAME); \
         } \
     } while(0)
 
