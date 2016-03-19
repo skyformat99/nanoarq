@@ -37,7 +37,7 @@ FunctionRecord s_functionRecords[] = { ARQ_MOCK_LIST() };
 #define ARQ_MOCK(FUNCTION_NAME) \
     __asm( \
         ".text\n\t" \
-        ".p2align 4,,15\n\t" \
+        ".p2align 4\n\t" \
         ".globl " ARQ_SYMBOL_PREFIX #FUNCTION_NAME "\n\t" \
         ARQ_SYMBOL_PREFIX #FUNCTION_NAME ":\n\t" \
         ".cfi_startproc\n\t" \

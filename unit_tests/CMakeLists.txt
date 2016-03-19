@@ -15,7 +15,8 @@ add_library(nanoarq_test_support STATIC replace_arq_runtime_function.h
                                         nanoarq_hook_plugin.h
                                         nanoarq_hook_plugin.cpp
                                         strict_mock_plugin.h
-                                        strict_mock_plugin.cpp)
+                                        strict_mock_plugin.cpp
+                                        main.cpp)
 
 target_compile_options(nanoarq_test_support PRIVATE ${NANOARQ_COMMON_FLAGS})
 add_dependencies(nanoarq_test_support CppUTest_external)
@@ -44,8 +45,7 @@ add_library(nanoarq_unit_test_objs OBJECT test_mock_hooks.cpp
                                           test_cobs.cpp
                                           test_minmax.cpp
                                           test_saturated_subtraction.cpp
-                                          test_crc32.cpp
-                                          main.cpp)
+                                          test_crc32.cpp)
 
 target_compile_options(nanoarq_unit_test_objs PRIVATE ${NANOARQ_COMMON_FLAGS})
 add_dependencies(nanoarq_unit_test_objs CppUTest_external)

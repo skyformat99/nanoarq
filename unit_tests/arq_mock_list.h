@@ -15,6 +15,7 @@
     ARQ_MOCK(arq__recv_wnd_rst) \
     ARQ_MOCK(arq__recv_wnd_frame) \
     ARQ_MOCK(arq__recv_wnd_recv) \
+    ARQ_MOCK(arq__recv_wnd_next_ack) \
     ARQ_MOCK(arq__recv_frame_fill) \
     ARQ_MOCK(arq__recv_frame_rst) \
     ARQ_MOCK(arq__recv_poll) \
