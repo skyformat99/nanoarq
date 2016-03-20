@@ -21,7 +21,7 @@ struct FunctionRecord
 // create an immutable array of all mocked functions and their thunk targets
 namespace {
 #define ARQ_MOCK(FUNCTION_NAME) { &FUNCTION_NAME, &FUNCTION_NAME##_ARQ_THUNK_TARGET },
-FunctionRecord s_functionRecords[] = { ARQ_MOCK_LIST() };
+FunctionRecord const s_functionRecords[] = { ARQ_MOCK_LIST() };
 #undef ARQ_MOCK
 }
 
@@ -33,11 +33,11 @@ FunctionRecord s_functionRecords[] = { ARQ_MOCK_LIST() };
 #endif
 
 // create the thunk with a tail call so the parameters remain intact.
-// x64 abi says r11 is a scratch register, so load the thunk there.
+// x64 abi: r11 is a scratch register, so load the thunk there.
 #define ARQ_MOCK(FUNCTION_NAME) \
     __asm( \
         ".text\n\t" \
-        ".p2align 4,,15\n\t" \
+        ".p2align 4\n\t" \
         ".globl " ARQ_SYMBOL_PREFIX #FUNCTION_NAME "\n\t" \
         ARQ_SYMBOL_PREFIX #FUNCTION_NAME ":\n\t" \
         ".cfi_startproc\n\t" \

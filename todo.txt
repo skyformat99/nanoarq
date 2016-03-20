@@ -1,22 +1,48 @@
-unsigned everywhere, none of this stuff is ever legit negative
+features:
+=========
 optional checksums
-metrics on crc failures, bad frames (too long before cobs 0)
-send_ptr_release() errors if the send pointer isn't owned by the user? new error enum?
-better return values for send_ptr_get and send_ptr_release (you already have ptr, there's nothing to send, etc)
-big bit vector to hold 'ready' message state of entire send window? rtx == 0 => msg bit set?
-hide __builtin_ctz() behind ARQ_COUNT_TRAILING_ZEROES()
-(compile-time selection?) only allow power-of-two-sized windows, replace div/mod
-pull out mock functions into common header
-send tinygram timer
-inter-byte and intra-frame timers
 arq__send_wnd_init
 arq__recv_wnd_init
 hook the linear allocator up to the various data structures
-assert that the logical size of arq_t + buffers == the physical size (account for all padding)
-multiple frames can fit in the ingoing / outgoing frame buffers, exploit that
-pull out buf/cap/len into arq__buf_t, reuse for send/recv frame_t's
-optimization, instead of % and / all over the place for indexing + iterating, use 2 loops: pre-wrap, post-wrap
-maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for empty frame
-normalize naming: size is the size of a struct / header / whatever. len is the length of a buffer.
 ARQ_ERR_NEED_POLL
+metrics on crc failures, bad frames (too long before cobs 0)
+
+timers:
+=======
+send tinygram timer
+recv "send ack" timers (if we don't recv last seg in a msg, possibly corrupted, we don't ACK the send)
+inter-byte and intra-frame timers
+
+correctness?
+============
+need an ACK bit? initial syn doesn't come with payload, can we fully NAK 0? ACK bit sounds easier.
+do we NAK sequence numbers off the top end of the recv window? or just ignore?
+if send window receives a NAK, should reset send window pointer if NAK is < current pointer seq/seg
+where / when do send + recv wnd ptrs get reset?
+
+optimizations:
+==============
+ACK timers in the receive window in case final segment in message gets corrupted?
+big bit vector to hold 'ready' message state of entire send window? rtx == 0 => msg bit set?
+instead of % and / all over the place for indexing + iterating, use 2 loops: pre-wrap, post-wrap
+maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for empty frame
+multiple frames can fit in the ingoing / outgoing frame buffers, exploit that
+recv window ack flag array => bitfield? might not be much smaller / faster
+
+build / infra:
+==============
+pull out mock functions into common header
+(compile-time selection?) only allow power-of-two-sized windows, replace div/mod
+ninja builds should emit timing json into CMAKE_BINARY_DIR
+compilation tests don't run by default?
+
+hygiene:
+========
+hide __builtin_ctz() behind ARQ_COUNT_TRAILING_ZEROES()
+unsigned everywhere, none of this stuff is ever legit negative
+normalize naming: size is the size of a struct / header / whatever. len is the length of a buffer.
+send_ptr_release() errors if the send pointer isn't owned by the user? new error enum?
+better return values for send_ptr_get and send_ptr_release (you already have ptr, there's nothing to send, etc)
+assert that the logical size of arq_t + buffers == the physical size (account for all padding)
+pull out buf/cap/len into arq__buf_t, reuse for send/recv frame_t's
 

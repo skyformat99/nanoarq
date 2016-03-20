@@ -19,6 +19,7 @@ TEST(recv_wnd, rst_calls_wnd_rst)
 {
     ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
     arq__recv_wnd_t rw;
+    rw.w.cap = 0;
     mock().expectOneCall("arq__wnd_rst").withParameter("w", &rw.w);
     arq__recv_wnd_rst(&rw);
 }
@@ -28,15 +29,31 @@ TEST(recv_wnd, rst_sets_recv_ptr_to_zero)
     ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
     mock().ignoreOtherCalls();
     arq__recv_wnd_t rw;
-    rw.recv_ptr = 1234;
+    rw.w.cap = 0;
     arq__recv_wnd_rst(&rw);
     CHECK_EQUAL(0, rw.recv_ptr);
+}
+
+TEST(recv_wnd, rst_clears_ack_array)
+{
+    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
+    mock().ignoreOtherCalls();
+    std::array< arq_uchar_t, 4 > ack;
+    std::fill(std::begin(ack), std::end(ack), 0xFE);
+    arq__recv_wnd_t rw;
+    rw.ack = ack.data();
+    rw.w.cap = 4;
+    arq__recv_wnd_rst(&rw);
+    for (auto const &f : ack) {
+        CHECK_EQUAL(0, f);
+    }
 }
 
 struct Fixture
 {
     Fixture()
     {
+        rw.ack = ack.data();
         rw.w.msg = msg.data();
         arq__wnd_init(&rw.w, msg.size(), 128, 32);
         buf.resize(rw.w.msg_len * rw.w.cap);
@@ -49,6 +66,7 @@ struct Fixture
 
     arq__recv_wnd_t rw;
     std::array< arq__msg_t, 64 > msg;
+    std::array< arq_uchar_t, 64 > ack;
     std::vector< arq_uchar_t > buf;
     std::vector< arq_uchar_t > seg;
     std::vector< arq_uchar_t > recv;
@@ -231,6 +249,79 @@ TEST(recv_wnd, frame_returns_zero_if_segment_already_received)
     f.msg[0].cur_ack_vec = 0b010;
     unsigned const len = arq__recv_wnd_frame(&f.rw, 0, 1, 3, f.seg.data(), f.seg.size());
     CHECK_EQUAL(0, len);
+}
+
+TEST(recv_wnd, frame_doesnt_set_ack_entry_for_first_segment_of_message_in_window)
+{
+    Fixture f;
+    f.seg.resize(1);
+    CHECK_EQUAL(0, f.rw.ack[0]);
+    arq__recv_wnd_frame(&f.rw, 0, 0, 2, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(0, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_doesnt_set_ack_entry_for_internal_segment_of_message_in_window)
+{
+    Fixture f;
+    f.seg.resize(1);
+    CHECK_EQUAL(0, f.rw.ack[0]);
+    arq__recv_wnd_frame(&f.rw, 0, 1, 3, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(0, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_window)
+{
+    Fixture f;
+    f.seg.resize(1);
+    CHECK_EQUAL(0, f.rw.ack[0]);
+    arq__recv_wnd_frame(&f.rw, 0, 6, 7, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(1, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_window_big_seq)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.w.seq = ARQ__FRAME_MAX_SEQ_NUM;
+    CHECK_EQUAL(0, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
+    arq__recv_wnd_frame(&f.rw, ARQ__FRAME_MAX_SEQ_NUM, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(1, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
+}
+
+TEST(recv_wnd, frame_resets_ack_timer_when_first_segment_received)
+{
+    // TODO
+}
+
+TEST(recv_wnd, frame_resets_ack_timer_when_internal_segment_received)
+{
+    // TODO
+}
+
+TEST(recv_wnd, frame_cancels_ack_timer_when_final_segment_received)
+{
+    // TODO
+}
+
+TEST(recv_wnd, frame_leaves_ack_set_entry_to_one_if_ack_is_already_noticed)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.ack[0] = 1;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(1, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_sets_ack_entry_for_every_segment_of_message_outside_of_window)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.w.seq = 1;
+    for (auto i = 0; i < 7; ++i) {
+        f.rw.ack[0] = 0;
+        arq__recv_wnd_frame(&f.rw, 0, i, 8, f.seg.data(), f.seg.size());
+        CHECK_EQUAL(1, f.rw.ack[0]);
+    }
 }
 
 TEST(recv_wnd, recv_empty_window_copies_nothing)

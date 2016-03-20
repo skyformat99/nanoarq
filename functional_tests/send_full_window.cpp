@@ -12,6 +12,7 @@ TEST(functional, send_full_window)
     std::vector< unsigned char > recv_wnd_buf;
     std::array< unsigned char, 256 > recv_frame;
     std::array< arq__msg_t, 4 > recv_wnd_msgs;
+    std::array< arq_uchar_t, 4 > recv_wnd_ack;
 
     arq.cfg.segment_length_in_bytes = 220;
     arq.cfg.message_length_in_segments = 4;
@@ -31,6 +32,7 @@ TEST(functional, send_full_window)
     arq.send_frame.buf = send_frame.data();
     arq.send_wnd.rtx = rtx_timers.data();
 
+    arq.recv_wnd.ack = recv_wnd_ack.data();
     arq.recv_wnd.w.msg = recv_wnd_msgs.data();
     arq.recv_wnd.w.buf = recv_wnd_buf.data();
 
