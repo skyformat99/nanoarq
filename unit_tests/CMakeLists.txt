@@ -39,6 +39,7 @@ add_library(nanoarq_unit_test_objs OBJECT test_mock_hooks.cpp
                                           test_send_frame.cpp
                                           test_send_poll.cpp
                                           test_recv_window.cpp
+                                          test_recv_window_ptr.cpp
                                           test_recv_frame.cpp
                                           test_recv_poll.cpp
                                           test_frame.cpp

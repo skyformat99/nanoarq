@@ -26,11 +26,13 @@ int MockSendPoll(arq__send_wnd_t *sw,
 }
 
 unsigned MockRecvPoll(arq__recv_wnd_t *rw,
+                      arq__recv_wnd_ptr_t *p,
                       arq__recv_frame_t *f,
                       arq__frame_hdr_t *h,
                       arq_checksum_cb_t checksum)
 {
     return mock().actualCall("arq__recv_poll").withParameter("rw", rw)
+                                              .withParameter("p", p)
                                               .withParameter("f", f)
                                               .withParameter("h", h)
                                               .withParameter("checksum", (void *)checksum)
@@ -42,6 +44,13 @@ void MockFrameHdrInit(arq__frame_hdr_t *h)
     mock().actualCall("arq__frame_hdr_init").withParameter("h", h);
 }
 
+int MockRecvWndPtrNext(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t *rw)
+{
+    return mock().actualCall("arq__recv_wnd_ptr_next").withParameter("p", p)
+                                                      .withParameter("rw", rw)
+                                                      .returnIntValue();
+}
+
 struct Fixture
 {
     Fixture()
@@ -49,6 +58,7 @@ struct Fixture
         ARQ_MOCK_HOOK(arq__frame_hdr_init, MockFrameHdrInit);
         ARQ_MOCK_HOOK(arq__send_poll, MockSendPoll);
         ARQ_MOCK_HOOK(arq__recv_poll, MockRecvPoll);
+        ARQ_MOCK_HOOK(arq__recv_wnd_ptr_next, MockRecvWndPtrNext);
     }
     arq_t arq;
     int send_size;
@@ -109,6 +119,25 @@ TEST(poll, writes_return_value_of_send_poll_to_send_size)
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
     CHECK_EQUAL(1234, f.send_size);
+}
+
+TEST(poll, advances_recv_wnd_ack_if_send_poll_has_frame_to_send)
+{
+    Fixture f;
+    mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(32);
+    mock().expectOneCall("arq__recv_wnd_ptr_next").withParameter("rw", &f.arq.recv_wnd)
+                                                  .withParameter("p", &f.arq.recv_wnd_ptr);
+    mock().ignoreOtherCalls();
+    arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
+}
+
+TEST(poll, does_not_advance_recv_wnd_ack_if_send_poll_has_nothing_to_send)
+{
+    Fixture f;
+    mock().expectOneCall("arq__frame_hdr_init").ignoreOtherParameters();
+    mock().expectOneCall("arq__recv_poll").ignoreOtherParameters();
+    mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(0);
+    arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
 }
 
 TEST(poll, calls_frame_init_then_recv_poll_then_send_poll)
