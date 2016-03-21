@@ -53,7 +53,7 @@ add_dependencies(nanoarq_unit_test_objs CppUTest_external)
 
 ############# Nanoarq runtime for unit tests
 
-set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h nanoarq_unit_test.h nanoarq_unit_test.c)
+set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h arq_in_unit_tests.h arq_in_unit_tests.c)
 string(REPLACE ";" " " NANOARQ_FLAGS_STR "${NANOARQ_FLAGS}")
 set_source_files_properties(nanoarq_unit_test.c PROPERTIES COMPILE_FLAGS "${NANOARQ_FLAGS_STR}")
 
