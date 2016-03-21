@@ -63,7 +63,7 @@ endfunction()
 
 ################ Nanoarq
 
-set(NANOARQ_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
+set(ARQ_RUNTIME_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
 set(ARQ_COMMON_FLAGS -Wall
                      -Wextra
                      -Wunreachable-code
