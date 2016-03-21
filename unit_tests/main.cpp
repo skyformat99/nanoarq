@@ -6,7 +6,6 @@
 #include <CppUTestExt/MemoryReporterPlugin.h>
 #include <CppUTestExt/MockSupportPlugin.h>
 #include <CppUTest/TestHarness_c.h>
-#include <cstdio>
 
 namespace {
 
