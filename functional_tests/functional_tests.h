@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nanoarq_functional_test.h"
+#include "arq_in_functional_tests.h"
 #include <CppUTest/TestHarness.h>
 #include <vector>
 #include <array>

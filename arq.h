@@ -40,7 +40,8 @@ typedef enum
     ARQ_OK_POLL_REQUIRED = 1,
     ARQ_ERR_INVALID_PARAM = -1,
     ARQ_ERR_NO_ASSERT_HANDLER = -2,
-    ARQ_ERR_SEND_PTR_NOT_HELD = -3
+    ARQ_ERR_SEND_PTR_NOT_HELD = -3,
+    ARQ_ERR_NEED_POLL = -4
 } arq_err_t;
 
 #define ARQ_SUCCEEDED(ARQ_RESULT) ((ARQ_RESULT) >= 0)
@@ -376,6 +377,8 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
         #error You must define ARQ_MEMCPY before including arq.h with ARQ_IMPLEMENTATION
     #endif
 #endif
+
+#define ARQ_COUNT_TRAILING_ZERO_BITS(x) __builtin_ctz(x)
 
 typedef ARQ_UINTPTR_TYPE arq_uintptr_t;
 
@@ -908,7 +911,7 @@ arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_w
     if (p->valid) {
         arq__msg_t const *m = &sw->w.msg[p->seq % sw->w.cap];
         unsigned const rem = (unsigned)m->cur_ack_vec >> (p->seg + 1u);
-        p->seg += (1 + __builtin_ctz(~rem));
+        p->seg += (1 + ARQ_COUNT_TRAILING_ZERO_BITS(~rem));
         if (((1 << p->seg) - 1) < m->full_ack_vec) {
             return ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG;
         }
@@ -923,7 +926,7 @@ arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_w
         if ((sw->rtx[seq % sw->w.cap] == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
             p->seq = seq;
             p->valid = 1;
-            p->seg = __builtin_ctz(~(unsigned)m->cur_ack_vec);
+            p->seg = ARQ_COUNT_TRAILING_ZERO_BITS(~(unsigned)m->cur_ack_vec);
             return rv;
         }
     }
@@ -1036,6 +1039,8 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_recv)(arq__recv_wnd_t *rw, void *dst, unsign
 void ARQ_MOCKABLE(arq__recv_wnd_ptr_init)(arq__recv_wnd_ptr_t *p)
 {
     ARQ_ASSERT(p);
+    p->seq = 0;
+    p->cur_ack_vec = 0;
 }
 
 void ARQ_MOCKABLE(arq__recv_wnd_ptr_next)(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t const *rw)

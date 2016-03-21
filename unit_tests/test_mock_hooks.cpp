@@ -1,5 +1,5 @@
-#include "nanoarq_unit_test.h"
-#include "nanoarq_hook_plugin.h"
+#include "arq_in_unit_tests.h"
+#include "arq_runtime_mock_plugin.h"
 
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
@@ -8,7 +8,7 @@ TEST_GROUP(mock_hooks) {};
 
 namespace {
 
-TEST(mock_hooks, can_hook_nanoarq_function)
+TEST(mock_hooks, can_hook_arq_runtime_function)
 {
     struct Local
     {
@@ -22,7 +22,7 @@ TEST(mock_hooks, can_hook_nanoarq_function)
     CHECK(Local::Called());
 }
 
-TEST(mock_hooks, can_unhook_nanoarq_function)
+TEST(mock_hooks, can_unhook_arq_runtime_function)
 {
     struct Local
     {

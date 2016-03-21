@@ -52,7 +52,7 @@ add_dependencies(libCppUTestExt CppUTest_external)
 
 ################ Test support
 
-function(nanoarq_add_test TEST_TARGET_EXECUTABLE)
+function(arq_add_test TEST_TARGET_EXECUTABLE)
     set(TEST_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET_EXECUTABLE}_tests.timestamp)
     add_custom_target(RUN_${TEST_TARGET_EXECUTABLE}_TESTS ALL DEPENDS ${TEST_TIMESTAMP_FILE})
     add_custom_command(OUTPUT ${TEST_TIMESTAMP_FILE}
@@ -61,11 +61,18 @@ function(nanoarq_add_test TEST_TARGET_EXECUTABLE)
                        COMMENT "Running ${TEST_TARGET_EXECUTABLE}")
 endfunction()
 
-################ Nanoarq
+################ Arq compilation flags
 
-set(NANOARQ_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
-set(NANOARQ_COMMON_FLAGS -Wall -Wextra -Wunreachable-code -Wshadow -Wcast-align -Wcast-qual
-                         -Wstrict-aliasing -Wmissing-braces -march=native)
+set(ARQ_RUNTIME_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
+set(ARQ_COMMON_FLAGS -Wall
+                     -Wextra
+                     -Wunreachable-code
+                     -Wshadow
+                     -Wcast-align
+                     -Wcast-qual
+                     -Wstrict-aliasing
+                     -Wmissing-braces
+                     -march=native)
 include_directories(${CMAKE_SOURCE_DIR})
 
 ################ Targets

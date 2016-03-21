@@ -4,7 +4,6 @@ optional checksums
 arq__send_wnd_init
 arq__recv_wnd_init
 hook the linear allocator up to the various data structures
-ARQ_ERR_NEED_POLL
 metrics on crc failures, bad frames (too long before cobs 0)
 
 timers:
@@ -19,6 +18,7 @@ need an ACK bit? initial syn doesn't come with payload, can we fully NAK 0? ACK 
 do we NAK sequence numbers off the top end of the recv window? or just ignore?
 if send window receives a NAK, should reset send window pointer if NAK is < current pointer seq/seg
 where / when do send + recv wnd ptrs get reset?
+ARQ_ERR_NEED_POLL
 
 optimizations:
 ==============
@@ -38,7 +38,6 @@ compilation tests don't run by default?
 
 hygiene:
 ========
-hide __builtin_ctz() behind ARQ_COUNT_TRAILING_ZEROES()
 unsigned everywhere, none of this stuff is ever legit negative
 normalize naming: size is the size of a struct / header / whatever. len is the length of a buffer.
 send_ptr_release() errors if the send pointer isn't owned by the user? new error enum?

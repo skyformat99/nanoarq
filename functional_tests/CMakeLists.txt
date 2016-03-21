@@ -8,22 +8,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED on)
 
 include_directories(${CPPUTEST_INCLUDE_DIR})
 
-set(NANOARQ_FUNCTIONAL_TEST_SOURCES main.cpp
-                                    functional_tests.h
-                                    nanoarq_functional_test.h
-                                    nanoarq_functional_test.c
-                                    frame_serialization.cpp
-                                    send_full_window.cpp
-                                    send_10mb_through_window.cpp
-                                    recv_full_window.cpp
-                                    recv_10mb_through_window.cpp)
+set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
+                                functional_tests.h
+                                arq_in_functional_tests.h
+                                arq_in_functional_tests.c
+                                frame_serialization.cpp
+                                send_full_window.cpp
+                                send_10mb_through_window.cpp
+                                recv_full_window.cpp
+                                recv_10mb_through_window.cpp)
 
-string(REPLACE ";" " " NANOARQ_FLAGS_STR "${NANOARQ_FLAGS}")
-set_source_files_properties(nanoarq_in_test_project.c PROPERTIES COMPILE_FLAGS "${NANOARQ_FLAGS_STR}")
+string(REPLACE ";" " " ARQ_RUNTIME_FLAGS_STR "${ARQ_RUNTIME_FLAGS}")
+set_source_files_properties(arq_in_test_project.c PROPERTIES COMPILE_FLAGS "${ARQ_RUNTIME_FLAGS_STR}")
 
-add_executable(nanoarq_functional_tests ${NANOARQ_FUNCTIONAL_TEST_SOURCES})
-target_compile_options(nanoarq_functional_tests PRIVATE ${NANOARQ_COMMON_FLAGS})
-add_dependencies(nanoarq_functional_tests CppUTest_external all_unit_tests)
-target_link_libraries(nanoarq_functional_tests libCppUTest libCppUTestExt)
-nanoarq_add_test(nanoarq_functional_tests)
+add_executable(arq_functional_tests ${ARQ_FUNCTIONAL_TEST_SOURCES})
+target_compile_options(arq_functional_tests PRIVATE ${ARQ_COMMON_FLAGS})
+add_dependencies(arq_functional_tests CppUTest_external all_unit_tests)
+target_link_libraries(arq_functional_tests libCppUTest libCppUTestExt)
+arq_add_test(arq_functional_tests)
 

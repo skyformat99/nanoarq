@@ -1,5 +1,5 @@
-#include "nanoarq_unit_test.h"
-#include "nanoarq_hook_plugin.h"
+#include "arq_in_unit_tests.h"
+#include "arq_runtime_mock_plugin.h"
 #include "strict_mock_plugin.h"
 #include <CppUTest/CommandLineTestRunner.h>
 #include <CppUTest/TestRegistry.h>
@@ -29,9 +29,9 @@ int main(int argc, char *argv[])
     StrictMockPlugin strictMockPlugin;
     TestRegistry::getCurrentRegistry()->installPlugin(&strictMockPlugin);
 
-    NanoArqHookPlugin nanoArqHookPlugin;
-    NanoArqHookPlugin::WellKnownInstance() = &nanoArqHookPlugin;
-    TestRegistry::getCurrentRegistry()->installPlugin(&nanoArqHookPlugin);
+    ArqRuntimeMockPlugin arqRuntimeMockPlugin;
+    ArqRuntimeMockPlugin::WellKnownInstance() = &arqRuntimeMockPlugin;
+    TestRegistry::getCurrentRegistry()->installPlugin(&arqRuntimeMockPlugin);
 
     arq_err_t const e = arq_assert_handler_set(&TestAssertHandler);
     if (e != ARQ_OK_COMPLETED) {

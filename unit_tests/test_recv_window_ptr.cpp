@@ -1,5 +1,5 @@
-#include "nanoarq_unit_test.h"
-#include "nanoarq_hook_plugin.h"
+#include "arq_in_unit_tests.h"
+#include "arq_runtime_mock_plugin.h"
 #include <CppUTest/TestHarness.h>
 #include <CppUTestExt/MockSupport.h>
 #include <vector>
@@ -8,6 +8,22 @@
 TEST_GROUP(recv_wnd_ptr) {};
 
 namespace {
+
+TEST(recv_wnd_ptr, init_sets_seq_to_zero)
+{
+    arq__recv_wnd_ptr_t p;
+    p.seq = 1;
+    arq__recv_wnd_ptr_init(&p);
+    CHECK_EQUAL(0, p.seq);
+}
+
+TEST(recv_wnd_ptr, init_sets_ack_to_zero)
+{
+    arq__recv_wnd_ptr_t p;
+    p.cur_ack_vec = 123;
+    arq__recv_wnd_ptr_init(&p);
+    CHECK_EQUAL(0, p.seq);
+}
 
 struct Fixture
 {
@@ -34,17 +50,21 @@ struct Fixture
     std::vector< arq_uchar_t > recv;
 };
 
-TEST(recv_wnd_ptr, next_returns_negative_one_if_ack_vector_is_all_zeros)
-{
-}
-
-TEST(recv_wnd_ptr, next_returns_ack_ptr_if_ack_vector_is_set_and_ack_ptr_greater_than_wnd_cap)
+TEST(recv_wnd_ptr, next_sets_seq_to_base_if_ack_vector_is_all_zeroes)
 {
     Fixture f;
-    f.p.seq = 1234;
-    f.rw.ack[f.p.seq % f.rw.w.cap] = 1;
-    //int const actual = arq__recv_wnd_ptr_next(&f.p, &f.rw);
-    //CHECK_EQUAL(1234, actual);
+    f.p.seq = 0;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(0, f.p.seq);
+}
+
+TEST(recv_wnd_ptr, next_sets_seq_to_base_if_ack_vector_all_zeroes_and_ptr_not_base)
+{
+    Fixture f;
+    f.p.seq = (f.rw.w.seq + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
+    f.rw.w.seq = 9;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(f.rw.w.seq, f.p.seq);
 }
 
 TEST(recv_wnd_ptr, next_sets_ack_vector_element_to_zero)
