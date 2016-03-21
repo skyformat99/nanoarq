@@ -40,7 +40,8 @@ typedef enum
     ARQ_OK_POLL_REQUIRED = 1,
     ARQ_ERR_INVALID_PARAM = -1,
     ARQ_ERR_NO_ASSERT_HANDLER = -2,
-    ARQ_ERR_SEND_PTR_NOT_HELD = -3
+    ARQ_ERR_SEND_PTR_NOT_HELD = -3,
+    ARQ_ERR_NEED_POLL = -4
 } arq_err_t;
 
 #define ARQ_SUCCEEDED(ARQ_RESULT) ((ARQ_RESULT) >= 0)
@@ -1036,6 +1037,8 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_recv)(arq__recv_wnd_t *rw, void *dst, unsign
 void ARQ_MOCKABLE(arq__recv_wnd_ptr_init)(arq__recv_wnd_ptr_t *p)
 {
     ARQ_ASSERT(p);
+    p->seq = 0;
+    p->cur_ack_vec = 0;
 }
 
 void ARQ_MOCKABLE(arq__recv_wnd_ptr_next)(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t const *rw)
