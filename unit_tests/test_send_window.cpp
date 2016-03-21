@@ -1,5 +1,5 @@
 #include "nanoarq_unit_test.h"
-#include "nanoarq_hook_plugin.h"
+#include "arq_runtime_mock_plugin.h"
 #include <CppUTestExt/MockSupport.h>
 #include <CppUTest/TestHarness.h>
 #include <cstring>

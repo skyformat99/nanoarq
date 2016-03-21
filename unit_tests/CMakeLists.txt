@@ -12,8 +12,8 @@ add_library(nanoarq_test_support STATIC replace_arq_runtime_function.h
                                         replace_arq_runtime_function.cpp
                                         arq_mock_list.h
                                         arq_enable_mocks.h
-                                        nanoarq_hook_plugin.h
-                                        nanoarq_hook_plugin.cpp
+                                        arq_runtime_mock_plugin.h
+                                        arq_runtime_mock_plugin.cpp
                                         strict_mock_plugin.h
                                         strict_mock_plugin.cpp
                                         main.cpp)
