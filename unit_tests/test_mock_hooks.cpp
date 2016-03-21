@@ -8,7 +8,7 @@ TEST_GROUP(mock_hooks) {};
 
 namespace {
 
-TEST(mock_hooks, can_hook_nanoarq_function)
+TEST(mock_hooks, can_hook_arq_runtime_function)
 {
     struct Local
     {
@@ -22,7 +22,7 @@ TEST(mock_hooks, can_hook_nanoarq_function)
     CHECK(Local::Called());
 }
 
-TEST(mock_hooks, can_unhook_nanoarq_function)
+TEST(mock_hooks, can_unhook_arq_runtime_function)
 {
     struct Local
     {

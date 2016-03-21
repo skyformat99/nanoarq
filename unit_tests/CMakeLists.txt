@@ -51,34 +51,33 @@ add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
 target_compile_options(arq_unit_test_objs PRIVATE ${ARQ_COMMON_FLAGS})
 add_dependencies(arq_unit_test_objs CppUTest_external)
 
-############# Nanoarq runtime for unit tests
+############# Arq runtime for unit tests
 
-set(NANOARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h arq_in_unit_tests.h arq_in_unit_tests.c)
+set(ARQ_UNIT_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h arq_in_unit_tests.h arq_in_unit_tests.c)
 string(REPLACE ";" " " ARQ_RUNTIME_FLAGS_STR "${ARQ_RUNTIME_FLAGS}")
 set_source_files_properties(arq_unit_test.c PROPERTIES COMPILE_FLAGS "${ARQ_RUNTIME_FLAGS_STR}")
 
 ############# Unit tests
 
-add_executable(arq_unit_tests ${NANOARQ_UNIT_TEST_SOURCES} $<TARGET_OBJECTS:arq_unit_test_objs>)
+add_executable(arq_unit_tests ${ARQ_UNIT_TEST_SOURCES} $<TARGET_OBJECTS:arq_unit_test_objs>)
 add_dependencies(arq_unit_tests CppUTest_external)
 target_compile_options(arq_unit_tests PRIVATE ${ARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=1)
 target_link_libraries(arq_unit_tests arq_test_support libCppUTest libCppUTestExt)
 if(CMAKE_GENERATOR STREQUAL Xcode)
     target_link_libraries(arq_unit_tests c++)
 endif()
-nanoarq_add_test(arq_unit_tests)
+arq_add_test(arq_unit_tests)
 
 ############# Unit tests without asserts enabled
 
-add_executable(arq_no_asserts_unit_tests ${NANOARQ_UNIT_TEST_SOURCES}
-                                             $<TARGET_OBJECTS:arq_unit_test_objs>)
+add_executable(arq_no_asserts_unit_tests ${ARQ_UNIT_TEST_SOURCES} $<TARGET_OBJECTS:arq_unit_test_objs>)
 add_dependencies(arq_no_asserts_unit_tests CppUTest_external)
 target_compile_options(arq_no_asserts_unit_tests PRIVATE ${ARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=0)
 target_link_libraries(arq_no_asserts_unit_tests arq_test_support libCppUTest libCppUTestExt)
 if(CMAKE_GENERATOR STREQUAL Xcode)
     target_link_libraries(arq_no_asserts_unit_tests c++)
 endif()
-nanoarq_add_test(arq_no_asserts_unit_tests)
+arq_add_test(arq_no_asserts_unit_tests)
 
 ############# Dummy target that depends on all unit tests
 
