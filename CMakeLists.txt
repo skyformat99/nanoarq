@@ -61,7 +61,7 @@ function(arq_add_test TEST_TARGET_EXECUTABLE)
                        COMMENT "Running ${TEST_TARGET_EXECUTABLE}")
 endfunction()
 
-################ Nanoarq
+################ Arq compilation flags
 
 set(ARQ_RUNTIME_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
 set(ARQ_COMMON_FLAGS -Wall
