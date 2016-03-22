@@ -466,20 +466,56 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_time_t *out_next_poll)
 {
     arq__frame_hdr_t h;
-    int send_size;
+    int send_size = 0;
+    int emit_frame = 0;
     if (!arq || !out_backend_send_size || !out_event || !out_next_poll) {
         return ARQ_ERR_INVALID_PARAM;
     }
     arq__frame_hdr_init(&h);
-    arq__recv_poll(&arq->recv_wnd, &arq->recv_wnd_ptr, &arq->recv_frame, &h, arq->cfg.checksum_cb);
-    send_size = arq__send_poll(&arq->send_wnd,
-                               &arq->send_wnd_ptr,
-                               &arq->send_frame,
-                               &h,
-                               arq->cfg.checksum_cb,
-                               arq->cfg.retransmission_timeout,
-                               dt);
-    if (send_size) {
+    h.ack_num = (int)arq->recv_wnd_ptr.seq;
+    h.cur_ack_vec = arq->recv_wnd_ptr.cur_ack_vec;
+
+    /* receive the current frame into the receive window */
+    if (arq->recv_frame.state == ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT) {
+        void const *seg;
+        arq__recv_frame_t *f = &arq->recv_frame;
+        arq__frame_hdr_t rh;
+        arq__frame_read_result_t const ok = arq__frame_read(f->buf,
+                                                            f->len,
+                                                            arq->cfg.checksum_cb,
+                                                            &rh,
+                                                            &seg);
+        arq__recv_frame_rst(f);
+        if (ok == ARQ__FRAME_READ_RESULT_SUCCESS) {
+            arq__recv_wnd_frame(&arq->recv_wnd,
+                                (unsigned)rh.seq_num,
+                                (unsigned)rh.seg_id,
+                                (unsigned)rh.msg_len,
+                                seg,
+                                (unsigned)rh.seg_len);
+        }
+    }
+    /* step the send window and emit a frame */
+    arq__send_wnd_step(&arq->send_wnd, dt);
+    if (arq->send_frame.state == ARQ__SEND_FRAME_STATE_RELEASED) {
+        unsigned const p_seq = arq->send_wnd_ptr.seq;
+        if (arq__send_wnd_ptr_next(&arq->send_wnd_ptr, &arq->send_wnd)==ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG) {
+            arq->send_wnd.rtx[p_seq % arq->send_wnd.w.cap] = arq->cfg.retransmission_timeout;
+        }
+        if (arq->send_wnd_ptr.valid) {
+            emit_frame = 1;
+        }
+        arq->send_frame.len = 0;
+        arq->send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
+    }
+
+    if (emit_frame) {
+        void *seg;
+        arq__send_wnd_t *sw = &arq->send_wnd;
+        arq__send_wnd_ptr_t *sp = &arq->send_wnd_ptr;
+        arq__send_frame_t *sf = &arq->send_frame;
+        arq__wnd_seg(&sw->w, sp->seq, sp->seg, &seg, &h.seg_len);
+        sf->len = arq__frame_write(&h, seg, arq->cfg.checksum_cb, sf->buf, sf->cap);
         arq__recv_wnd_ptr_next(&arq->recv_wnd_ptr, &arq->recv_wnd);
     }
     *out_backend_send_size = send_size;
