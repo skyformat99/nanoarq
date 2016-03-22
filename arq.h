@@ -159,6 +159,8 @@ typedef struct arq__frame_hdr_t
     arq_uint16_t cur_ack_vec;
     char rst;
     char fin;
+    char ack;
+    char seg;
 } arq__frame_hdr_t;
 
 void arq__frame_hdr_init(arq__frame_hdr_t *h);
@@ -291,6 +293,7 @@ typedef struct arq__recv_wnd_ptr_t
     arq_uint16_t seq;
     arq_uint16_t cur_ack_vec;
     arq_uchar_t pending;
+    arq_uchar_t valid;
 } arq__recv_wnd_ptr_t;
 
 void arq__recv_wnd_ptr_init(arq__recv_wnd_ptr_t *p);
@@ -466,26 +469,18 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_time_t *out_next_poll)
 {
     arq__frame_hdr_t h;
-    int send_size = 0;
-    int emit_frame = 0;
+    int send_size = 0, emit_frame = 0, emit_seg = 0;
     if (!arq || !out_backend_send_size || !out_event || !out_next_poll) {
         return ARQ_ERR_INVALID_PARAM;
     }
     arq__frame_hdr_init(&h);
-    h.ack_num = (int)arq->recv_wnd_ptr.seq;
-    h.cur_ack_vec = arq->recv_wnd_ptr.cur_ack_vec;
-
-    /* receive the current frame into the receive window */
+    /* recv window */
     if (arq->recv_frame.state == ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT) {
         void const *seg;
-        arq__recv_frame_t *f = &arq->recv_frame;
         arq__frame_hdr_t rh;
-        arq__frame_read_result_t const ok = arq__frame_read(f->buf,
-                                                            f->len,
-                                                            arq->cfg.checksum_cb,
-                                                            &rh,
-                                                            &seg);
-        arq__recv_frame_rst(f);
+        arq__frame_read_result_t const ok =
+            arq__frame_read(arq->recv_frame.buf, arq->recv_frame.len, arq->cfg.checksum_cb, &rh, &seg);
+        arq__recv_frame_rst(&arq->recv_frame);
         if (ok == ARQ__FRAME_READ_RESULT_SUCCESS) {
             arq__recv_wnd_frame(&arq->recv_wnd,
                                 (unsigned)rh.seq_num,
@@ -494,28 +489,39 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                                 seg,
                                 (unsigned)rh.seg_len);
         }
+        arq__recv_wnd_ptr_next(&arq->recv_wnd_ptr, &arq->recv_wnd);
     }
-    /* step the send window and emit a frame */
+    if (arq->recv_wnd_ptr.valid) {
+        h.ack = 1;
+        h.ack_num = (int)arq->recv_wnd_ptr.seq;
+        h.cur_ack_vec = arq->recv_wnd_ptr.cur_ack_vec;
+        if (arq->recv_wnd_ptr.pending) {
+            emit_frame = 1;
+        }
+    }
+    /* send window */
     arq__send_wnd_step(&arq->send_wnd, dt);
-    if (arq->send_frame.state == ARQ__SEND_FRAME_STATE_RELEASED) {
+    if ((arq->send_frame.state == ARQ__SEND_FRAME_STATE_RELEASED) || !arq->send_wnd_ptr.valid) {
         unsigned const p_seq = arq->send_wnd_ptr.seq;
         if (arq__send_wnd_ptr_next(&arq->send_wnd_ptr, &arq->send_wnd)==ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG) {
             arq->send_wnd.rtx[p_seq % arq->send_wnd.w.cap] = arq->cfg.retransmission_timeout;
         }
         if (arq->send_wnd_ptr.valid) {
-            emit_frame = 1;
+            h.seq_num = arq->send_wnd_ptr.seq;
+            h.seg_id = arq->send_wnd_ptr.seg;
+            h.seg = emit_frame = emit_seg = 1;
         }
         arq->send_frame.len = 0;
         arq->send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     }
-
+    /* write out a frame */
     if (emit_frame) {
-        void *seg;
-        arq__send_wnd_t *sw = &arq->send_wnd;
-        arq__send_wnd_ptr_t *sp = &arq->send_wnd_ptr;
-        arq__send_frame_t *sf = &arq->send_frame;
-        arq__wnd_seg(&sw->w, sp->seq, sp->seg, &seg, &h.seg_len);
-        sf->len = arq__frame_write(&h, seg, arq->cfg.checksum_cb, sf->buf, sf->cap);
+        void *seg = ARQ_NULL_PTR;
+        if (emit_seg) {
+            arq__wnd_seg(&arq->send_wnd.w, (unsigned)h.seq_num, (unsigned)h.seg_id, &seg, &h.seg_len);
+        }
+        send_size = arq__frame_write(&h, seg, arq->cfg.checksum_cb, arq->send_frame.buf, arq->send_frame.cap);
+        arq->send_frame.len = send_size;
         arq__recv_wnd_ptr_next(&arq->recv_wnd_ptr, &arq->recv_wnd);
     }
     *out_backend_send_size = send_size;
@@ -686,7 +692,7 @@ int ARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *h, void *out_buf)
 
 int ARQ_MOCKABLE(arq__frame_seg_write)(void const *seg, void *out_buf, int len)
 {
-    ARQ_ASSERT(seg && out_buf && (len >= 0));
+    ARQ_ASSERT((len && seg && out_buf) || (!seg && (len == 0)) || (len == 0));
     ARQ_MEMCPY(out_buf, seg, len);
     return len;
 }
@@ -1080,6 +1086,7 @@ void ARQ_MOCKABLE(arq__recv_wnd_ptr_init)(arq__recv_wnd_ptr_t *p)
     p->seq = 0;
     p->cur_ack_vec = 0;
     p->pending = 0;
+    p->valid = 0;
 }
 
 void ARQ_MOCKABLE(arq__recv_wnd_ptr_next)(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t const *rw)
@@ -1096,11 +1103,13 @@ void ARQ_MOCKABLE(arq__recv_wnd_ptr_next)(arq__recv_wnd_ptr_t *p, arq__recv_wnd_
         unsigned const idx = seq % rw->w.cap;
         if (rw->ack[idx]) {
             rw->ack[idx] = 0;
-            p->pending = 1;
             p->seq = seq;
+            p->pending = 1;
+            p->valid = 1;
             break;
         }
     }
+    p->cur_ack_vec = rw->w.msg[p->seq % rw->w.cap].cur_ack_vec;
 }
 
 void ARQ_MOCKABLE(arq__recv_wnd_ptr_set)(arq__recv_wnd_ptr_t *p, unsigned seq, unsigned ack_vec)

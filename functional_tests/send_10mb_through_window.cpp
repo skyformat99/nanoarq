@@ -47,6 +47,7 @@ TEST(functional, send_10mb_through_window)
                   arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
                   arq.cfg.segment_length_in_bytes);
     arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
+    arq__recv_wnd_ptr_init(&arq.recv_wnd_ptr);
     arq__recv_wnd_rst(&arq.recv_wnd);
 
     std::vector< arq_uchar_t > input_data(1024 * 1024 * 10);

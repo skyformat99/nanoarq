@@ -24,12 +24,21 @@ TEST(recv_wnd_ptr, init_sets_ack_to_zero)
     arq__recv_wnd_ptr_init(&p);
     CHECK_EQUAL(0, p.seq);
 }
+
 TEST(recv_wnd_ptr, init_sets_pending_to_zero)
 {
     arq__recv_wnd_ptr_t p;
     p.pending = 123;
     arq__recv_wnd_ptr_init(&p);
     CHECK_EQUAL(0, p.pending);
+}
+
+TEST(recv_wnd_ptr, init_sets_valid_to_zero)
+{
+    arq__recv_wnd_ptr_t p;
+    p.valid = 123;
+    arq__recv_wnd_ptr_init(&p);
+    CHECK_EQUAL(0, p.valid);
 }
 
 struct Fixture

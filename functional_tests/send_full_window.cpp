@@ -47,6 +47,7 @@ TEST(functional, send_full_window)
                   arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
                   arq.cfg.segment_length_in_bytes);
     arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
+    arq__recv_wnd_ptr_init(&arq.recv_wnd_ptr);
     arq__recv_wnd_rst(&arq.recv_wnd);
     std::vector< unsigned char > send_test_data(send_wnd_buf.size());
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
@@ -63,7 +64,7 @@ TEST(functional, send_full_window)
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
     }
 
-    for (;;) {
+    while (recv_test_data.size() < send_test_data.size()) {
         unsigned char decode_buf[256];
         {
             arq_event_t event;
@@ -71,9 +72,7 @@ TEST(functional, send_full_window)
             int bytes_to_drain;
             arq_err_t e = arq_backend_poll(&arq, 0, &bytes_to_drain, &event, &next_poll);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-            if (bytes_to_drain == 0) {
-                break;
-            }
+            CHECK(bytes_to_drain > 0);
         }
 
         int size;
@@ -97,7 +96,7 @@ TEST(functional, send_full_window)
                                   (unsigned char const *)seg + h.seg_len);
         }
     }
-
+    CHECK_EQUAL(send_test_data.size(), recv_test_data.size());
     MEMCMP_EQUAL(send_test_data.data(), recv_test_data.data(), send_test_data.size());
 }
 

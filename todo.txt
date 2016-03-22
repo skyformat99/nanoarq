@@ -14,6 +14,8 @@ inter-byte and intra-frame timers
 
 correctness?
 ============
+unit tests for ack + seg flags in header, load / save
+unit test for recv wnd ptr valid => 1
 need an ACK bit? initial syn doesn't come with payload, can we fully NAK 0? ACK bit sounds easier.
 do we NAK sequence numbers off the top end of the recv window? or just ignore?
 if send window receives a NAK, should reset send window pointer if NAK is < current pointer seq/seg
