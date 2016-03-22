@@ -16,7 +16,8 @@ set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                 send_full_window.cpp
                                 send_10mb_through_window.cpp
                                 recv_full_window.cpp
-                                recv_10mb_through_window.cpp)
+                                recv_10mb_through_window.cpp
+                                transfer_full_window_one_way.cpp)
 
 string(REPLACE ";" " " ARQ_RUNTIME_FLAGS_STR "${ARQ_RUNTIME_FLAGS}")
 set_source_files_properties(arq_in_test_project.c PROPERTIES COMPILE_FLAGS "${ARQ_RUNTIME_FLAGS_STR}")

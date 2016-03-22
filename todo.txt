@@ -5,6 +5,8 @@ arq__send_wnd_init
 arq__recv_wnd_init
 hook the linear allocator up to the various data structures
 metrics on crc failures, bad frames (too long before cobs 0)
+backend_poll needs to return # of bytes ready to be recvd
+arq_select?
 
 timers:
 =======
