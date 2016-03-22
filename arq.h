@@ -510,7 +510,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
             arq__msg_t const *m = &arq->send_wnd.w.msg[arq->send_wnd_ptr.seq % arq->send_wnd.w.cap];
             h.seq_num = arq->send_wnd_ptr.seq;
             h.seg_id = arq->send_wnd_ptr.seg;
-            h.msg_len = (m->len + (arq->cfg.segment_length_in_bytes - 1)) / arq->cfg.segment_length_in_bytes;
+            h.msg_len = (m->len + arq->send_wnd.w.seg_len - 1) / arq->send_wnd.w.seg_len;
             h.seg = emit_frame = emit_seg = 1;
         }
         arq->send_frame.len = 0;
