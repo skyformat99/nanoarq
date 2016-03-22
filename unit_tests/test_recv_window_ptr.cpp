@@ -24,6 +24,13 @@ TEST(recv_wnd_ptr, init_sets_ack_to_zero)
     arq__recv_wnd_ptr_init(&p);
     CHECK_EQUAL(0, p.seq);
 }
+TEST(recv_wnd_ptr, init_sets_pending_to_zero)
+{
+    arq__recv_wnd_ptr_t p;
+    p.pending = 123;
+    arq__recv_wnd_ptr_init(&p);
+    CHECK_EQUAL(0, p.pending);
+}
 
 struct Fixture
 {
@@ -67,16 +74,55 @@ TEST(recv_wnd_ptr, next_sets_seq_to_base_if_ack_vector_all_zeroes_and_ptr_not_ba
     CHECK_EQUAL(f.rw.w.seq, f.p.seq);
 }
 
-TEST(recv_wnd_ptr, next_sets_ack_vector_element_to_zero)
+TEST(recv_wnd_ptr, next_sets_pending_to_zero_if_ack_vector_is_all_zeroes)
 {
     Fixture f;
-    f.p.seq = 3;
-    f.rw.ack[f.p.seq] = 1;
+    f.p.seq = 0;
+    f.p.pending = 1;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
-    CHECK_EQUAL(0, f.rw.ack[1234 % f.rw.w.cap]);
+    CHECK_EQUAL(0, f.p.pending);
 }
 
-TEST(recv_wnd_ptr, next_increments_ptr)
+TEST(recv_wnd_ptr, next_advances_to_first_nonzero_ack_entry)
+{
+    Fixture f;
+    f.p.seq = 0;
+    f.rw.ack[1] = 1;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(1, f.p.seq);
+}
+
+TEST(recv_wnd_ptr, next_sets_pending_to_1_upon_finding_nonzero_ack_entry)
+{
+    Fixture f;
+    f.p.seq = 0;
+    f.rw.ack[1] = 1;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(1, f.p.pending);
+}
+
+TEST(recv_wnd_ptr, next_sets_found_ack_element_to_zero)
+{
+    Fixture f;
+    f.p.seq = 0;
+    f.rw.ack[1] = 1;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(0, f.rw.ack[1]);
+}
+
+TEST(recv_wnd_ptr, next_skips_sequence_numbers_that_havent_been_received)
+{
+    Fixture f;
+    f.p.seq = 1;
+    f.rw.w.cap = 5;
+    f.rw.ack[1] = 0;
+    f.rw.ack[2] = 0;
+    f.rw.ack[3] = 1;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(3, f.p.seq);
+}
+
+TEST(recv_wnd_ptr, next_increments_nonzero_ptr)
 {
     Fixture f;
     f.p.seq = 2;
@@ -94,29 +140,18 @@ TEST(recv_wnd_ptr, next_increments_ack_ptr_and_wraps_around_if_max_seq)
     CHECK_EQUAL(0, f.p.seq);
 }
 
-TEST(recv_wnd_ptr, next_skips_sequence_numbers_that_havent_been_received)
+TEST(recv_wnd_ptr, next_starts_searching_for_ack_from_window_base_if_currently_out_of_bounds_before)
 {
     Fixture f;
-    f.p.seq = 1;
-    f.rw.w.cap = 5;
-    f.rw.ack[1] = 0;
-    f.rw.ack[2] = 0;
-    f.rw.ack[3] = 1;
-    arq__recv_wnd_ptr_next(&f.p, &f.rw);
-    CHECK_EQUAL(3, f.p.seq);
-}
-
-TEST(recv_wnd_ptr, next_returns_dropped_ack_sequence_number)
-{
-    Fixture f;
-    f.rw.w.cap = 8;
     f.rw.w.seq = 8;
-    f.p.seq = 4;
+    f.rw.ack[8] = 1;
+    f.rw.ack[7] = 1;
+    f.p.seq = 6;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
-    //CHECK_EQUAL(4, ack_seq);
+    CHECK_EQUAL(8, f.p.seq);
 }
 
-TEST(recv_wnd_ptr, next_returns_dropped_ack_sequence_number_when_dropped_seq_wraps_around_seq_space)
+TEST(recv_wnd_ptr, next_starts_searching_for_ack_from_window_base_if_currently_out_of_bounds_after)
 {
     Fixture f;
     f.rw.w.cap = 8;
@@ -155,6 +190,40 @@ TEST(recv_wnd_ptr, next_sets_ptr_to_window_base_seq_from_dropped_ack_seq_num_wra
     f.p.seq = ARQ__FRAME_MAX_SEQ_NUM;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
     CHECK_EQUAL(6, f.p.seq);
+}
+
+TEST(recv_wnd_ptr, next_sets_pending_to_0_when_starting_out_of_bounds_and_all_zero_ack_vector)
+{
+    Fixture f;
+    f.rw.w.seq = 5;
+    f.p.seq = 0;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(0, f.p.pending);
+}
+
+TEST(recv_wnd_ptr, next_sets_pending_to_1_when_starting_out_of_bounds_and_1_in_ack_vector)
+{
+    Fixture f;
+    f.rw.w.seq = 5;
+    f.rw.ack[5] = 1;
+    f.p.seq = 0;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(1, f.p.pending);
+}
+
+TEST(recv_wnd_ptr, set_sets_seq_and_ack)
+{
+    arq__recv_wnd_ptr_t p;
+    p.seq = p.cur_ack_vec = p.pending = 0xAA;
+    arq__recv_wnd_ptr_set(&p, 12, 34);
+}
+
+TEST(recv_wnd_ptr, set_sets_pending_to_1)
+{
+    arq__recv_wnd_ptr_t p;
+    p.pending = 0;
+    arq__recv_wnd_ptr_set(&p, 0, 0);
+    CHECK_EQUAL(1, p.pending);
 }
 
 }
