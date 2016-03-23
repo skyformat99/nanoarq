@@ -1,62 +1,7 @@
 #include "functional_tests.h"
+#include "arq_context.h"
 
 namespace {
-
-struct ArqContext
-{
-    explicit ArqContext(arq_cfg_t const &config)
-    {
-        arq.cfg = config;
-
-        send_wnd_buf.resize(send_wnd_msgs.size() *
-                            arq.cfg.segment_length_in_bytes *
-                            arq.cfg.message_length_in_segments);
-
-        recv_wnd_buf.resize(recv_wnd_msgs.size() *
-                            arq.cfg.segment_length_in_bytes *
-                            arq.cfg.message_length_in_segments);
-
-        arq.cfg.checksum_cb = &arq_crc32;
-        arq.send_wnd.w.msg = send_wnd_msgs.data();
-        arq.send_wnd.w.buf = send_wnd_buf.data();
-        arq.send_frame.buf = send_frame.data();
-        arq.send_wnd.rtx = rtx_timers.data();
-
-        arq.recv_wnd.ack = recv_wnd_ack.data();
-        arq.recv_wnd.w.msg = recv_wnd_msgs.data();
-        arq.recv_wnd.w.buf = recv_wnd_buf.data();
-
-        arq__wnd_init(&arq.send_wnd.w,
-                      send_wnd_msgs.size(),
-                      arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
-                      arq.cfg.segment_length_in_bytes);
-        arq__send_frame_init(&arq.send_frame, send_frame.size());
-        arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
-        arq__wnd_init(&arq.recv_wnd.w,
-                      recv_wnd_msgs.size(),
-                      arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
-                      arq.cfg.segment_length_in_bytes);
-        arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
-        arq__recv_wnd_ptr_init(&arq.recv_wnd_ptr);
-        arq__recv_wnd_rst(&arq.recv_wnd);
-    }
-
-    ~ArqContext() = default;
-
-    arq_t arq;
-    std::array< arq__msg_t, 16 > send_wnd_msgs;
-    std::array< arq_time_t, 16 > rtx_timers;
-    std::array< unsigned char, 256 > send_frame;
-    std::vector< unsigned char > send_wnd_buf;
-    std::vector< unsigned char > recv_wnd_buf;
-    std::array< unsigned char, 256 > recv_frame;
-    std::array< arq__msg_t, 16 > recv_wnd_msgs;
-    std::array< arq_uchar_t, 16 > recv_wnd_ack;
-
-    ArqContext() = delete;
-    ArqContext(ArqContext const &) = delete;
-    ArqContext &operator =(ArqContext const &) = delete;
-};
 
 TEST(functional, transfer_full_window_one_way)
 {
@@ -64,6 +9,7 @@ TEST(functional, transfer_full_window_one_way)
     config.segment_length_in_bytes = 220;
     config.message_length_in_segments = 4;
     config.retransmission_timeout = 100;
+    config.checksum_cb = &arq_crc32;
 
     ArqContext sender(config), receiver(config);
 

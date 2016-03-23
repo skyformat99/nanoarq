@@ -12,12 +12,15 @@ set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                 functional_tests.h
                                 arq_in_functional_tests.h
                                 arq_in_functional_tests.c
+                                arq_context.h
+                                arq_context.cpp
                                 frame_serialization.cpp
                                 send_full_window.cpp
                                 send_10mb_through_window.cpp
                                 recv_full_window.cpp
                                 recv_10mb_through_window.cpp
-                                transfer_full_window_one_way.cpp)
+                                transfer_full_window_one_way.cpp
+                                transfer_10mb_one_way.cpp)
 
 string(REPLACE ";" " " ARQ_RUNTIME_FLAGS_STR "${ARQ_RUNTIME_FLAGS}")
 set_source_files_properties(arq_in_test_project.c PROPERTIES COMPILE_FLAGS "${ARQ_RUNTIME_FLAGS_STR}")
