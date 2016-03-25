@@ -22,7 +22,7 @@ need an ACK bit? initial syn doesn't come with payload, can we fully NAK 0? ACK 
 do we NAK sequence numbers off the top end of the recv window? or just ignore?
 if send window receives a NAK, should reset send window pointer if NAK is < current pointer seq/seg
 where / when do send + recv wnd ptrs get reset?
-ARQ_ERR_NEED_POLL
+ARQ_ERR_NEED_POLL after send_ptr_release
 
 optimizations:
 ==============

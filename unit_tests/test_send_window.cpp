@@ -469,9 +469,10 @@ TEST(send_wnd, flush_does_nothing_if_current_message_has_zero_length)
     CHECK_EQUAL(2, f.sw.w.size);
 }
 
-TEST(send_wnd, flush_increments_size_if_current_message_has_nonzero_length)
+TEST(send_wnd, flush_does_not_increment_size_if_current_message_has_nonzero_length)
 {
     Fixture f;
+    f.sw.w.size = 1;
     f.msg[0].len = 12;
     arq__send_wnd_flush(&f.sw);
     CHECK_EQUAL(1, f.sw.w.size);
@@ -519,6 +520,15 @@ TEST(send_wnd, flush_acts_on_final_incomplete_message)
     f.msg[2].len = 1;
     arq__send_wnd_flush(&f.sw);
     CHECK_EQUAL(0b1, f.msg[2].full_ack_vec);
+}
+
+TEST(send_wnd, flush_sets_associated_rtx_to_zero)
+{
+    Fixture f;
+    f.msg[0].len = 10;
+    f.rtx[0] = 100;
+    arq__send_wnd_flush(&f.sw);
+    CHECK_EQUAL(0, f.rtx[0]);
 }
 
 TEST(send_wnd, step_decrements_first_timer_in_window_by_dt)

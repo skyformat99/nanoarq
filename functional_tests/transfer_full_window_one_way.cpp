@@ -3,7 +3,7 @@
 
 namespace {
 
-TEST(functional, transfer_full_window_one_way)
+TEST(functional, transfer_full_window_one_way_manual_acks)
 {
     arq_cfg_t config;
     config.segment_length_in_bytes = 220;
