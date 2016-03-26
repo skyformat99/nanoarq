@@ -1,6 +1,6 @@
 #pragma once
-
 #include "arq_in_functional_tests.h"
+#include "arq_context.h"
 #include <CppUTest/TestHarness.h>
 #include <vector>
 #include <array>

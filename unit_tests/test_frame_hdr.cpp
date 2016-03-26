@@ -33,6 +33,8 @@ TEST(frame_hdr, init_sets_all_fields_to_zero)
     CHECK_EQUAL(0, h.cur_ack_vec);
     CHECK_EQUAL(0, h.rst);
     CHECK_EQUAL(0, h.fin);
+    CHECK_EQUAL(0, h.ack);
+    CHECK_EQUAL(0, h.seg);
 }
 
 struct ReadFixture
@@ -87,6 +89,28 @@ TEST(frame_hdr, read_fin_flag)
     CHECK_EQUAL(0, (int)f.h.fin);
 }
 
+TEST(frame_hdr, read_ack_flag)
+{
+    ReadFixture f;
+    f.buf[2] = 1 << 2;
+    arq__frame_hdr_read(f.buf, &f.h);
+    CHECK_EQUAL(1, (int)f.h.ack);
+    f.buf[2] = 0;
+    arq__frame_hdr_read(f.buf, &f.h);
+    CHECK_EQUAL(0, (int)f.h.ack);
+}
+
+TEST(frame_hdr, read_seg_flag)
+{
+    ReadFixture f;
+    f.buf[2] = 1 << 3;
+    arq__frame_hdr_read(f.buf, &f.h);
+    CHECK_EQUAL(1, (int)f.h.seg);
+    f.buf[2] = 0;
+    arq__frame_hdr_read(f.buf, &f.h);
+    CHECK_EQUAL(0, (int)f.h.seg);
+}
+
 TEST(frame_hdr, read_window_size)
 {
     ReadFixture f;
@@ -131,6 +155,8 @@ struct WriteFixture
         h.seg_len = SegmentLength;
         h.rst = 0;
         h.fin = 0;
+        h.seg = 0;
+        h.ack = 0;
         h.win_size = WindowSize;
         h.seq_num = SequenceNumber;
         h.msg_len = MessageLength;
@@ -161,7 +187,7 @@ TEST(frame_hdr, write_rst_flag)
     WriteFixture f;
     f.h.rst = 1;
     arq__frame_hdr_write(&f.h, f.buf);
-    CHECK_EQUAL(2, f.buf[2] & 2);
+    CHECK(f.buf[2] & 2);
     f.h.rst = 0;
     arq__frame_hdr_write(&f.h, f.buf);
     CHECK_EQUAL(0, f.buf[2] & 2);
@@ -172,10 +198,32 @@ TEST(frame_hdr, write_fin_flag)
     WriteFixture f;
     f.h.fin = 1;
     arq__frame_hdr_write(&f.h, f.buf);
-    CHECK_EQUAL(1, f.buf[2] & 1);
+    CHECK(f.buf[2] & 1);
     f.h.fin = 0;
     arq__frame_hdr_write(&f.h, f.buf);
     CHECK_EQUAL(0, f.buf[2] & 1);
+}
+
+TEST(frame_hdr, write_ack_flag)
+{
+    WriteFixture f;
+    f.h.ack = 1;
+    arq__frame_hdr_write(&f.h, f.buf);
+    CHECK(f.buf[2] & 4);
+    f.h.ack = 0;
+    arq__frame_hdr_write(&f.h, f.buf);
+    CHECK_EQUAL(0, f.buf[2] & 4);
+}
+
+TEST(frame_hdr, write_seg_flag)
+{
+    WriteFixture f;
+    f.h.seg = 1;
+    arq__frame_hdr_write(&f.h, f.buf);
+    CHECK(f.buf[2] & 8);
+    f.h.seg = 0;
+    arq__frame_hdr_write(&f.h, f.buf);
+    CHECK_EQUAL(0, f.buf[2] & 8);
 }
 
 TEST(frame_hdr, write_window_size)

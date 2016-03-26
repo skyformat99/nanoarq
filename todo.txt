@@ -5,6 +5,8 @@ arq__send_wnd_init
 arq__recv_wnd_init
 hook the linear allocator up to the various data structures
 metrics on crc failures, bad frames (too long before cobs 0)
+backend_poll needs to return # of bytes ready to be recvd
+arq_select?
 
 timers:
 =======
@@ -14,11 +16,14 @@ inter-byte and intra-frame timers
 
 correctness?
 ============
+unit tests for ack + seg flags in header, load / save
+unit test for recv wnd ptr valid => 1
 need an ACK bit? initial syn doesn't come with payload, can we fully NAK 0? ACK bit sounds easier.
 do we NAK sequence numbers off the top end of the recv window? or just ignore?
 if send window receives a NAK, should reset send window pointer if NAK is < current pointer seq/seg
 where / when do send + recv wnd ptrs get reset?
-ARQ_ERR_NEED_POLL
+ARQ_ERR_NEED_POLL after send_ptr_release
+"if ((sf->state == ARQ__SEND_FRAME_STATE_RELEASED) || !sp->valid) {" is fishy (send poll)
 
 optimizations:
 ==============
