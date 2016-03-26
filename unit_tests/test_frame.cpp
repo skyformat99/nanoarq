@@ -190,6 +190,14 @@ TEST(frame, write_seg_copies_segment_into_buffer)
     MEMCMP_EQUAL(f.seg, f.frame, sizeof(f.seg));
 }
 
+TEST(frame, write_seg_tolerant_of_null_seg_if_len_is_0)
+{
+    Fixture f;
+    f.frame[0] = 0xFF;
+    arq__frame_seg_write(nullptr, f.frame, 0);
+    CHECK_EQUAL(0xFF, (arq_uchar_t)f.frame[0]);
+}
+
 TEST(frame, checksum_write_computes_checksum_over_range_starting_at_offset_1)
 {
     MockFixture f;

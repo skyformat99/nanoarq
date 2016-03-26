@@ -33,6 +33,8 @@ TEST(frame_hdr, init_sets_all_fields_to_zero)
     CHECK_EQUAL(0, h.cur_ack_vec);
     CHECK_EQUAL(0, h.rst);
     CHECK_EQUAL(0, h.fin);
+    CHECK_EQUAL(0, h.ack);
+    CHECK_EQUAL(0, h.seg);
 }
 
 struct ReadFixture

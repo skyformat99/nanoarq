@@ -23,6 +23,7 @@ do we NAK sequence numbers off the top end of the recv window? or just ignore?
 if send window receives a NAK, should reset send window pointer if NAK is < current pointer seq/seg
 where / when do send + recv wnd ptrs get reset?
 ARQ_ERR_NEED_POLL after send_ptr_release
+"if ((sf->state == ARQ__SEND_FRAME_STATE_RELEASED) || !sp->valid) {" is fishy (send poll)
 
 optimizations:
 ==============
