@@ -93,9 +93,9 @@ struct Fixture
     arq_time_t time;
 };
 
-struct DefaultMockSendPollFixture : Fixture
+struct DefaultMocksFixture : Fixture
 {
-    DefaultMockSendPollFixture()
+    DefaultMocksFixture()
     {
         void *msp = reinterpret_cast< void * >(&MockSendPoll<0, 0, false>);
         ARQ_MOCK_HOOK(arq__send_poll, msp);
@@ -104,7 +104,7 @@ struct DefaultMockSendPollFixture : Fixture
 
 TEST(poll, invalid_params)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_poll(nullptr, 0, &f.send_size, &f.event,  &f.time));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_poll(&f.arq,  0, nullptr,      &f.event,  &f.time));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_poll(&f.arq,  0, &f.send_size, nullptr,   &f.time));
@@ -113,7 +113,7 @@ TEST(poll, invalid_params)
 
 TEST(poll, initializes_frame_header)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     mock().expectOneCall("arq__frame_hdr_init").ignoreOtherParameters();
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 1, &f.send_size, &f.event, &f.time);
@@ -121,7 +121,7 @@ TEST(poll, initializes_frame_header)
 
 TEST(poll, calls_recv_poll_with_arq_context)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     f.arq.cfg.checksum_cb = (arq_checksum_cb_t)0x12345678;
     mock().expectOneCall("arq__recv_poll").withParameter("rw", &f.arq.recv_wnd)
                                           .withParameter("f", &f.arq.recv_frame)
@@ -134,7 +134,7 @@ TEST(poll, calls_recv_poll_with_arq_context)
 
 TEST(poll, calls_send_poll_with_arq_context)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     f.arq.cfg.retransmission_timeout = 7654;
     int const dt = 1234;
     mock().expectOneCall("arq__send_poll").withParameter("sw", &f.arq.send_wnd)
@@ -149,7 +149,7 @@ TEST(poll, calls_send_poll_with_arq_context)
 
 TEST(poll, writes_send_frame_length_to_output_size_parameter)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     mock().ignoreOtherCalls();
     f.arq.send_frame.len = 1234;
     arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
@@ -164,10 +164,12 @@ TEST(poll, loads_segment_from_send_window_if_header_segment_flag_is_set)
         ARQ_MOCK_HOOK(arq__send_poll, msp);
     }
 
+    int out_seg_len = 1234;
     mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__wnd_seg").withParameter("w", &f.arq.send_wnd)
                                         .withParameter("seq", 12)
                                         .withParameter("seg", 34)
+                                        .withOutputParameterReturning("out_seg_len", &out_seg_len, sizeof(int))
                                         .ignoreOtherParameters();
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
@@ -175,7 +177,7 @@ TEST(poll, loads_segment_from_send_window_if_header_segment_flag_is_set)
 
 TEST(poll, doesnt_load_segment_from_send_window_if_header_segment_flag_isnt_set)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     mock().expectOneCall("arq__frame_hdr_init").ignoreOtherParameters();
     mock().expectOneCall("arq__recv_poll").ignoreOtherParameters();
     mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(1);
@@ -186,7 +188,7 @@ TEST(poll, doesnt_load_segment_from_send_window_if_header_segment_flag_isnt_set)
 
 TEST(poll, emits_a_frame_if_send_poll_returns_one)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     f.arq.send_frame.cap = 123;
     mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__frame_write").withParameter("checksum", (void *)f.arq.cfg.checksum_cb)
@@ -199,7 +201,7 @@ TEST(poll, emits_a_frame_if_send_poll_returns_one)
 
 TEST(poll, emits_a_frame_if_recv_poll_returns_one)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     mock().expectOneCall("arq__recv_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__frame_write").ignoreOtherParameters();
     mock().ignoreOtherCalls();
@@ -208,7 +210,7 @@ TEST(poll, emits_a_frame_if_recv_poll_returns_one)
 
 TEST(poll, frame_write_return_value_becomes_send_frame_length)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     f.arq.send_frame.cap = 123;
     mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__frame_write").withParameter("checksum", (void *)f.arq.cfg.checksum_cb)
@@ -223,7 +225,7 @@ TEST(poll, frame_write_return_value_becomes_send_frame_length)
 
 TEST(poll, advances_recv_wnd_ptr_if_emitting_frame)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     f.arq.send_frame.cap = 123;
     mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__recv_wnd_ptr_next").withParameter("p", &f.arq.recv_wnd_ptr)
@@ -234,7 +236,7 @@ TEST(poll, advances_recv_wnd_ptr_if_emitting_frame)
 
 TEST(poll, returns_ok_completed)
 {
-    DefaultMockSendPollFixture f;
+    DefaultMocksFixture f;
     mock().ignoreOtherCalls();
     arq_err_t const e = arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
     CHECK_EQUAL(ARQ_OK_COMPLETED, e);
