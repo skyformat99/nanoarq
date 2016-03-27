@@ -320,7 +320,8 @@ int arq__recv_poll(arq__recv_wnd_t *rw,
                    arq__recv_frame_t *rf,
                    arq__recv_wnd_ptr_t *rp,
                    arq_checksum_cb_t checksum,
-                   arq__frame_hdr_t *h);
+                   arq__frame_hdr_t *sendh,
+                   arq__frame_hdr_t *recvh);
 
 typedef struct arq_t
 {
@@ -465,27 +466,28 @@ int ARQ_MOCKABLE(arq__recv_poll)(arq__recv_wnd_t *rw,
                                  arq__recv_frame_t *rf,
                                  arq__recv_wnd_ptr_t *rp,
                                  arq_checksum_cb_t checksum,
-                                 arq__frame_hdr_t *h)
+                                 arq__frame_hdr_t *sendh,
+                                 arq__frame_hdr_t *recvh)
 {
+    ARQ_ASSERT(rw && rf && rp && checksum && sendh && recvh);
     if (rf->state == ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT) {
         void const *seg;
-        arq__frame_hdr_t rh;
-        arq__frame_read_result_t const ok = arq__frame_read(rf->buf, rf->len, checksum, &rh, &seg);
+        arq__frame_read_result_t const ok = arq__frame_read(rf->buf, rf->len, checksum, recvh, &seg);
         arq__recv_frame_rst(rf);
         if (ok == ARQ__FRAME_READ_RESULT_SUCCESS) {
             arq__recv_wnd_frame(rw,
-                                (unsigned)rh.seq_num,
-                                (unsigned)rh.seg_id,
-                                (unsigned)rh.msg_len,
+                                (unsigned)recvh->seq_num,
+                                (unsigned)recvh->seg_id,
+                                (unsigned)recvh->msg_len,
                                 seg,
-                                (unsigned)rh.seg_len);
+                                (unsigned)recvh->seg_len);
         }
         arq__recv_wnd_ptr_next(rp, rw);
     }
     if (rp->valid) {
-        h->ack = 1;
-        h->ack_num = (int)rp->seq;
-        h->cur_ack_vec = rp->cur_ack_vec;
+        sendh->ack = 1;
+        sendh->ack_num = (int)rp->seq;
+        sendh->cur_ack_vec = rp->cur_ack_vec;
         if (rp->pending) {
             return 1;
         }
@@ -525,27 +527,36 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_event_t *out_event,
                            arq_time_t *out_next_poll)
 {
-    arq__frame_hdr_t h;
+    arq__frame_hdr_t sendh, recvh;
     int emit = 0;
     if (!arq || !out_backend_send_size || !out_event || !out_next_poll) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    arq__frame_hdr_init(&h);
-    emit |= arq__recv_poll(&arq->recv_wnd, &arq->recv_frame, &arq->recv_wnd_ptr, arq->cfg.checksum_cb, &h);
+    arq__frame_hdr_init(&sendh);
+    emit |= arq__recv_poll(&arq->recv_wnd,
+                           &arq->recv_frame,
+                           &arq->recv_wnd_ptr,
+                           arq->cfg.checksum_cb,
+                           &sendh,
+                           &recvh);
     emit |= arq__send_poll(&arq->send_wnd,
                            &arq->send_frame,
                            &arq->send_wnd_ptr,
-                           &h,
+                           &sendh,
                            dt,
                            arq->cfg.retransmission_timeout);
     if (emit) {
         void *seg = ARQ_NULL_PTR;
-        if (h.seg) {
-            arq__wnd_seg(&arq->send_wnd.w, (unsigned)h.seq_num, (unsigned)h.seg_id, &seg, &h.seg_len);
-            ARQ_ASSERT(h.seg_len);
+        if (sendh.seg) {
+            arq__wnd_seg(&arq->send_wnd.w,
+                         (unsigned)sendh.seq_num,
+                         (unsigned)sendh.seg_id,
+                         &seg,
+                         &sendh.seg_len);
+            ARQ_ASSERT(sendh.seg_len);
         }
         arq->send_frame.len =
-            arq__frame_write(&h, seg, arq->cfg.checksum_cb, arq->send_frame.buf, arq->send_frame.cap);
+            arq__frame_write(&sendh, seg, arq->cfg.checksum_cb, arq->send_frame.buf, arq->send_frame.cap);
         arq__recv_wnd_ptr_next(&arq->recv_wnd_ptr, &arq->recv_wnd);
     }
     *out_backend_send_size = arq->send_frame.len;
