@@ -11,17 +11,19 @@ template< int SequenceNumber, int SegmentID, bool SegmentPresent >
 int MockSendPoll(arq__send_wnd_t *sw,
                  arq__send_frame_t *f,
                  arq__send_wnd_ptr_t *p,
-                 arq__frame_hdr_t *h,
+                 arq__frame_hdr_t *sh,
+                 arq__frame_hdr_t *rh,
                  arq_time_t dt,
                  arq_time_t rtx)
 {
-    h->seq_num = SequenceNumber;
-    h->seg_id = SegmentID;
-    h->seg = SegmentPresent;
+    sh->seq_num = SequenceNumber;
+    sh->seg_id = SegmentID;
+    sh->seg = SegmentPresent;
     return mock().actualCall("arq__send_poll").withParameter("sw", sw)
                                               .withParameter("p", p)
                                               .withParameter("f", f)
-                                              .withParameter("h", h)
+                                              .withParameter("sh", sh)
+                                              .withParameter("rh", rh)
                                               .withParameter("dt", dt)
                                               .withParameter("rtx", rtx)
                                               .returnIntValue();
@@ -111,10 +113,10 @@ TEST(poll, invalid_params)
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_poll(&f.arq,  0, &f.send_size, &f.event,  nullptr));
 }
 
-TEST(poll, initializes_frame_header)
+TEST(poll, initializes_frame_headers)
 {
     DefaultMocksFixture f;
-    mock().expectOneCall("arq__frame_hdr_init").ignoreOtherParameters();
+    mock().expectNCalls(2, "arq__frame_hdr_init").ignoreOtherParameters();
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 1, &f.send_size, &f.event, &f.time);
 }
@@ -178,7 +180,7 @@ TEST(poll, loads_segment_from_send_window_if_header_segment_flag_is_set)
 TEST(poll, doesnt_load_segment_from_send_window_if_header_segment_flag_isnt_set)
 {
     DefaultMocksFixture f;
-    mock().expectOneCall("arq__frame_hdr_init").ignoreOtherParameters();
+    mock().expectNCalls(2, "arq__frame_hdr_init").ignoreOtherParameters();
     mock().expectOneCall("arq__recv_poll").ignoreOtherParameters();
     mock().expectOneCall("arq__send_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__frame_write").ignoreOtherParameters();

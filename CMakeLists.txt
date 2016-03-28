@@ -56,7 +56,7 @@ function(arq_add_test TEST_TARGET_EXECUTABLE)
     set(TEST_TIMESTAMP_FILE ${CMAKE_CURRENT_BINARY_DIR}/${TEST_TARGET_EXECUTABLE}_tests.timestamp)
     add_custom_target(RUN_${TEST_TARGET_EXECUTABLE}_TESTS ALL DEPENDS ${TEST_TIMESTAMP_FILE})
     add_custom_command(OUTPUT ${TEST_TIMESTAMP_FILE}
-                       COMMAND ${TEST_TARGET_EXECUTABLE} && touch ${TEST_TIMESTAMP_FILE}
+                       COMMAND ${TEST_TARGET_EXECUTABLE} && ${CMAKE_COMMAND} -E touch ${TEST_TIMESTAMP_FILE}
                        DEPENDS ${TEST_TARGET_EXECUTABLE}
                        COMMENT "Running ${TEST_TARGET_EXECUTABLE}")
 endfunction()
