@@ -8,7 +8,7 @@ TEST(functional, send_full_window)
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
-    cfg.checksum_cb = &arq_crc32;
+    cfg.checksum = &arq_crc32;
 
     ArqContext ctx(cfg);
 
@@ -52,7 +52,7 @@ TEST(functional, send_full_window)
             void const *seg;
             arq__frame_hdr_t h;
             arq__frame_read_result_t const r =
-                arq__frame_read(decode_buf, size, cfg.checksum_cb, &h, &seg);
+                arq__frame_read(decode_buf, size, cfg.checksum, &h, &seg);
             CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
             recv_test_data.insert(std::end(recv_test_data),
                                   (unsigned char const *)seg,

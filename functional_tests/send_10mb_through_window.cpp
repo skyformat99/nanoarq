@@ -8,7 +8,7 @@ TEST(functional, send_10mb_through_window)
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
-    cfg.checksum_cb = &arq_crc32;
+    cfg.checksum = &arq_crc32;
 
     ArqContext ctx(cfg);
 
@@ -76,7 +76,7 @@ TEST(functional, send_10mb_through_window)
                     arq__frame_hdr_t h;
                     arq__frame_read_result_t const r = arq__frame_read(frame.data(),
                                                                        frame_len,
-                                                                       cfg.checksum_cb,
+                                                                       cfg.checksum,
                                                                        &h,
                                                                        (void const **)&seg);
                     CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);

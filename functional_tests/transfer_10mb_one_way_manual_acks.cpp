@@ -9,7 +9,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
-    cfg.checksum_cb = &arq_crc32;
+    cfg.checksum = &arq_crc32;
 
     ArqContext sender(cfg), receiver(cfg);
 
@@ -80,7 +80,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
                 void const *seg;
                 arq__frame_hdr_t h;
                 arq__frame_read_result_t const r =
-                    arq__frame_read(decode.data(), frame_len, cfg.checksum_cb, &h, &seg);
+                    arq__frame_read(decode.data(), frame_len, cfg.checksum, &h, &seg);
                 CHECK(ARQ_SUCCEEDED(r));
                 unsigned const ack_vec = (1 << (h.seg_id + 1)) - 1u;
                 arq__send_wnd_ack(&sender.arq.send_wnd, h.seq_num, ack_vec);

@@ -9,7 +9,7 @@ TEST(functional, ack_one_message)
     cfg.segment_length_in_bytes = 128;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
-    cfg.checksum_cb = &arq_crc32;
+    cfg.checksum = &arq_crc32;
 
     ArqContext sender(cfg), receiver(cfg);
 

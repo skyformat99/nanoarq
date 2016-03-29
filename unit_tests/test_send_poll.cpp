@@ -76,23 +76,13 @@ TEST(send_poll, calls_step_with_dt)
     arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, dt, f.rtx_timeout);
 }
 
-TEST(send_poll, returns_zero_after_stepping_if_send_ptr_valid_and_frame_not_released)
+TEST(send_poll, returns_zero_after_stepping_if_send_frame_in_use)
 {
     Fixture f;
     f.p.valid = 1;
     f.f.state = ARQ__SEND_FRAME_STATE_HELD;
     mock().expectOneCall("arq__send_wnd_step").ignoreOtherParameters();
-    int const emit = arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 1, f.rtx_timeout);
-    CHECK_EQUAL(0, emit);
-}
-
-TEST(send_poll, returns_zero_after_stepping_if_send_ptr_not_acquired_and_ptr_valid)
-{
-    Fixture f;
-    f.p.valid = 1;
-    f.f.state = ARQ__SEND_FRAME_STATE_FREE;
-    mock().expectOneCall("arq__send_wnd_step").ignoreOtherParameters();
-    int const emit = arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 10, f.rtx_timeout);
+    int const emit = arq__send_poll(&f.sw, &f.f, &f.p, nullptr, &f.rh, 1, f.rtx_timeout);
     CHECK_EQUAL(0, emit);
 }
 
@@ -104,7 +94,7 @@ struct ExpectSendWndStepFixture : Fixture
     }
 };
 
-TEST(send_poll, advances_send_wnd_ptr_if_frame_is_ready)
+TEST(send_poll, advances_send_wnd_ptr_if_frame_is_available)
 {
     ExpectSendWndStepFixture f;
     mock().expectOneCall("arq__send_wnd_ptr_next")
@@ -139,42 +129,11 @@ struct ExpectSendWndPtrNextFixture : ExpectSendWndStepFixture
     }
 };
 
-TEST(send_poll, resets_send_frame)
-{
-    ExpectSendWndPtrNextFixture f;
-    f.f.len = 1;
-    f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
-    arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 10, f.rtx_timeout);
-    CHECK_EQUAL(0, f.f.len);
-    CHECK_EQUAL(ARQ__SEND_FRAME_STATE_FREE, f.f.state);
-}
-
 TEST(send_poll, returns_zero_if_no_new_data_to_send)
 {
     ExpectSendWndPtrNextFixture f;
     int const emit = arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 10, f.rtx_timeout);
     CHECK_EQUAL(0, emit);
-}
-
-TEST(send_poll, zeroes_frame_length_if_frame_was_released)
-{
-    ExpectSendWndPtrNextFixture f;
-    f.p.valid = 1;
-    f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
-    f.f.len = 123;
-    mock().ignoreOtherCalls();
-    arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 10, f.rtx_timeout);
-    CHECK_EQUAL(0, f.f.len);
-}
-
-TEST(send_poll, resets_frame_state_if_frame_was_released)
-{
-    ExpectSendWndPtrNextFixture f;
-    f.p.valid = 1;
-    f.f.state = ARQ__SEND_FRAME_STATE_RELEASED;
-    mock().ignoreOtherCalls();
-    arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 10, f.rtx_timeout);
-    CHECK_EQUAL(ARQ__SEND_FRAME_STATE_FREE, f.f.state);
 }
 
 TEST(send_poll, sets_seg_flag_if_send_ptr_valid)

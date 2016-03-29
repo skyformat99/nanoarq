@@ -8,7 +8,7 @@ TEST(functional, recv_full_window)
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
-    cfg.checksum_cb = &arq_crc32;
+    cfg.checksum = &arq_crc32;
 
     ArqContext ctx(cfg);
 
@@ -31,6 +31,7 @@ TEST(functional, recv_full_window)
 
     size_t test_input_offset = 0;
     while (test_input_offset < test_input.size()) {
+        h.seg = 1;
         h.seg_len = arq__min(cfg.segment_length_in_bytes, test_input.size() - test_input_offset);
         frame.resize(arq__frame_len(h.seg_len));
 

@@ -8,7 +8,7 @@ TEST(functional, recv_10mb_through_window)
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
-    cfg.checksum_cb = &arq_crc32;
+    cfg.checksum = &arq_crc32;
 
     ArqContext ctx(cfg);
 
@@ -30,6 +30,7 @@ TEST(functional, recv_10mb_through_window)
     while (test_output.size() < test_input.size()) {
         while (ctx.arq.recv_wnd.w.size < ctx.arq.recv_wnd.w.cap) {
             for (int seg = 0; seg < cfg.message_length_in_segments; ++seg) {
+                h.seg = 1;
                 h.seg_len = arq__min(cfg.segment_length_in_bytes, test_input.size() - test_input_offset);
                 h.seg_id = seg;
 
