@@ -99,7 +99,20 @@ TEST(functional, ack_one_message)
         CHECK(ARQ_SUCCEEDED(e));
     }
 
+    // drain the receiver's receive window
+    {
+        std::array< arq_uchar_t, 128 > data;
+        int bytes_read;
+        do {
+            arq_err_t const e = arq_recv(&receiver.arq, data.data(), data.size(), &bytes_read);
+            CHECK(ARQ_SUCCEEDED(e));
+            std::copy(data.data(), data.data() + bytes_read, std::back_inserter(recv_test_data));
+        } while (bytes_read);
+    }
+
     CHECK_EQUAL(0, sender.arq.send_wnd.w.size);
+    CHECK_EQUAL(send_test_data.size(), recv_test_data.size());
+    MEMCMP_EQUAL(recv_test_data.data(), send_test_data.data(), send_test_data.size());
 }
 
 }
