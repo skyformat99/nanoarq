@@ -42,6 +42,7 @@ TEST(backend_send, send_ptr_get_writes_zero_and_null_when_nothing_to_send)
     Fixture f;
     f.send = (void *)1;
     f.size = 1;
+    f.arq.send_frame.len = 0;
     arq_backend_send_ptr_get(&f.arq, &f.send, &f.size);
     CHECK_EQUAL((void const *)NULL, f.send);
     CHECK_EQUAL(0, f.size);
@@ -50,6 +51,7 @@ TEST(backend_send, send_ptr_get_writes_zero_and_null_when_nothing_to_send)
 TEST(backend_send, send_ptr_get_sets_state_to_free_when_nothing_to_send)
 {
     Fixture f;
+    f.arq.send_frame.len = 0;
     f.arq.send_frame.state = (arq__send_frame_state_t)123;
     arq_backend_send_ptr_get(&f.arq, &f.send, &f.size);
     CHECK_EQUAL(ARQ__SEND_FRAME_STATE_FREE, f.arq.send_frame.state);
@@ -83,7 +85,8 @@ TEST(backend_send, send_ptr_get_sets_len_to_send_frame_len_when_valid)
 
 TEST(backend_send, send_ptr_release_invalid_params)
 {
-    CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_send_ptr_release(nullptr));
+    arq_err_t const e = arq_backend_send_ptr_release(nullptr);
+    CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, e);
 }
 
 TEST(backend_send, send_ptr_release_error_if_ptr_not_held)
