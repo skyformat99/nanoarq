@@ -9,7 +9,7 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
     config.segment_length_in_bytes = 220;
     config.message_length_in_segments = 4;
     config.retransmission_timeout = 100;
-    config.checksum_cb = &arq_crc32;
+    config.checksum = &arq_crc32;
 
     ArqContext sender(config), receiver(config);
 

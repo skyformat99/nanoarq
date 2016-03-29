@@ -65,7 +65,7 @@ int MockArqFrameSegWrite(void const *seg, void *out_buf, int len)
         .returnIntValue();
 }
 
-void MockArqFrameChecksumWrite(arq_checksum_cb_t checksum, void *checksum_seat, void *frame, int seg_len)
+void MockArqFrameChecksumWrite(arq_checksum_t checksum, void *checksum_seat, void *frame, int seg_len)
 {
     mock().actualCall("arq__frame_checksum_write")
         .withParameter("checksum", (void *)checksum)
@@ -88,7 +88,7 @@ void MockArqFrameHdrRead(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 arq__frame_read_result_t MockArqFrameChecksumRead(void const *frame,
                                                   int frame_len,
                                                   int seg_len,
-                                                  arq_checksum_cb_t checksum)
+                                                  arq_checksum_t checksum)
 {
     return (arq__frame_read_result_t)mock().actualCall("arq__frame_checksum_read")
                                            .withParameter("frame", frame)

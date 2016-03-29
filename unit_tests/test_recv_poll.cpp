@@ -8,14 +8,11 @@ TEST_GROUP(recv_poll) {};
 
 namespace {
 
-arq_uint32_t StubChecksum(void const *, int)
-{
-    return 0;
-}
+arq_uint32_t csum(void const *, int) { return 0; }
 
 arq__frame_read_result_t MockFrameRead(void *frame,
                                        int frame_len,
-                                       arq_checksum_cb_t checksum,
+                                       arq_checksum_t checksum,
                                        arq__frame_hdr_t *out_hdr,
                                        void const **out_seg)
 {
@@ -71,20 +68,6 @@ struct Fixture
     arq_uchar_t dummy;
 };
 
-TEST(recv_poll, returns_zero_without_making_any_calls_if_recv_frame_doesnt_have_a_frame)
-{
-    Fixture f;
-    f.arq.recv_frame.state = ARQ__RECV_FRAME_STATE_ACCUMULATING;
-    f.arq.recv_wnd_ptr.valid = 0;
-    int const recvd = arq__recv_poll(&f.arq.recv_wnd,
-                                     &f.arq.recv_frame,
-                                     &f.arq.recv_wnd_ptr,
-                                     StubChecksum,
-                                     &f.sh,
-                                     &f.rh);
-    CHECK_EQUAL(0, recvd);
-}
-
 TEST(recv_poll, calls_frame_read_if_recv_frame_has_a_full_frame)
 {
     Fixture f;
@@ -92,10 +75,10 @@ TEST(recv_poll, calls_frame_read_if_recv_frame_has_a_full_frame)
     f.arq.recv_frame.len = 123;
     mock().expectOneCall("arq__frame_read").withParameter("frame", f.arq.recv_frame.buf)
                                            .withParameter("frame_len", f.arq.recv_frame.len)
-                                           .withParameter("checksum", (void *)StubChecksum)
+                                           .withParameter("checksum", (void *)csum)
                                            .ignoreOtherParameters();
     mock().ignoreOtherCalls();
-    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, StubChecksum, &f.sh, &f.rh);
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
 }
 
 TEST(recv_poll, resets_recv_frame_after_frame_read)
@@ -106,13 +89,14 @@ TEST(recv_poll, resets_recv_frame_after_frame_read)
     mock().expectOneCall("arq__frame_read").ignoreOtherParameters();
     mock().expectOneCall("arq__recv_frame_rst").withParameter("f", &f.arq.recv_frame);
     mock().ignoreOtherCalls();
-    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, StubChecksum, &f.sh, &f.rh);
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
 }
 
 TEST(recv_poll, calls_recv_wnd_frame_if_frame_read_returns_success)
 {
     Fixture f;
     f.arq.recv_frame.state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
+    f.rh.seg = 1;
     f.rh.seq_num = 2;
     f.rh.seg_id = 3;
     f.rh.msg_len = 64;
@@ -127,7 +111,28 @@ TEST(recv_poll, calls_recv_wnd_frame_if_frame_read_returns_success)
                                                .withParameter("len", f.rh.seg_len)
                                                .ignoreOtherParameters();
     mock().ignoreOtherCalls();
-    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, StubChecksum, &f.sh, &f.rh);
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
+}
+
+TEST(recv_poll, doesnt_call_recv_wnd_frame_if_frame_has_no_segment)
+{
+    Fixture f;
+    f.arq.recv_frame.state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
+    mock().expectOneCall("arq__frame_read").withOutputParameterReturning("out_hdr", &f.rh, sizeof(f.rh))
+                                           .ignoreOtherParameters()
+                                           .andReturnValue(ARQ__FRAME_READ_RESULT_SUCCESS);
+    mock().expectOneCall("arq__recv_frame_rst").ignoreOtherParameters();
+    mock().expectOneCall("arq__recv_wnd_ptr_next").ignoreOtherParameters();
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
+}
+
+TEST(recv_poll, returns_zero_if_send_header_is_null)
+{
+    Fixture f;
+    mock().ignoreOtherCalls();
+    int const emit =
+        arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, nullptr, &f.rh);
+    CHECK_EQUAL(0, emit);
 }
 
 TEST(recv_poll, returns_zero_if_recv_wnd_ptr_isnt_valid)
@@ -135,13 +140,9 @@ TEST(recv_poll, returns_zero_if_recv_wnd_ptr_isnt_valid)
     Fixture f;
     f.arq.recv_wnd_ptr.valid = 0;
     mock().ignoreOtherCalls();
-    int const recvd = arq__recv_poll(&f.arq.recv_wnd,
-                                     &f.arq.recv_frame,
-                                     &f.arq.recv_wnd_ptr,
-                                     StubChecksum,
-                                     &f.sh,
-                                     &f.rh);
-    CHECK_EQUAL(0, recvd);
+    int const emit =
+        arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
+    CHECK_EQUAL(0, emit);
 }
 
 TEST(recv_poll, returns_zero_if_recv_wnd_ptr_isnt_pending)
@@ -150,13 +151,9 @@ TEST(recv_poll, returns_zero_if_recv_wnd_ptr_isnt_pending)
     f.arq.recv_wnd_ptr.valid = 1;
     f.arq.recv_wnd_ptr.pending = 0;
     mock().ignoreOtherCalls();
-    int const recvd = arq__recv_poll(&f.arq.recv_wnd,
-                                     &f.arq.recv_frame,
-                                     &f.arq.recv_wnd_ptr,
-                                     StubChecksum,
-                                     &f.sh,
-                                     &f.rh);
-    CHECK_EQUAL(0, recvd);
+    int const emit =
+        arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
+    CHECK_EQUAL(0, emit);
 }
 
 TEST(recv_poll, returns_one_if_recv_wnd_ptr_is_pending)
@@ -170,13 +167,29 @@ TEST(recv_poll, returns_one_if_recv_wnd_ptr_is_pending)
     f.arq.recv_wnd_ptr.valid = 1;
     f.arq.recv_wnd_ptr.pending = 1;
     f.arq.recv_frame.state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
-    int const recvd = arq__recv_poll(&f.arq.recv_wnd,
-                                     &f.arq.recv_frame,
-                                     &f.arq.recv_wnd_ptr,
-                                     StubChecksum,
-                                     &f.sh,
-                                     &f.rh);
-    CHECK_EQUAL(1, recvd);
+    int const emit =
+        arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
+    CHECK_EQUAL(1, emit);
+}
+
+TEST(recv_poll, steps_receive_window_pointer_if_emitting_a_frame)
+{
+    Fixture f;
+    f.arq.recv_wnd_ptr.valid = 1;
+    f.arq.recv_wnd_ptr.pending = 1;
+    f.arq.recv_frame.state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
+    mock().expectOneCall("arq__recv_wnd_ptr_next").withParameter("p", &f.arq.recv_wnd_ptr)
+                                                  .withParameter("rw", (void const *)&f.arq.recv_wnd);
+    mock().ignoreOtherCalls();
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
+}
+
+TEST(recv_poll, doesnt_step_receive_window_pointer_if_not_emitting_a_frame)
+{
+    Fixture f;
+    mock().expectNoCall("arq__recv_wnd_ptr_next");
+    mock().ignoreOtherCalls();
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, nullptr, &f.rh);
 }
 
 TEST(recv_poll, copies_ack_vec_from_ptr_if_valid)
@@ -186,7 +199,7 @@ TEST(recv_poll, copies_ack_vec_from_ptr_if_valid)
     f.arq.recv_wnd_ptr.pending = 1;
     f.arq.recv_wnd_ptr.cur_ack_vec = 1234;
     mock().ignoreOtherCalls();
-    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, StubChecksum, &f.sh, &f.rh);
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
     CHECK_EQUAL(1234, f.sh.cur_ack_vec);
 }
 
@@ -196,7 +209,7 @@ TEST(recv_poll, sets_ack_flag_if_read_ptr_valid)
     f.arq.recv_wnd_ptr.valid = 1;
     f.arq.recv_wnd_ptr.pending = 1;
     mock().ignoreOtherCalls();
-    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, StubChecksum, &f.sh, &f.rh);
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
     CHECK(f.sh.ack);
 }
 
@@ -207,7 +220,7 @@ TEST(recv_poll, writes_ack_ptr_to_header)
     f.arq.recv_wnd_ptr.valid = 1;
     f.arq.recv_wnd_ptr.pending = 1;
     mock().ignoreOtherCalls();
-    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, StubChecksum, &f.sh, &f.rh);
+    arq__recv_poll(&f.arq.recv_wnd, &f.arq.recv_frame, &f.arq.recv_wnd_ptr, csum, &f.sh, &f.rh);
     CHECK_EQUAL(1234, f.sh.ack_num);
 }
 
