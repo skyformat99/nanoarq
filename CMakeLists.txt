@@ -32,7 +32,7 @@ set(CPPUTEST_CMAKE_ARGS -DCMAKE_BINARY_DIR=${CMAKE_BINARY_DIR}
 ExternalProject_Add(CppUTest_external
                     PREFIX ${CPPUTEST_ROOT_DIR}
                     GIT_REPOSITORY "https://github.com/cpputest/cpputest.git"
-                    GIT_TAG "efd7a2b75f79d4ee5bd92d1e48a78f8a5b869cd1"
+                    GIT_TAG "5341c45d11dddf27e9e66c7ce57baf88f2a1145e"
                     UPDATE_COMMAND ""
                     PATCH_COMMAND ""
                     TEST_COMMAND ""
