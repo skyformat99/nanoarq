@@ -81,8 +81,5 @@ arq_add_test(arq_no_asserts_unit_tests)
 
 ############# Dummy target that depends on all unit tests
 
-add_custom_target(all_unit_tests DEPENDS arq_unit_tests
-                                         RUN_arq_unit_tests_TESTS
-                                         arq_no_asserts_unit_tests
-                                         RUN_arq_no_asserts_unit_tests_TESTS)
+add_custom_target(all_unit_tests DEPENDS RUN_arq_unit_tests_TESTS RUN_arq_no_asserts_unit_tests_TESTS)
 

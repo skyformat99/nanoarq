@@ -45,6 +45,7 @@ struct Fixture
 {
     Fixture()
     {
+        arq__recv_wnd_ptr_init(&p);
         rw.ack = ack.data();
         rw.w.msg = msg.data();
         arq__wnd_init(&rw.w, msg.size(), 128, 32);
@@ -77,6 +78,7 @@ TEST(recv_wnd_ptr, next_sets_seq_to_base_if_ack_vector_is_all_zeroes)
 TEST(recv_wnd_ptr, next_sets_seq_to_base_if_ack_vector_all_zeroes_and_ptr_not_base)
 {
     Fixture f;
+    f.p.valid = 1;
     f.p.seq = (f.rw.w.seq + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
     f.rw.w.seq = 9;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
@@ -108,6 +110,15 @@ TEST(recv_wnd_ptr, next_sets_pending_to_1_upon_finding_nonzero_ack_entry)
     f.rw.ack[1] = 1;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
     CHECK_EQUAL(1, f.p.pending);
+}
+
+TEST(recv_wnd_ptr, next_sets_valid_to_1_upon_finding_nonzero_ack_entry)
+{
+    Fixture f;
+    f.p.seq = 0;
+    f.rw.ack[1] = 1;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK_EQUAL(1, f.p.valid);
 }
 
 TEST(recv_wnd_ptr, next_sets_found_ack_element_to_zero)
@@ -156,6 +167,7 @@ TEST(recv_wnd_ptr, next_starts_searching_for_ack_from_window_base_if_currently_o
     f.rw.ack[8] = 1;
     f.rw.ack[7] = 1;
     f.p.seq = 6;
+    f.p.valid = 1;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
     CHECK_EQUAL(8, f.p.seq);
 }
@@ -166,6 +178,7 @@ TEST(recv_wnd_ptr, next_starts_searching_for_ack_from_window_base_if_currently_o
     f.rw.w.cap = 8;
     f.rw.w.seq = 3;
     f.p.seq = ARQ__FRAME_MAX_SEQ_NUM - 2;
+    f.p.valid = 1;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
     CHECK_EQUAL(3, f.p.seq);
 }
@@ -176,6 +189,7 @@ TEST(recv_wnd_ptr, next_sets_ptr_to_window_base_seq_from_dropped_ack_sequence_nu
     f.rw.w.seq = 8;
     f.rw.w.cap = 1;
     f.p.seq = 3;
+    f.p.valid = 1;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
     CHECK_EQUAL(8, f.p.seq);
 }
@@ -197,6 +211,7 @@ TEST(recv_wnd_ptr, next_sets_ptr_to_window_base_seq_from_dropped_ack_seq_num_wra
     f.rw.w.cap = 8;
     f.rw.w.seq = 6;
     f.p.seq = ARQ__FRAME_MAX_SEQ_NUM;
+    f.p.valid = 1;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
     CHECK_EQUAL(6, f.p.seq);
 }
@@ -218,6 +233,17 @@ TEST(recv_wnd_ptr, next_sets_pending_to_1_when_starting_out_of_bounds_and_1_in_a
     f.p.seq = 0;
     arq__recv_wnd_ptr_next(&f.p, &f.rw);
     CHECK_EQUAL(1, f.p.pending);
+}
+
+TEST(recv_wnd_ptr, next_sets_seq_to_base_when_ack_set_and_ptr_is_invalid)
+{
+    Fixture f;
+    f.rw.w.size = 1;
+    f.rw.ack[0] = 1;
+    arq__recv_wnd_ptr_next(&f.p, &f.rw);
+    CHECK(f.p.valid);
+    CHECK_EQUAL(0, f.p.seq);
+    CHECK(f.p.pending);
 }
 
 TEST(recv_wnd_ptr, set_sets_seq_and_ack)

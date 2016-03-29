@@ -576,7 +576,7 @@ arq_err_t arq_backend_send_ptr_get(struct arq_t *arq, void const **out_send, int
     if (!arq || !out_send || !out_send_size) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    if (arq->send_wnd_ptr.valid) {
+    if (arq->send_frame.len) {
         arq->send_frame.state = ARQ__SEND_FRAME_STATE_HELD;
         *out_send = arq->send_frame.buf;
         *out_send_size = arq->send_frame.len;
@@ -596,6 +596,7 @@ arq_err_t arq_backend_send_ptr_release(struct arq_t *arq)
     if (arq->send_frame.state != ARQ__SEND_FRAME_STATE_HELD) {
         return ARQ_ERR_SEND_PTR_NOT_HELD;
     }
+    arq->send_frame.len = 0;
     arq->send_frame.state = ARQ__SEND_FRAME_STATE_RELEASED;
     return ARQ_OK_COMPLETED;
 }
@@ -1112,14 +1113,13 @@ void ARQ_MOCKABLE(arq__recv_wnd_ptr_init)(arq__recv_wnd_ptr_t *p)
 
 void ARQ_MOCKABLE(arq__recv_wnd_ptr_next)(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t const *rw)
 {
-    unsigned i = 1;
+    unsigned i;
     ARQ_ASSERT(rw);
     p->pending = 0;
-    if ((unsigned)(p->seq - rw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1) > rw->w.cap) {
+    if (p->valid && (unsigned)(p->seq - rw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1) > rw->w.cap) {
         p->seq = rw->w.seq;
-        i = 0;
     }
-    for (; i < rw->w.cap; ++i) {
+    for (i = 0; i < rw->w.cap; ++i) {
         unsigned const seq = (p->seq + i) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
         unsigned const idx = seq % rw->w.cap;
         if (rw->ack[idx]) {
