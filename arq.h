@@ -554,16 +554,16 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq->cfg.retransmission_timeout);
     if (psh && emit) {
         void *seg = ARQ_NULL_PTR;
-        if (sh.seg) {
+        if (psh->seg) {
             arq__wnd_seg(&arq->send_wnd.w,
                          (unsigned)sh.seq_num,
                          (unsigned)sh.seg_id,
                          &seg,
-                         &sh.seg_len);
-            ARQ_ASSERT(sh.seg_len);
+                         &psh->seg_len);
+            ARQ_ASSERT(psh->seg_len);
         }
         arq->send_frame.len =
-            arq__frame_write(&sh, seg, arq->cfg.checksum, arq->send_frame.buf, arq->send_frame.cap);
+            arq__frame_write(psh, seg, arq->cfg.checksum, arq->send_frame.buf, arq->send_frame.cap);
         arq->send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     }
     *out_backend_send_size = arq->send_frame.len;
