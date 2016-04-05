@@ -104,6 +104,7 @@ struct arq_t;
 arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb);
 arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb);
 arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size);
+
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, int arq_seat_size, struct arq_t **out_arq);
 arq_err_t arq_connect(struct arq_t *arq);
 arq_err_t arq_reset(struct arq_t *arq);
@@ -167,13 +168,11 @@ void arq__frame_hdr_init(arq__frame_hdr_t *h);
 int  arq__frame_hdr_write(arq__frame_hdr_t const *h, void *out_frame);
 void arq__frame_hdr_read(void const *buf, arq__frame_hdr_t *out_frame_hdr);
 int  arq__frame_seg_write(void const *seg, void *out_frame, int len);
-
 int arq__frame_write(arq__frame_hdr_t const *h,
                      void const *seg,
                      arq_checksum_t checksum,
                      void *out_frame,
                      int frame_max);
-
 typedef enum
 {
     ARQ__FRAME_READ_RESULT_SUCCESS,
@@ -192,7 +191,6 @@ arq__frame_read_result_t arq__frame_checksum_read(void const *frame,
                                                   int frame_len,
                                                   int seg_len,
                                                   arq_checksum_t checksum);
-
 void arq__cobs_encode(void *p, int len);
 void arq__cobs_decode(void *p, int len);
 
@@ -223,10 +221,12 @@ typedef struct arq__send_wnd_t
 {
     arq__wnd_t w;
     arq_time_t *rtx;
+    arq_time_t tiny;
+    arq_uchar_t tiny_on;
 } arq__send_wnd_t;
 
 void arq__send_wnd_rst(arq__send_wnd_t *sw);
-unsigned arq__send_wnd_send(arq__send_wnd_t *sw, void const *seg, unsigned len);
+unsigned arq__send_wnd_send(arq__send_wnd_t *sw, void const *seg, unsigned len, arq_time_t tiny);
 void arq__send_wnd_ack(arq__send_wnd_t *sw, unsigned seq, arq_uint16_t cur_ack_vec);
 void arq__send_wnd_flush(arq__send_wnd_t *sw);
 void arq__send_wnd_step(arq__send_wnd_t *sw, arq_time_t dt);
@@ -450,7 +450,8 @@ arq_err_t arq_send(struct arq_t *arq, void const *send, int send_max, int *out_s
     if (!arq || !send || !out_sent_size || (send_max < 0)) {
         return ARQ_ERR_INVALID_PARAM;
     }
-    *out_sent_size = (int)arq__send_wnd_send(&arq->send_wnd, send, (unsigned)send_max);
+    *out_sent_size =
+        (int)arq__send_wnd_send(&arq->send_wnd, send, (unsigned)send_max, arq->cfg.tinygram_send_delay);
     return ARQ_OK_COMPLETED;
 }
 
@@ -902,13 +903,21 @@ void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *sw)
     for (i = 0; i < sw->w.cap; ++i) {
         sw->rtx[i] = 0;
     }
+    sw->tiny = 0;
+    sw->tiny_on = 0;
 }
 
-unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw, void const *buf, unsigned len)
+unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw,
+                                          void const *buf,
+                                          unsigned len,
+                                          arq_time_t tiny)
 {
-    unsigned last_msg_len, seq, msg_idx, cur_byte_idx, bytes_rem;
+    unsigned last_msg_len, seq, msg_idx, cur_byte_idx, bytes_rem, orig_size;
     unsigned wnd_cap_in_bytes, wnd_size_in_bytes, pre_wrap_copy_len;
     ARQ_ASSERT(sw && buf);
+    if (len == 0) {
+        return 0;
+    }
     seq = sw->w.seq + arq__sub_sat(sw->w.size, 1);
     msg_idx = seq % sw->w.cap;
     last_msg_len = sw->w.msg[msg_idx].len;
@@ -929,7 +938,13 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw, void const *buf, 
         msg_idx = seq % sw->w.cap;
         bytes_rem -= cur_msg_len;
     }
-    sw->w.size = (wnd_size_in_bytes + len + (sw->w.msg_len - 1u)) / sw->w.msg_len;
+    orig_size = sw->w.size;
+    sw->w.size = (wnd_size_in_bytes + len + sw->w.msg_len - 1u) / sw->w.msg_len;
+    last_msg_len = sw->w.msg[sw->w.size - 1].len;
+    sw->tiny_on = (last_msg_len > 0) && (last_msg_len < sw->w.msg_len);
+    if (orig_size < sw->w.size) {
+        sw->tiny = tiny;
+    }
     return len;
 }
 
@@ -963,7 +978,7 @@ void ARQ_MOCKABLE(arq__send_wnd_flush)(arq__send_wnd_t *sw)
     idx = (sw->w.seq + arq__sub_sat(sw->w.size, 1)) % sw->w.cap;
     m = &sw->w.msg[idx];
     if (m->len) {
-        segs = (m->len + (sw->w.seg_len - 1u)) / sw->w.seg_len;
+        segs = (m->len + sw->w.seg_len - 1u) / sw->w.seg_len;
         m->full_ack_vec = (1u << segs) - 1u;
         sw->rtx[idx] = 0;
     }
@@ -1217,7 +1232,6 @@ arq_uint32_t arq_crc32(void const *buf, int size)
         0xBDBDF21C, 0xCABAC28A, 0x53B39330, 0x24B4A3A6, 0xBAD03605, 0xCDD70693, 0x54DE5729, 0x23D967BF,
         0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D
     };
-
     arq_uchar_t const *p = (arq_uchar_t const *)buf;
     arq_uint32_t crc = 0xFFFFFFFF;
     while (size--) {

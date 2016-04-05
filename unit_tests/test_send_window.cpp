@@ -11,9 +11,9 @@ TEST_GROUP(send_wnd) {};
 
 namespace {
 
-struct Fixture
+struct NoResetFixture
 {
-    Fixture()
+    NoResetFixture()
     {
         sw.rtx = rtx.data();
         sw.w.msg = msg.data();
@@ -31,7 +31,7 @@ struct Fixture
 
 TEST(send_wnd, rst_resets_window)
 {
-    Fixture f;
+    NoResetFixture f;
     f.sw.w.size = 13;
     f.sw.w.seq = 4321;
     arq__send_wnd_rst(&f.sw);
@@ -39,9 +39,19 @@ TEST(send_wnd, rst_resets_window)
     CHECK_EQUAL(0, f.sw.w.size);
 }
 
+TEST(send_wnd, rst_resets_tinygram)
+{
+    NoResetFixture f;
+    f.sw.tiny = 123u;
+    f.sw.tiny_on = 0xAA;
+    arq__send_wnd_rst(&f.sw);
+    CHECK_EQUAL(0, f.sw.tiny);
+    CHECK_EQUAL(0, f.sw.tiny_on);
+}
+
 TEST(send_wnd, rst_resets_messages_to_default)
 {
-    Fixture f;
+    NoResetFixture f;
     for (auto &m : f.msg) {
         m.len = 1234;
         m.cur_ack_vec = 100;
@@ -58,7 +68,7 @@ TEST(send_wnd, rst_resets_messages_to_default)
 
 TEST(send_wnd, rst_resets_rtx_to_default)
 {
-    Fixture f;
+    NoResetFixture f;
     for (auto &t : f.rtx) {
         t = 1234;
     }
@@ -68,11 +78,19 @@ TEST(send_wnd, rst_resets_rtx_to_default)
     }
 }
 
+struct Fixture : NoResetFixture
+{
+    Fixture()
+    {
+        arq__send_wnd_rst(&sw);
+    }
+};
+
 TEST(send_wnd, send_size_increases_if_payload_uses_new_message)
 {
     Fixture f;
     f.snd.resize(1);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(1, f.sw.w.size);
 }
 
@@ -80,7 +98,7 @@ TEST(send_wnd, send_with_empty_window_returns_full_size_written)
 {
     Fixture f;
     f.snd.resize(5);
-    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(5, written);
 }
 
@@ -88,7 +106,7 @@ TEST(send_wnd, send_small_with_empty_message_sets_message_size)
 {
     Fixture f;
     f.snd.resize(5);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(5, f.msg[0].len);
 }
 
@@ -96,7 +114,7 @@ TEST(send_wnd, send_with_empty_window_copies_to_start_of_buf)
 {
     Fixture f;
     f.snd.resize(5);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     MEMCMP_EQUAL(f.snd.data(), f.buf.data(), f.snd.size());
 }
 
@@ -109,7 +127,7 @@ TEST(send_wnd, send_with_partially_full_window_appends)
     }
     std::fill(std::begin(f.buf), std::end(f.buf), 0xFF);
     f.sw.w.msg[0].len = 3;
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     MEMCMP_EQUAL(f.snd.data(), &f.buf[3], f.snd.size());
 }
 
@@ -119,7 +137,7 @@ TEST(send_wnd, send_with_partially_full_window_updates_message_length)
     f.sw.w.size = 1;
     f.sw.w.msg[0].len = 12;
     f.snd.resize(15);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(12 + 15, f.msg[0].len);
 }
 
@@ -127,7 +145,7 @@ TEST(send_wnd, send_more_than_one_message_updates_lengths_in_first_two_messages)
 {
     Fixture f;
     f.snd.resize(f.sw.w.msg_len + 7);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(f.sw.w.msg_len, f.msg[0].len);
     CHECK_EQUAL((int)f.snd.size() % f.sw.w.msg_len, f.msg[1].len);
     CHECK_EQUAL(0, f.msg[2].len);
@@ -139,7 +157,7 @@ TEST(send_wnd, send_one_full_message_sets_rtx_to_zero)
     f.snd.resize(f.sw.w.msg_len);
     f.sw.w.size = 1;
     f.sw.rtx[0] = 1;
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(0, f.sw.rtx[0]);
 }
 
@@ -149,7 +167,7 @@ TEST(send_wnd, send_two_messages_sets_rtx_to_zero_for_full_message)
     f.snd.resize(f.sw.w.msg_len + 1);
     f.sw.w.size = 1;
     f.sw.rtx[0] = 1;
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(0, f.sw.rtx[0]);
 }
 
@@ -157,7 +175,7 @@ TEST(send_wnd, send_more_than_two_messages_updates_lengths_in_first_three_messag
 {
     Fixture f;
     f.snd.resize(f.sw.w.msg_len * 2 + 7);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(f.sw.w.msg_len, f.msg[0].len);
     CHECK_EQUAL(f.sw.w.msg_len, f.msg[1].len);
     CHECK_EQUAL((int)f.snd.size() % f.sw.w.msg_len, f.msg[2].len);
@@ -169,7 +187,7 @@ TEST(send_wnd, send_three_messages_sets_rtx_to_zero_for_first_two_messages)
     Fixture f;
     f.snd.resize(f.sw.w.msg_len * 2 + 1);
     f.sw.rtx[0] = f.sw.rtx[1] = 1;
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(0, f.sw.rtx[0]);
     CHECK_EQUAL(0, f.sw.rtx[1]);
 }
@@ -178,7 +196,7 @@ TEST(send_wnd, send_more_than_one_messages_increments_size_by_number_of_messages
 {
     Fixture f;
     f.snd.resize(f.sw.w.msg_len * 4);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(4, f.sw.w.size);
 }
 
@@ -189,7 +207,7 @@ TEST(send_wnd, send_perfectly_completing_a_message_doesnt_increment_size)
     f.sw.w.msg[0].len = f.sw.w.msg_len;
     f.sw.w.msg[1].len = f.sw.w.msg_len - 12;
     f.snd.resize(12);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(2, f.sw.w.size);
 }
 
@@ -200,7 +218,7 @@ TEST(send_wnd, send_when_cur_index_greater_than_zero_updates_correct_message_len
     f.sw.w.seq = 1;
     f.msg[2].len = 3;
     f.snd.resize(15);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(3 + 15, f.msg[2].len);
 }
 
@@ -209,7 +227,7 @@ TEST(send_wnd, send_when_cur_index_greater_than_zero_more_than_one_message_updat
     Fixture f;
     f.sw.w.seq = 2;
     f.snd.resize(f.sw.w.msg_len + 1);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(f.sw.w.msg_len, f.msg[2].len);
     CHECK_EQUAL(1, f.msg[3].len);
     CHECK_EQUAL(0, f.msg[4].len);
@@ -220,7 +238,7 @@ TEST(send_wnd, send_updates_messages_at_beginning_of_msg_array_when_copy_wraps_a
     Fixture f;
     f.sw.w.seq = f.sw.w.cap - 1;
     f.snd.resize(f.sw.w.msg_len * 3);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(f.sw.w.msg_len, f.msg[f.sw.w.cap - 1].len);
     CHECK_EQUAL(f.sw.w.msg_len, f.msg[0].len);
     CHECK_EQUAL(f.sw.w.msg_len, f.msg[1].len);
@@ -231,7 +249,7 @@ TEST(send_wnd, send_more_data_than_window_space_returns_bytes_sent)
 {
     Fixture f;
     f.snd.resize(((f.sw.w.msg_len * f.sw.w.cap) + 1));
-    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(f.sw.w.msg_len * f.sw.w.cap, written);
 }
 
@@ -241,7 +259,7 @@ TEST(send_wnd, send_to_full_window_returns_zero)
     f.sw.w.size = f.sw.w.cap;
     std::for_each(std::begin(f.msg), std::end(f.msg), [&](arq__msg_t& m) { m.len = f.sw.w.msg_len; });
     f.snd.resize(16);
-    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(0, written);
 }
 
@@ -256,7 +274,7 @@ TEST(send_wnd, send_more_data_than_window_space_with_partial_msg_returns_rest_of
     int const cap_in_bytes = f.sw.w.cap * f.sw.w.msg_len;
     int const size_in_bytes = f.sw.w.msg[0].len + f.sw.w.msg[1].len + f.sw.w.msg[2].len;
     f.snd.resize(cap_in_bytes);
-    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    int const written = arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(cap_in_bytes - size_in_bytes, written);
 }
 
@@ -268,7 +286,7 @@ TEST(send_wnd, send_copies_data_to_current_message_space_in_buf)
     for (size_t i = 0; i < f.snd.size(); ++i) {
         f.snd[i] = (unsigned char)i;
     }
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     MEMCMP_EQUAL(f.snd.data(), &f.buf[f.sw.w.msg_len], f.snd.size());
 }
 
@@ -282,7 +300,7 @@ TEST(send_wnd, send_wraps_copy_around_if_inside_window_at_end_of_buf)
         f.snd[i] = (unsigned char)i;
     }
     std::fill(std::begin(f.buf), std::end(f.buf), 0xFE);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     MEMCMP_EQUAL(f.snd.data(), &f.buf[(orig_msg_idx * f.sw.w.msg_len)], f.sw.w.msg_len);
     MEMCMP_EQUAL(&f.snd[f.sw.w.msg_len], f.buf.data(), f.sw.w.msg_len);
 }
@@ -298,7 +316,7 @@ TEST(send_wnd, send_wraps_copy_around_and_respects_partially_filled_starting_mes
     int const orig_msg_idx = f.sw.w.cap - 1;
     f.sw.w.seq = orig_msg_idx;
     f.msg[orig_msg_idx].len = 3;
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     MEMCMP_EQUAL(f.snd.data(), &f.buf[(orig_msg_idx * f.sw.w.msg_len) + 3], f.sw.w.msg_len - 3);
     MEMCMP_EQUAL(&f.snd[f.sw.w.msg_len - 3], f.buf.data(), 3);
 }
@@ -316,8 +334,65 @@ TEST(send_wnd, send_payload_is_message_size_wrap_window)
     f.sw.w.msg[2].len = 32;
     f.sw.w.msg[3].len = 32;
     f.snd.resize(32);
-    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size());
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(32, f.sw.w.msg[0].len);
+}
+
+TEST(send_wnd, send_partial_message_turns_tinygram_timer_on)
+{
+    Fixture f;
+    f.snd.resize(1);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
+    CHECK_EQUAL(1, f.sw.tiny_on);
+}
+
+TEST(send_wnd, send_partial_message_sets_tinygram_timer_to_default)
+{
+    Fixture f;
+    f.snd.resize(1);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 123);
+    CHECK_EQUAL(123, f.sw.tiny);
+}
+
+TEST(send_wnd, send_accumulating_incomplete_message_doesnt_reset_tinygram_timer)
+{
+    Fixture f;
+    f.sw.tiny_on = 1;
+    f.sw.tiny = 123;
+    f.sw.w.size = 1;
+    f.sw.w.msg[0].len = 1;
+    f.snd.resize(1);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
+    CHECK_EQUAL(123, f.sw.tiny);
+    CHECK_EQUAL(1, f.sw.tiny_on);
+}
+
+TEST(send_wnd, send_accumulating_complete_message_turns_tinygram_timer_off)
+{
+    Fixture f;
+    f.sw.tiny_on = 1;
+    f.sw.tiny = 123;
+    f.sw.w.size = 1;
+    f.sw.w.msg[0].len = 1;
+    f.snd.resize(f.sw.w.msg_len - 1);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
+    CHECK_EQUAL(0, f.sw.tiny_on);
+}
+
+TEST(send_wnd, send_full_message_leaves_tinygram_timer_off)
+{
+    Fixture f;
+    f.snd.resize(f.sw.w.msg_len);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
+    CHECK_EQUAL(0, f.sw.tiny_on);
+}
+
+TEST(send_wnd, send_multiple_messages_in_one_call_leaves_tinygram_timer_off)
+{
+    Fixture f;
+    f.snd.resize(f.sw.w.msg_len * 3);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
+    CHECK_EQUAL(0, f.sw.tiny_on);
 }
 
 TEST(send_wnd, ack_seq_outside_of_send_wnd_greater_does_nothing)
