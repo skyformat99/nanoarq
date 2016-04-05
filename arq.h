@@ -956,7 +956,7 @@ void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *sw, unsigned seq, arq_uint
 {
     unsigned ack_msg_idx, i;
     ARQ_ASSERT(sw);
-    if ((sw->w.size == 0) || (sw->w.seq > seq) || ((sw->w.seq + sw->w.size - 1) < seq)) {
+    if ((sw->w.size == 0) || (sw->w.seq > seq) || (((unsigned)sw->w.seq + sw->w.size - 1) < seq)) {
         return;
     }
     ack_msg_idx = seq % sw->w.cap;
@@ -982,7 +982,7 @@ void ARQ_MOCKABLE(arq__send_wnd_flush)(arq__send_wnd_t *sw)
     if (sw->w.size == 0) {
         return;
     }
-    idx = (sw->w.seq + sw->w.size - 1) % sw->w.cap;
+    idx = ((unsigned)sw->w.seq + sw->w.size - 1) % sw->w.cap;
     m = &sw->w.msg[idx];
     if (m->len) {
         segs = (m->len + (unsigned)sw->w.seg_len - 1u) / sw->w.seg_len;
