@@ -939,7 +939,7 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw,
         bytes_rem -= cur_msg_len;
     }
     orig_size = sw->w.size;
-    sw->w.size = (wnd_size_in_bytes + len + sw->w.msg_len - 1u) / sw->w.msg_len;
+    sw->w.size = (wnd_size_in_bytes + len + sw->w.msg_len - 1) / sw->w.msg_len;
     last_msg_len = sw->w.msg[sw->w.size - 1].len;
     sw->tiny_on = (last_msg_len > 0) && (last_msg_len < sw->w.msg_len);
     if (orig_size < sw->w.size) {
@@ -978,8 +978,8 @@ void ARQ_MOCKABLE(arq__send_wnd_flush)(arq__send_wnd_t *sw)
     idx = (sw->w.seq + arq__sub_sat(sw->w.size, 1)) % sw->w.cap;
     m = &sw->w.msg[idx];
     if (m->len) {
-        segs = (m->len + sw->w.seg_len - 1u) / sw->w.seg_len;
-        m->full_ack_vec = (1u << segs) - 1u;
+        segs = (m->len + (unsigned)sw->w.seg_len - 1u) / sw->w.seg_len;
+        m->full_ack_vec = (1 << segs) - 1;
         sw->rtx[idx] = 0;
     }
 }
@@ -1021,7 +1021,7 @@ arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_w
     ARQ_ASSERT(p && sw);
     if (p->valid) {
         arq__msg_t const *m = &sw->w.msg[p->seq % sw->w.cap];
-        unsigned const rem = (unsigned)m->cur_ack_vec >> (p->seg + 1u);
+        unsigned const rem = (unsigned)m->cur_ack_vec >> (p->seg + 1);
         p->seg += (1 + ARQ_COUNT_TRAILING_ZERO_BITS(~rem));
         if (((1 << p->seg) - 1) < m->full_ack_vec) {
             return ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG;
@@ -1073,14 +1073,14 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
         return 0;
     }
     m = &rw->w.msg[seq % rw->w.cap];
-    if (m->cur_ack_vec & (1u << seg)) {
+    if (m->cur_ack_vec & (1 << seg)) {
         return 0;
     }
     arq__wnd_seg(&rw->w, seq, seg, &seg_dst, &unused);
     ARQ_MEMCPY(seg_dst, p, len);
     rw->w.size = arq__max(rw->w.size, ((seq - rw->w.seq) % (ARQ__FRAME_MAX_SEQ_NUM + 1)) + 1);
     m->full_ack_vec = full_ack_vec;
-    m->cur_ack_vec |= (1u << seg);
+    m->cur_ack_vec |= (1 << seg);
     m->len += len;
     if (seg == seg_cnt - 1) {
         rw->ack[seq % rw->w.cap] = 1;
