@@ -10,7 +10,6 @@ arq_select?
 
 timers:
 =======
-send tinygram timer
 recv "send ack" timers (if we don't recv last seg in a msg, possibly corrupted, we don't ACK the send)
 inter-byte and intra-frame timers
 

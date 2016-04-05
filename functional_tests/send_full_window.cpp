@@ -9,16 +9,15 @@ TEST(functional, send_full_window)
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
     cfg.checksum = &arq_crc32;
-
     ArqContext ctx(cfg);
 
-    std::vector< unsigned char > send_test_data(ctx.send_wnd_buf.size());
+    std::vector< arq_uchar_t > send_test_data(ctx.send_wnd_buf.size());
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
         uint16_t const v = i;
         std::memcpy(&send_test_data[i * 2], &v, sizeof(v));
     }
 
-    std::vector< unsigned char > recv_test_data;
+    std::vector< arq_uchar_t > recv_test_data;
     recv_test_data.reserve(send_test_data.size());
 
     {
@@ -28,7 +27,7 @@ TEST(functional, send_full_window)
     }
 
     while (recv_test_data.size() < send_test_data.size()) {
-        unsigned char decode_buf[256];
+        arq_uchar_t decode_buf[256];
         {
             arq_event_t event;
             arq_time_t next_poll;
@@ -55,8 +54,8 @@ TEST(functional, send_full_window)
                 arq__frame_read(decode_buf, size, cfg.checksum, &h, &seg);
             CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
             recv_test_data.insert(std::end(recv_test_data),
-                                  (unsigned char const *)seg,
-                                  (unsigned char const *)seg + h.seg_len);
+                                  (arq_uchar_t const *)seg,
+                                  (arq_uchar_t const *)seg + h.seg_len);
         }
     }
     CHECK_EQUAL(send_test_data.size(), recv_test_data.size());

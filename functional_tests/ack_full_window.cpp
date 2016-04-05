@@ -32,7 +32,7 @@ TEST(functional, ack_full_window)
     {
         int sent;
         arq_err_t const e = arq_send(&sender.arq, send_test_data.data(), send_test_data.size(), &sent);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+        CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL((int)send_test_data.size(), sent);
     }
 

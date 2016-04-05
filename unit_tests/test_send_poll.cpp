@@ -28,6 +28,11 @@ void MockSendWndAck(arq__send_wnd_t *sw, unsigned seq, arq_uint16_t cur_ack_vec)
                                           .withParameter("cur_ack_vec", cur_ack_vec);
 }
 
+void MockSendWndFlush(arq__send_wnd_t *sw)
+{
+    mock().actualCall("arq__send_wnd_flush").withParameter("sw", sw);
+}
+
 struct Fixture
 {
     Fixture()
@@ -42,6 +47,7 @@ struct Fixture
         ARQ_MOCK_HOOK(arq__send_wnd_step, MockSendWndStep);
         ARQ_MOCK_HOOK(arq__send_wnd_ptr_next, MockSendWndPtrNext);
         ARQ_MOCK_HOOK(arq__send_wnd_ack, MockSendWndAck);
+        ARQ_MOCK_HOOK(arq__send_wnd_flush, MockSendWndFlush);
     }
 
     arq_time_t const rtx_timeout = 37;
@@ -93,6 +99,45 @@ struct ExpectSendWndStepFixture : Fixture
         mock().expectOneCall("arq__send_wnd_step").ignoreOtherParameters();
     }
 };
+
+TEST(send_poll, flushes_send_window_if_tinygram_timer_enabled_and_expired)
+{
+    ExpectSendWndStepFixture f;
+    f.sw.tiny_on = 1;
+    f.sw.tiny = 0;
+    mock().expectOneCall("arq__send_wnd_flush").withParameter("sw", &f.sw);
+    mock().ignoreOtherCalls();
+    arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 1, f.rtx_timeout);
+}
+
+TEST(send_poll, disables_tinygram_timer_if_tinygram_timer_enabled_and_expired)
+{
+    ExpectSendWndStepFixture f;
+    f.sw.tiny_on = 1;
+    f.sw.tiny = 0;
+    mock().ignoreOtherCalls();
+    arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 1, f.rtx_timeout);
+    CHECK_EQUAL(0, f.sw.tiny_on);
+}
+
+TEST(send_poll, doesnt_flush_send_window_if_tinygram_timer_enabled_but_not_expired)
+{
+    ExpectSendWndStepFixture f;
+    f.sw.tiny_on = 1;
+    f.sw.tiny = 100;
+    mock().expectNoCall("arq__send_wnd_flush");
+    mock().ignoreOtherCalls();
+    arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 1, f.rtx_timeout);
+}
+
+TEST(send_poll, doesnt_flush_send_window_if_tinygram_timer_disabled)
+{
+    ExpectSendWndStepFixture f;
+    f.sw.tiny_on = 0;
+    mock().expectNoCall("arq__send_wnd_flush");
+    mock().ignoreOtherCalls();
+    arq__send_poll(&f.sw, &f.f, &f.p, &f.sh, &f.rh, 1, f.rtx_timeout);
+}
 
 TEST(send_poll, advances_send_wnd_ptr_if_frame_is_available)
 {

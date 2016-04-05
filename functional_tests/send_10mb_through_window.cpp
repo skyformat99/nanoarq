@@ -8,6 +8,7 @@ TEST(functional, send_10mb_through_window)
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
+    cfg.tinygram_send_delay = 10;
     cfg.checksum = &arq_crc32;
 
     ArqContext ctx(cfg);
@@ -27,14 +28,16 @@ TEST(functional, send_10mb_through_window)
 
     while (output_data.size() < input_data.size()) {
         {
-            int sent_this_turn;
-            arq_err_t const e =
-                arq_send(&ctx.arq, &input_data[input_idx], input_data.size() - input_idx, &sent_this_turn);
+            int sent;
+            arq_err_t e = arq_send(&ctx.arq, &input_data[input_idx], input_data.size() - input_idx, &sent);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-            input_idx += sent_this_turn;
+            e = arq_flush(&ctx.arq);
+            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            input_idx += sent;
         }
 
         while (ctx.arq.send_wnd.w.size) {
+            arq_uint16_t ack_vec = 0u;
             for (auto i = 0; i < cfg.message_length_in_segments; ++i) {
                 if (output_data.size() >= input_data.size()) {
                     break;
@@ -81,9 +84,10 @@ TEST(functional, send_10mb_through_window)
                                                                        (void const **)&seg);
                     CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
                     std::copy(seg, seg + h.seg_len, std::back_inserter(output_data));
+                    ack_vec |= 1 << h.seg_id;
                 }
             }
-            arq__send_wnd_ack(&ctx.arq.send_wnd, seq, (1 << cfg.message_length_in_segments) - 1);
+            arq__send_wnd_ack(&ctx.arq.send_wnd, seq, ack_vec);
             seq = (seq + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
         }
     }

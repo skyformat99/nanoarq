@@ -92,6 +92,7 @@ struct Fixture
         ARQ_MOCK_HOOK(arq__frame_write, MockFrameWrite);
         ARQ_MOCK_HOOK(arq__wnd_seg, MockWndSeg);
         arq.cfg.checksum = &arq_crc32;
+        arq__send_frame_init(&arq.send_frame, 100);
     }
     arq_t arq;
     int send_size;
