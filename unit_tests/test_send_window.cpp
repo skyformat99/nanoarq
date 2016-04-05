@@ -354,6 +354,27 @@ TEST(send_wnd, send_partial_message_sets_tinygram_timer_to_default)
     CHECK_EQUAL(123, f.sw.tiny);
 }
 
+TEST(send_wnd, send_partial_messages_sets_message_rtx_to_tinygram_timeout)
+{
+    Fixture f;
+    f.snd.resize(1);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 79);
+    CHECK_EQUAL(79, f.sw.rtx[0]);
+}
+
+TEST(send_wnd, send_partial_messages_nonzero_sets_message_rtx_to_tinygram_timeout)
+{
+    Fixture f;
+    f.sw.w.cap = 8;
+    f.sw.w.size = 6;
+    for (auto i = 0u; i < f.sw.w.size; ++i) {
+        f.sw.w.msg[i].len = f.sw.w.msg_len;
+    }
+    f.snd.resize(1);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 79);
+    CHECK_EQUAL(79, f.sw.rtx[6]);
+}
+
 TEST(send_wnd, send_accumulating_incomplete_message_doesnt_reset_tinygram_timer)
 {
     Fixture f;
@@ -567,6 +588,7 @@ TEST(send_wnd, flush_does_nothing_on_full_window)
 TEST(send_wnd, flush_sets_full_ack_vector_to_one_if_less_than_one_segment)
 {
     Fixture f;
+    f.sw.w.size = 1;
     f.msg[0].len = 1;
     arq__send_wnd_flush(&f.sw);
     CHECK_EQUAL(0b1, f.msg[0].full_ack_vec);
@@ -575,6 +597,7 @@ TEST(send_wnd, flush_sets_full_ack_vector_to_one_if_less_than_one_segment)
 TEST(send_wnd, flush_number_of_bits_in_ack_vector_is_number_of_segments)
 {
     Fixture f;
+    f.sw.w.size = 1;
     f.msg[0].len = f.sw.w.seg_len * 5;
     arq__send_wnd_flush(&f.sw);
     CHECK_EQUAL(0b11111, f.msg[0].full_ack_vec);
@@ -583,6 +606,7 @@ TEST(send_wnd, flush_number_of_bits_in_ack_vector_is_number_of_segments)
 TEST(send_wnd, flush_makes_msg_full_ack_vector_from_current_message_size)
 {
     Fixture f;
+    f.sw.w.size = 1;
     f.msg[0].len = f.sw.w.seg_len * 2 + 1;
     arq__send_wnd_flush(&f.sw);
     CHECK_EQUAL(0b111, f.msg[0].full_ack_vec);
@@ -600,6 +624,7 @@ TEST(send_wnd, flush_acts_on_final_incomplete_message)
 TEST(send_wnd, flush_sets_associated_rtx_to_zero)
 {
     Fixture f;
+    f.sw.w.size = 1;
     f.msg[0].len = 10;
     f.rtx[0] = 100;
     arq__send_wnd_flush(&f.sw);
