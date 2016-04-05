@@ -512,6 +512,10 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
         arq__send_wnd_ack(sw, (unsigned)rh->ack_num, rh->cur_ack_vec);
     }
     arq__send_wnd_step(sw, dt);
+    if (sw->tiny_on && (sw->tiny == 0)) {
+        arq__send_wnd_flush(sw);
+        sw->tiny_on = 0;
+    }
     if (sh) {
         unsigned const p_seq = sp->seq;
         if (arq__send_wnd_ptr_next(sp, sw) == ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG) {
