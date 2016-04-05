@@ -665,5 +665,32 @@ TEST(send_wnd, step_wraps_around_when_window_wraps)
     CHECK_EQUAL(60, f.sw.rtx[1]);
 }
 
+TEST(send_wnd, step_decrements_tinygram_timer_if_active)
+{
+    Fixture f;
+    f.sw.tiny_on = 1;
+    f.sw.tiny = 10;
+    arq__send_wnd_step(&f.sw, 3);
+    CHECK_EQUAL(7, f.sw.tiny);
+}
+
+TEST(send_wnd, step_ignores_tinygram_timer_if_inactive)
+{
+    Fixture f;
+    f.sw.tiny_on = 0;
+    f.sw.tiny = 13;
+    arq__send_wnd_step(&f.sw, 1000);
+    CHECK_EQUAL(13, f.sw.tiny);
+}
+
+TEST(send_wnd, step_saturates_tiny_to_zero)
+{
+    Fixture f;
+    f.sw.tiny_on = 1;
+    f.sw.tiny = 12;
+    arq__send_wnd_step(&f.sw, 100);
+    CHECK_EQUAL(0, f.sw.tiny);
+}
+
 }
 

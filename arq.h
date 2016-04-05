@@ -992,6 +992,9 @@ void ARQ_MOCKABLE(arq__send_wnd_step)(arq__send_wnd_t *sw, arq_time_t dt)
         unsigned const idx = (sw->w.seq + i) % sw->w.cap;
         sw->rtx[idx] = arq__sub_sat(sw->rtx[idx], (arq_uint32_t)dt);
     }
+    if (sw->tiny_on) {
+        sw->tiny = arq__sub_sat(sw->tiny, dt);
+    }
 }
 
 void ARQ_MOCKABLE(arq__send_wnd_ptr_init)(arq__send_wnd_ptr_t *p)
