@@ -917,7 +917,7 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw,
                                           arq_time_t tiny)
 {
     unsigned last_msg_len, seq, msg_idx, cur_byte_idx, bytes_rem, orig_size;
-    unsigned wnd_cap_in_bytes, wnd_size_in_bytes, pre_wrap_copy_len;
+    unsigned wnd_cap_in_bytes, wnd_size_in_bytes, pre_wrap_copy_len, i, full_msg_cnt;
     ARQ_ASSERT(sw && buf);
     if (len == 0) {
         return 0;
@@ -932,21 +932,20 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw,
     pre_wrap_copy_len = arq__min(len, wnd_cap_in_bytes - cur_byte_idx);
     ARQ_MEMCPY(sw->w.buf + cur_byte_idx, buf, pre_wrap_copy_len);
     ARQ_MEMCPY(sw->w.buf, (arq_uchar_t const *)buf + pre_wrap_copy_len, len - pre_wrap_copy_len);
-    bytes_rem = len;
-    while (bytes_rem) {
-        unsigned const cur_msg_len = arq__min(bytes_rem, sw->w.msg_len - (unsigned)sw->w.msg[msg_idx].len);
-        sw->w.msg[msg_idx].len += cur_msg_len;
-        sw->rtx[msg_idx] = 0;
-        seq = (seq + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
-        msg_idx = seq % sw->w.cap;
-        bytes_rem -= cur_msg_len;
+    full_msg_cnt = (last_msg_len + len) / sw->w.msg_len;
+    for (i = 0; i < full_msg_cnt; ++i) {
+        sw->rtx[(seq + i) % sw->w.cap] = 0;
+        sw->w.msg[(seq + i) % sw->w.cap].len = sw->w.msg_len;
     }
+    bytes_rem = (last_msg_len + len) - (full_msg_cnt * sw->w.msg_len);
     orig_size = sw->w.size;
     sw->w.size = (wnd_size_in_bytes + len + sw->w.msg_len - 1) / sw->w.msg_len;
-    last_msg_len = sw->w.msg[sw->w.size - 1].len;
-    sw->tiny_on = (last_msg_len > 0) && (last_msg_len < sw->w.msg_len);
-    if (sw->tiny_on && (orig_size < sw->w.size)) {
-        sw->rtx[sw->w.size - 1] = tiny;
+    if (bytes_rem) {
+        sw->w.msg[(sw->w.seq + sw->w.size - 1) % sw->w.cap].len = bytes_rem;
+    }
+    sw->tiny_on = bytes_rem > 0;
+    if (sw->tiny_on && (sw->w.size > orig_size)) {
+        sw->rtx[(sw->w.seq + sw->w.size - 1) % sw->w.cap] = tiny;
         sw->tiny = tiny;
     }
     return len;
