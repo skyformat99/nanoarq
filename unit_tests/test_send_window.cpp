@@ -211,7 +211,7 @@ TEST(send_wnd, send_perfectly_completing_a_message_doesnt_increment_size)
     CHECK_EQUAL(2, f.sw.w.size);
 }
 
-TEST(send_wnd, send_when_cur_index_greater_than_zero_updates_correct_message_len)
+TEST(send_wnd, send_when_sequence_number_greater_than_zero_updates_correct_message_len)
 {
     Fixture f;
     f.sw.w.size = 2;
@@ -222,7 +222,7 @@ TEST(send_wnd, send_when_cur_index_greater_than_zero_updates_correct_message_len
     CHECK_EQUAL(3 + 15, f.msg[2].len);
 }
 
-TEST(send_wnd, send_when_cur_index_greater_than_zero_more_than_one_message_updates_sizes)
+TEST(send_wnd, send_when_sequence_number_greater_than_zero_more_than_one_message_updates_sizes)
 {
     Fixture f;
     f.sw.w.seq = 2;
@@ -414,6 +414,18 @@ TEST(send_wnd, send_multiple_messages_in_one_call_leaves_tinygram_timer_off)
     f.snd.resize(f.sw.w.msg_len * 3);
     arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
     CHECK_EQUAL(0, f.sw.tiny_on);
+}
+
+TEST(send_wnd, send_multiple_calls_accumulating_inside_one_message_doesnt_reset_tinygram_timer)
+{
+    Fixture f;
+    f.snd.resize(1);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 13);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 13);
+    arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 13);
+    CHECK_EQUAL(1, f.sw.tiny_on);
+    CHECK_EQUAL(13, f.sw.tiny);
+    CHECK_EQUAL(13, f.sw.rtx[0]);
 }
 
 TEST(send_wnd, ack_seq_outside_of_send_wnd_greater_does_nothing)
