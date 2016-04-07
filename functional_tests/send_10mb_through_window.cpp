@@ -38,7 +38,7 @@ TEST(functional, send_10mb_through_window)
 
         while (ctx.arq.send_wnd.w.size) {
             arq_uint16_t ack_vec = 0u;
-            for (auto i = 0; i < cfg.message_length_in_segments; ++i) {
+            for (auto i = 0u; i < cfg.message_length_in_segments; ++i) {
                 if (output_data.size() >= input_data.size()) {
                     break;
                 }

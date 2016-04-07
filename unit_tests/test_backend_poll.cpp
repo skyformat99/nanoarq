@@ -59,18 +59,18 @@ int MockRecvWndPtrNext(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t *rw)
                                                       .returnIntValue();
 }
 
-int MockFrameWrite(arq__frame_hdr_t const *h,
+unsigned MockFrameWrite(arq__frame_hdr_t const *h,
                    void const *seg,
                    arq_checksum_t checksum,
                    void *out_frame,
-                   int frame_max)
+                   unsigned frame_max)
 {
     return mock().actualCall("arq__frame_write").withParameter("h", h)
                                                 .withParameter("seg", seg)
                                                 .withParameter("checksum", (void *)checksum)
                                                 .withParameter("out_frame", out_frame)
                                                 .withParameter("frame_max", frame_max)
-                                                .returnIntValue();
+                                                .returnUnsignedIntValue();
 }
 
 void MockWndSeg(arq__wnd_t *w, unsigned seq, unsigned seg, void **out_seg, int *out_seg_len)

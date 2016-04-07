@@ -8,10 +8,10 @@ TEST_GROUP(recv_poll) {};
 
 namespace {
 
-arq_uint32_t csum(void const *, int) { return 0; }
+arq_uint32_t csum(void const *, unsigned) { return 0; }
 
 arq__frame_read_result_t MockFrameRead(void *frame,
-                                       int frame_len,
+                                       unsigned frame_len,
                                        arq_checksum_t checksum,
                                        arq__frame_hdr_t *out_hdr,
                                        void const **out_seg)

@@ -39,7 +39,7 @@ TEST(functional, recv_full_window)
             arq__frame_write(&h, &test_input[test_input_offset], arq_crc32, frame.data(), frame.size());
 
         test_input_offset += h.seg_len;
-        h.seq_num += (h.seg_id == cfg.message_length_in_segments - 1);
+        h.seq_num += ((unsigned)h.seg_id == cfg.message_length_in_segments - 1);
         h.seg_id = (h.seg_id + 1) % cfg.message_length_in_segments;
 
         {

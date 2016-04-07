@@ -29,7 +29,7 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
         CHECK_EQUAL((int)send_test_data.size(), sent);
     }
 
-    for (auto i = 0; i < config.message_length_in_segments * sender.arq.send_wnd.w.cap; ++i) {
+    for (auto i = 0u; i < config.message_length_in_segments * sender.arq.send_wnd.w.cap; ++i) {
         {
             arq_event_t event;
             arq_time_t next_poll;

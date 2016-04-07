@@ -8,12 +8,12 @@ namespace {
 TEST(lin_alloc, init_sets_fields)
 {
     void *base = (void *)0x12345678;
-    int capacity = 3141592;
+    unsigned const capacity = 3141592;
     arq__lin_alloc_t a;
     arq__lin_alloc_init(&a, base, capacity);
 
     CHECK_EQUAL(base, a.base);
-    CHECK_EQUAL(base, a.top);
+    CHECK_EQUAL(0, a.size);
     CHECK_EQUAL(capacity, a.capacity);
 }
 
@@ -42,8 +42,8 @@ TEST(lin_alloc, second_alloc_align_1_returns_top)
 TEST(lin_alloc, pads_for_alignment)
 {
     Fixture f;
-    f.a.base = (unsigned char *)(0);
-    f.a.top = (unsigned char *)(1);
+    f.a.base = (unsigned char *)0;
+    f.a.size = 1;
     void *p = arq__lin_alloc_alloc(&f.a, 1, 4);
     CHECK_EQUAL((void *)4, p);
 }
@@ -111,12 +111,11 @@ TEST(lin_alloc, alloc_returns_null_when_asserts_disabled)
     CHECK_EQUAL((void *)NULL, p);
 }
 
-TEST(lin_alloc, top_remains_unchanged_when_exhausted)
+TEST(lin_alloc, size_remains_unchanged_when_exhausted)
 {
     DisableAssertFixture f;
-    void *p = arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1);
-    CHECK_EQUAL((void *)NULL, p);
-    CHECK_EQUAL((void *)f.a.base, (void *)f.a.top);
+    arq__lin_alloc_alloc(&f.a, f.a.capacity + 1, 1);
+    CHECK_EQUAL(0, f.a.size);
 }
 
 }

@@ -10,9 +10,8 @@ namespace {
 
 TEST(frame, len_is_header_size_plus_segment_length_plus_cobs_overhead_plus_checksum)
 {
-    int const seg_len = 123;
-    CHECK_EQUAL(ARQ__FRAME_COBS_OVERHEAD + ARQ__FRAME_HEADER_SIZE + seg_len + 4,
-                arq__frame_len(seg_len));
+    unsigned const len = 123;
+    CHECK_EQUAL(ARQ__FRAME_COBS_OVERHEAD + ARQ__FRAME_HEADER_SIZE + len + 4, arq__frame_len(len));
 }
 
 struct Fixture
@@ -33,7 +32,7 @@ struct Fixture
         std::memset(frame, 0, sizeof(frame));
     }
     arq__frame_hdr_t h;
-    int const frame_len = arq__frame_len(sizeof(seg));
+    unsigned const frame_len = arq__frame_len(sizeof(seg));
     char const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     char frame[64];
 };
@@ -42,30 +41,30 @@ TEST(frame, write_returns_frame_len)
 {
     struct Local
     {
-        static arq_uint32_t StubChecksum(void const *, int) { return 0; }
+        static arq_uint32_t StubChecksum(void const *, unsigned) { return 0; }
     };
 
     Fixture f;
-    int const written =
+    unsigned const written =
         arq__frame_write(&f.h, f.seg, &Local::StubChecksum, &f.frame, sizeof(f.frame));
     CHECK_EQUAL(arq__frame_len(sizeof(f.seg)), written);
 }
 
-int MockArqFrameHdrWrite(arq__frame_hdr_t *frame_hdr, void *out_buf)
+unsigned MockArqFrameHdrWrite(arq__frame_hdr_t *frame_hdr, void *out_buf)
 {
     return mock().actualCall("arq__frame_hdr_write")
         .withParameter("frame_hdr", frame_hdr).withParameter("out_buf", out_buf)
-        .returnIntValue();
+        .returnUnsignedIntValue();
 }
 
-int MockArqFrameSegWrite(void const *seg, void *out_buf, int len)
+unsigned MockArqFrameSegWrite(void const *seg, void *out_buf, unsigned len)
 {
     return mock().actualCall("arq__frame_seg_write")
         .withParameter("seg", seg).withParameter("out_buf", out_buf).withParameter("len", len)
-        .returnIntValue();
+        .returnUnsignedIntValue();
 }
 
-void MockArqFrameChecksumWrite(arq_checksum_t checksum, void *checksum_seat, void *frame, int seg_len)
+void MockArqFrameChecksumWrite(arq_checksum_t checksum, void *checksum_seat, void *frame, unsigned seg_len)
 {
     mock().actualCall("arq__frame_checksum_write")
         .withParameter("checksum", (void *)checksum)
@@ -74,7 +73,7 @@ void MockArqFrameChecksumWrite(arq_checksum_t checksum, void *checksum_seat, voi
         .withParameter("seg_len", seg_len);
 }
 
-void MockArqCobsEncode(void *p, int len)
+void MockArqCobsEncode(void *p, unsigned len)
 {
     mock().actualCall("arq__cobs_encode").withParameter("p", p).withParameter("len", len);
 }
@@ -86,8 +85,8 @@ void MockArqFrameHdrRead(void const *buf, arq__frame_hdr_t *out_frame_hdr)
 }
 
 arq__frame_read_result_t MockArqFrameChecksumRead(void const *frame,
-                                                  int frame_len,
-                                                  int seg_len,
+                                                  unsigned frame_len,
+                                                  unsigned seg_len,
                                                   arq_checksum_t checksum)
 {
     return (arq__frame_read_result_t)mock().actualCall("arq__frame_checksum_read")
@@ -98,12 +97,12 @@ arq__frame_read_result_t MockArqFrameChecksumRead(void const *frame,
                                            .returnIntValue();
 }
 
-void MockArqCobsDecode(void *p, int len)
+void MockArqCobsDecode(void *p, unsigned len)
 {
     mock().actualCall("arq__cobs_decode").withParameter("p", p).withParameter("len", len);
 }
 
-uint32_t MockChecksum(void const *p, int len)
+uint32_t MockChecksum(void const *p, unsigned len)
 {
     return (uint32_t)mock().actualCall("checksum")
         .withParameter("p", p).withParameter("len", len).returnUnsignedIntValue();

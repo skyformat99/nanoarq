@@ -33,7 +33,7 @@ TEST(functional, ack_one_message)
         CHECK_EQUAL((int)send_test_data.size(), sent);
     }
 
-    for (auto i = 0; i < cfg.message_length_in_segments; ++i) {
+    for (auto i = 0u; i < cfg.message_length_in_segments; ++i) {
         // poll the sender to move a frame from the send window into the send frame
         {
             arq_event_t event;
