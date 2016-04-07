@@ -26,7 +26,7 @@ FunctionRecord const s_functionRecords[] = { ARQ_MOCK_LIST() };
 }
 
 // clang's convention on OSX is to prefix C functions with _, but gcc and linux don't.
-#ifdef __APPLE__
+#if defined(__APPLE__) && defined(__clang__)
     #define ARQ_SYMBOL_PREFIX "_"
 #else
     #define ARQ_SYMBOL_PREFIX ""

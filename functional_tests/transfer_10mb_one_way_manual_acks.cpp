@@ -9,6 +9,8 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
     cfg.retransmission_timeout = 100;
+    cfg.send_window_size_in_messages = 16;
+    cfg.recv_window_size_in_messages = 16;
     cfg.checksum = &arq_crc32;
 
     ArqContext sender(cfg), receiver(cfg);
@@ -29,30 +31,30 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
             int send_size;
             arq_event_t event;
             arq_time_t next_poll;
-            arq_err_t const e = arq_backend_poll(&sender.arq, 0, &send_size, &event, &next_poll);
+            arq_err_t const e = arq_backend_poll(sender.arq, 0, &send_size, &event, &next_poll);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
         }
 
         // fill the send window
         {
             int sent_this_turn;
-            arq_err_t e = arq_send(&sender.arq,
+            arq_err_t e = arq_send(sender.arq,
                                    &send_test_data[send_idx],
                                    send_test_data.size() - send_idx,
                                    &sent_this_turn);
             CHECK(ARQ_SUCCEEDED(e));
-            e = arq_flush(&sender.arq);
+            e = arq_flush(sender.arq);
             CHECK(ARQ_SUCCEEDED(e));
             send_idx += sent_this_turn;
         }
 
-        while (sender.arq.send_wnd.w.size) {
+        while (sender.arq->send_wnd.w.size) {
             // prepare a segment from send window
             {
                 int send_size;
                 arq_event_t event;
                 arq_time_t next_poll;
-                arq_err_t const e = arq_backend_poll(&sender.arq, 0, &send_size, &event, &next_poll);
+                arq_err_t const e = arq_backend_poll(sender.arq, 0, &send_size, &event, &next_poll);
                 CHECK_EQUAL(ARQ_OK_COMPLETED, e);
                 CHECK(send_size > 0);
             }
@@ -62,13 +64,13 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
             {
                 void const *p;
                 {
-                    arq_err_t const e = arq_backend_send_ptr_get(&sender.arq, &p, &frame_len);
+                    arq_err_t const e = arq_backend_send_ptr_get(sender.arq, &p, &frame_len);
                     CHECK_EQUAL(ARQ_OK_COMPLETED, e);
                     CHECK(p && frame_len > 0);
                 }
                 std::memcpy(frame.data(), p, frame_len);
                 if (frame_len) {
-                    arq_err_t const e = arq_backend_send_ptr_release(&sender.arq);
+                    arq_err_t const e = arq_backend_send_ptr_release(sender.arq);
                     CHECK_EQUAL(ARQ_OK_COMPLETED, e);
                 }
             }
@@ -83,13 +85,13 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
                     arq__frame_read(decode.data(), frame_len, cfg.checksum, &h, &seg);
                 CHECK(ARQ_SUCCEEDED(r));
                 unsigned const ack_vec = (1 << (h.seg_id + 1)) - 1u;
-                arq__send_wnd_ack(&sender.arq.send_wnd, h.seq_num, ack_vec);
+                arq__send_wnd_ack(&sender.arq->send_wnd, h.seq_num, ack_vec);
             }
 
             // push frame into receiver
             {
                 int filled;
-                arq_err_t const e = arq_backend_recv_fill(&receiver.arq, frame.data(), frame_len, &filled);
+                arq_err_t const e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &filled);
                 CHECK(ARQ_SUCCEEDED(e));
                 CHECK_EQUAL(frame_len, filled);
             }
@@ -99,17 +101,17 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
                 arq_event_t event;
                 arq_time_t next_poll;
                 int bytes_to_drain;
-                arq_err_t const e = arq_backend_poll(&receiver.arq, 0, &bytes_to_drain, &event, &next_poll);
+                arq_err_t const e = arq_backend_poll(receiver.arq, 0, &bytes_to_drain, &event, &next_poll);
                 CHECK(ARQ_SUCCEEDED(e));
             }
         }
-        CHECK_EQUAL(0, sender.arq.send_wnd.w.size);
+        CHECK_EQUAL(0, sender.arq->send_wnd.w.size);
 
         // drain the receive window
-        while (receiver.arq.recv_wnd.w.size) {
+        while (receiver.arq->recv_wnd.w.size) {
             unsigned char recv_buf[1024];
             int bytes_recvd;
-            arq_err_t const e = arq_recv(&receiver.arq, recv_buf, sizeof(recv_buf), &bytes_recvd);
+            arq_err_t const e = arq_recv(receiver.arq, recv_buf, sizeof(recv_buf), &bytes_recvd);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK(bytes_recvd > 0);
             std::copy(recv_buf, recv_buf + bytes_recvd, std::back_inserter(recv_test_data));

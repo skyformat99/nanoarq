@@ -15,6 +15,8 @@ inter-byte and intra-frame timers
 
 correctness?
 ============
+unit tests for ARQ__ALIGNOF
+unit tests for arq__alloc
 unit test for recv wnd ptr valid => 1
 who initializes the recv wnd ptr?
 need an ACK bit? initial syn doesn't come with payload, can we fully NAK 0? ACK bit sounds easier.
