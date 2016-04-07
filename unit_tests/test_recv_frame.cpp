@@ -24,10 +24,8 @@ TEST(recv_frame, init_assigns_parameters)
 {
     arq__recv_frame_t f;
     f.cap = f.len = 12345;
-    f.buf = nullptr;
-    arq__recv_frame_init(&f, &f, 100);
+    arq__recv_frame_init(&f, 100);
     CHECK_EQUAL(100, f.cap);
-    CHECK_EQUAL((void *)&f, (void *)f.buf);
 }
 
 void MockFrameReset(arq__recv_frame_t *f)
@@ -47,7 +45,8 @@ struct Fixture
 {
     Fixture()
     {
-        arq__recv_frame_init(&f, buf.data(), buf.size());
+        f.buf = buf.data();
+        arq__recv_frame_init(&f, buf.size());
         std::fill(std::begin(buf), std::end(buf), 0xFF);
     }
     arq__recv_frame_t f;

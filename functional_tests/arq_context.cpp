@@ -1,38 +1,35 @@
-#include "arq_context.h"
+#include "functional_tests.h"
 
 ArqContext::ArqContext(arq_cfg_t const &config)
 {
-    arq.cfg = config;
+    unsigned size;
+    arq_err_t const e = arq_required_size(&config, &size);
+    CHECK(ARQ_SUCCEEDED(e));
 
-    send_wnd_buf.resize(send_wnd_msgs.size() *
-                        arq.cfg.segment_length_in_bytes *
-                        arq.cfg.message_length_in_segments);
+    seat = std::malloc(size);
+    arq__lin_alloc_t la;
+    arq__lin_alloc_init(&la, seat, size);
 
-    recv_wnd_buf.resize(recv_wnd_msgs.size() *
-                        arq.cfg.segment_length_in_bytes *
-                        arq.cfg.message_length_in_segments);
+    arq = arq__alloc(&config, &la);
+    arq->cfg = config;
 
-    arq.send_wnd.w.msg = send_wnd_msgs.data();
-    arq.send_wnd.w.buf = send_wnd_buf.data();
-    arq.send_frame.buf = send_frame.data();
-    arq.send_wnd.rtx = rtx_timers.data();
+    arq__wnd_init(&arq->send_wnd.w,
+                  arq->cfg.send_window_size_in_messages,
+                  arq->cfg.message_length_in_segments * arq->cfg.segment_length_in_bytes,
+                  arq->cfg.segment_length_in_bytes);
+    arq__send_frame_init(&arq->send_frame, arq__frame_len(arq->cfg.segment_length_in_bytes));
+    arq__send_wnd_ptr_init(&arq->send_wnd_ptr);
+    arq__wnd_init(&arq->recv_wnd.w,
+                  arq->cfg.recv_window_size_in_messages,
+                  arq->cfg.message_length_in_segments * arq->cfg.segment_length_in_bytes,
+                  arq->cfg.segment_length_in_bytes);
+    arq__recv_frame_init(&arq->recv_frame, arq__frame_len(arq->cfg.segment_length_in_bytes));
+    arq__recv_wnd_ptr_init(&arq->recv_wnd_ptr);
+    arq__recv_wnd_rst(&arq->recv_wnd);
+}
 
-    arq.recv_wnd.ack = recv_wnd_ack.data();
-    arq.recv_wnd.w.msg = recv_wnd_msgs.data();
-    arq.recv_wnd.w.buf = recv_wnd_buf.data();
-
-    arq__wnd_init(&arq.send_wnd.w,
-                  send_wnd_msgs.size(),
-                  arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
-                  arq.cfg.segment_length_in_bytes);
-    arq__send_frame_init(&arq.send_frame, send_frame.size());
-    arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
-    arq__wnd_init(&arq.recv_wnd.w,
-                  recv_wnd_msgs.size(),
-                  arq.cfg.message_length_in_segments * arq.cfg.segment_length_in_bytes,
-                  arq.cfg.segment_length_in_bytes);
-    arq__recv_frame_init(&arq.recv_frame, recv_frame.data(), recv_frame.size());
-    arq__recv_wnd_ptr_init(&arq.recv_wnd_ptr);
-    arq__recv_wnd_rst(&arq.recv_wnd);
+ArqContext::~ArqContext()
+{
+    std::free(seat);
 }
 

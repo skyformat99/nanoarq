@@ -5,15 +5,19 @@ namespace {
 
 TEST(functional, transfer_full_window_one_way_manual_acks)
 {
-    arq_cfg_t config;
-    config.segment_length_in_bytes = 220;
-    config.message_length_in_segments = 4;
-    config.retransmission_timeout = 100;
-    config.checksum = &arq_crc32;
+    arq_cfg_t cfg;
+    cfg.segment_length_in_bytes = 220;
+    cfg.message_length_in_segments = 4;
+    cfg.send_window_size_in_messages = 16;
+    cfg.recv_window_size_in_messages = 16;
+    cfg.retransmission_timeout = 100;
+    cfg.checksum = &arq_crc32;
 
-    ArqContext sender(config), receiver(config);
+    ArqContext sender(cfg), receiver(cfg);
 
-    std::vector< unsigned char > send_test_data(sender.send_wnd_buf.size());
+    std::vector< unsigned char > send_test_data(cfg.message_length_in_segments *
+                                                cfg.segment_length_in_bytes *
+                                                cfg.send_window_size_in_messages);
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
         uint16_t const v = i;
         std::memcpy(&send_test_data[i * 2], &v, sizeof(v));
@@ -24,17 +28,17 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
 
     {
         int sent;
-        arq_err_t const e = arq_send(&sender.arq, send_test_data.data(), send_test_data.size(), &sent);
+        arq_err_t const e = arq_send(sender.arq, send_test_data.data(), send_test_data.size(), &sent);
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
         CHECK_EQUAL((int)send_test_data.size(), sent);
     }
 
-    for (auto i = 0u; i < config.message_length_in_segments * sender.arq.send_wnd.w.cap; ++i) {
+    for (auto i = 0u; i < cfg.message_length_in_segments * cfg.send_window_size_in_messages; ++i) {
         {
             arq_event_t event;
             arq_time_t next_poll;
             int bytes_to_drain;
-            arq_err_t const e = arq_backend_poll(&sender.arq, 0, &bytes_to_drain, &event, &next_poll);
+            arq_err_t const e = arq_backend_poll(sender.arq, 0, &bytes_to_drain, &event, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK(bytes_to_drain > 0);
         }
@@ -43,16 +47,16 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
         unsigned char decode_buf[256];
         {
             void const *p;
-            arq_err_t e = arq_backend_send_ptr_get(&sender.arq, &p, &size);
+            arq_err_t e = arq_backend_send_ptr_get(sender.arq, &p, &size);
             CHECK(ARQ_SUCCEEDED(e));
             std::memcpy(decode_buf, p, size);
-            e = arq_backend_send_ptr_release(&sender.arq);
+            e = arq_backend_send_ptr_release(sender.arq);
             CHECK(ARQ_SUCCEEDED(e));
         }
 
         {
             int bytes_filled;
-            arq_err_t const e = arq_backend_recv_fill(&receiver.arq, decode_buf, size, &bytes_filled);
+            arq_err_t const e = arq_backend_recv_fill(receiver.arq, decode_buf, size, &bytes_filled);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(size, bytes_filled);
         }
@@ -61,7 +65,7 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
             arq_event_t event;
             arq_time_t next_poll;
             int bytes_to_drain;
-            arq_err_t const e = arq_backend_poll(&receiver.arq, 0, &bytes_to_drain, &event, &next_poll);
+            arq_err_t const e = arq_backend_poll(receiver.arq, 0, &bytes_to_drain, &event, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
         }
     }
@@ -70,7 +74,7 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
         {
             unsigned char recv_buf[256];
             int bytes_recvd;
-            arq_err_t const e = arq_recv(&receiver.arq, recv_buf, sizeof(recv_buf), &bytes_recvd);
+            arq_err_t const e = arq_recv(receiver.arq, recv_buf, sizeof(recv_buf), &bytes_recvd);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK(bytes_recvd > 0);
 

@@ -7,6 +7,8 @@ TEST(functional, poll_until_tinygram_sends)
     arq_cfg_t cfg;
     cfg.segment_length_in_bytes = 220;
     cfg.message_length_in_segments = 4;
+    cfg.send_window_size_in_messages = 16;
+    cfg.recv_window_size_in_messages = 16;
     cfg.retransmission_timeout = 100;
     cfg.tinygram_send_delay = 50;
     cfg.checksum = &arq_crc32;
@@ -15,7 +17,7 @@ TEST(functional, poll_until_tinygram_sends)
     arq_uchar_t const send_data = 0x5A;
     {
         int sent;
-        arq_err_t const e = arq_send(&ctx.arq, &send_data, 1, &sent);
+        arq_err_t const e = arq_send(ctx.arq, &send_data, 1, &sent);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(1, sent);
     }
@@ -24,7 +26,7 @@ TEST(functional, poll_until_tinygram_sends)
         arq_event_t event;
         arq_time_t next_poll;
         int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(&ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
+        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(0, bytes_to_drain);
     }
@@ -33,7 +35,7 @@ TEST(functional, poll_until_tinygram_sends)
         arq_event_t event;
         arq_time_t next_poll;
         int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(&ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
+        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK(bytes_to_drain);
     }
@@ -42,10 +44,10 @@ TEST(functional, poll_until_tinygram_sends)
     arq_uchar_t decode_buf[256];
     {
         void const *p;
-        arq_err_t e = arq_backend_send_ptr_get(&ctx.arq, &p, &size);
+        arq_err_t e = arq_backend_send_ptr_get(ctx.arq, &p, &size);
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
         std::memcpy(decode_buf, p, size);
-        e = arq_backend_send_ptr_release(&ctx.arq);
+        e = arq_backend_send_ptr_release(ctx.arq);
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
     }
 

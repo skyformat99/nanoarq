@@ -103,7 +103,7 @@ struct arq_t;
 
 arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb);
 arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb);
-arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size);
+arq_err_t arq_required_size(arq_cfg_t const *cfg, unsigned *out_required_size);
 
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, int arq_seat_size, struct arq_t **out_arq);
 arq_err_t arq_connect(struct arq_t *arq);
@@ -136,7 +136,7 @@ typedef struct arq__lin_alloc_t
     unsigned capacity;
 } arq__lin_alloc_t;
 
-void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity);
+void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, unsigned capacity);
 void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, unsigned size, unsigned align);
 
 enum
@@ -314,7 +314,7 @@ typedef struct arq__recv_frame_t
     arq_uint16_t len;
 } arq__recv_frame_t;
 
-void arq__recv_frame_init(arq__recv_frame_t *f, void *buf, int len);
+void arq__recv_frame_init(arq__recv_frame_t *f, unsigned len);
 void arq__recv_frame_rst(arq__recv_frame_t *f);
 unsigned arq__recv_frame_fill(arq__recv_frame_t *f, void const *src, unsigned len);
 int arq__recv_poll(arq__recv_wnd_t *rw,
@@ -337,6 +337,7 @@ typedef struct arq_t
     arq__recv_frame_t recv_frame;
 } arq_t;
 
+arq_err_t arq__check_cfg(arq_cfg_t const *cfg);
 arq_t *arq__alloc(arq_cfg_t const *cfg, arq__lin_alloc_t *la);
 
 unsigned arq__min(unsigned x, unsigned y);
@@ -427,10 +428,20 @@ arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb)
     return ARQ_OK_COMPLETED;
 }
 
-arq_err_t arq_required_size(arq_cfg_t const *cfg, int *out_required_size)
+arq_err_t arq_required_size(arq_cfg_t const *cfg, unsigned *out_required_size)
 {
-    (void)cfg;
-    *out_required_size = 0;
+    arq__lin_alloc_t la;
+    arq_err_t check_err;
+    if (!cfg || !out_required_size) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    check_err = arq__check_cfg(cfg);
+    if (!ARQ_SUCCEEDED(check_err)) {
+        return check_err;
+    }
+    arq__lin_alloc_init(&la, ARQ_NULL_PTR, (unsigned)-1);
+    arq__alloc(cfg, &la);
+    *out_required_size = la.size;
     return ARQ_OK_COMPLETED;
 }
 
@@ -619,15 +630,15 @@ arq_err_t arq_backend_recv_fill(struct arq_t *arq, void const *recv, int recv_ma
         ARQ_OK_COMPLETED : ARQ_OK_POLL_REQUIRED;
 }
 
-void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, int capacity)
+void ARQ_MOCKABLE(arq__lin_alloc_init)(arq__lin_alloc_t *a, void *base, unsigned capacity)
 {
-    ARQ_ASSERT(a && base && (capacity > 0));
+    ARQ_ASSERT(a);
     a->base = (arq_uchar_t *)base;
     a->size = 0;
-    a->capacity = (unsigned)capacity;
+    a->capacity = capacity;
 }
 
-void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, unsigned size, unsigned align)
+void *ARQ_MOCKABLE(arq__lin_alloc_alloc)(arq__lin_alloc_t *a, unsigned size, unsigned align)
 {
     unsigned const seat = (a->size + (align - 1)) & ~(align - 1);
     unsigned const new_size = seat + size;
@@ -1166,11 +1177,10 @@ void ARQ_MOCKABLE(arq__recv_wnd_ptr_set)(arq__recv_wnd_ptr_t *p, unsigned seq, u
     p->pending = 1;
 }
 
-void arq__recv_frame_init(arq__recv_frame_t *f, void *buf, int len)
+void arq__recv_frame_init(arq__recv_frame_t *f, unsigned len)
 {
-    ARQ_ASSERT(f && buf);
+    ARQ_ASSERT(f && (len < (arq_uint16_t)-1));
     f->cap = len;
-    f->buf = (arq_uchar_t *)buf;
     arq__recv_frame_rst(f);
 }
 
@@ -1206,19 +1216,37 @@ unsigned ARQ_MOCKABLE(arq__recv_frame_fill)(arq__recv_frame_t *f, void const *sr
     return ret - len;
 }
 
-arq_t *arq__alloc(arq_cfg_t const *cfg, arq__lin_alloc_t *la)
+arq_err_t ARQ_MOCKABLE(arq__check_cfg)(arq_cfg_t const *cfg)
+{
+    ARQ_ASSERT(cfg);
+    if (cfg->message_length_in_segments == 0) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    if (cfg->segment_length_in_bytes == 0) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    if (cfg->send_window_size_in_messages == 0) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    if (cfg->recv_window_size_in_messages == 0) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    return ARQ_OK_COMPLETED;
+}
+
+arq_t *ARQ_MOCKABLE(arq__alloc)(arq_cfg_t const *cfg, arq__lin_alloc_t *la)
 {
     arq_t *arq;
     void *p;
     unsigned len;
     ARQ_ASSERT(cfg && la);
-    arq = (arq_t *)arq__lin_alloc_alloc(la, sizeof(arq), ARQ__ALIGNOF(arq_t));
-    len = (int)sizeof(arq_time_t) * cfg->send_window_size_in_messages;
+    arq = (arq_t *)arq__lin_alloc_alloc(la, sizeof(arq_t), ARQ__ALIGNOF(arq_t));
+    len = sizeof(arq_time_t) * cfg->send_window_size_in_messages;
     p = arq__lin_alloc_alloc(la, len, ARQ__ALIGNOF(arq_time_t));
     if (arq) {
         arq->send_wnd.rtx = (arq_time_t *)p;
     }
-    len = (int)sizeof(arq__msg_t) * cfg->send_window_size_in_messages;
+    len = sizeof(arq__msg_t) * cfg->send_window_size_in_messages;
     p = arq__lin_alloc_alloc(la, len, ARQ__ALIGNOF(arq__msg_t));
     if (arq) {
         arq->send_wnd.w.msg = (arq__msg_t *)p;
@@ -1232,7 +1260,7 @@ arq_t *arq__alloc(arq_cfg_t const *cfg, arq__lin_alloc_t *la)
     if (arq) {
         arq->recv_wnd.ack = (arq_uchar_t *)p;
     }
-    len = (int)sizeof(arq__msg_t) * cfg->recv_window_size_in_messages;
+    len = sizeof(arq__msg_t) * cfg->recv_window_size_in_messages;
     p = arq__lin_alloc_alloc(la, len, ARQ__ALIGNOF(arq__msg_t));
     if (arq) {
         arq->recv_wnd.w.msg = (arq__msg_t *)p;

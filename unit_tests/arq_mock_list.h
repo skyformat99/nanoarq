@@ -1,6 +1,10 @@
 #pragma once
 
 #define ARQ_MOCK_LIST() \
+    ARQ_MOCK(arq__check_cfg) \
+    ARQ_MOCK(arq__lin_alloc_init) \
+    ARQ_MOCK(arq__lin_alloc_alloc) \
+    ARQ_MOCK(arq__alloc) \
     ARQ_MOCK(arq__wnd_init) \
     ARQ_MOCK(arq__wnd_rst) \
     ARQ_MOCK(arq__wnd_seg) \
