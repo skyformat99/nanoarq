@@ -44,6 +44,7 @@ struct Fixture
         arq__wnd_init(&sw.w, m.size(), 128, 16);
         arq__send_frame_init(&f, 128);
         arq__send_wnd_ptr_init(&p);
+        sw.tiny_on = 0;
         ARQ_MOCK_HOOK(arq__send_wnd_step, MockSendWndStep);
         ARQ_MOCK_HOOK(arq__send_wnd_ptr_next, MockSendWndPtrNext);
         ARQ_MOCK_HOOK(arq__send_wnd_ack, MockSendWndAck);
