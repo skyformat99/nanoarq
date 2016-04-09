@@ -37,7 +37,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
 
         // fill the send window
         {
-            int sent_this_turn;
+            unsigned sent_this_turn;
             arq_err_t e = arq_send(sender.arq,
                                    &send_test_data[send_idx],
                                    send_test_data.size() - send_idx,
@@ -110,7 +110,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
         // drain the receive window
         while (receiver.arq->recv_wnd.w.size) {
             unsigned char recv_buf[1024];
-            int bytes_recvd;
+            unsigned bytes_recvd;
             arq_err_t const e = arq_recv(receiver.arq, recv_buf, sizeof(recv_buf), &bytes_recvd);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK(bytes_recvd > 0);

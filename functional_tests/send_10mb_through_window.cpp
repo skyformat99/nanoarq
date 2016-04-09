@@ -30,7 +30,7 @@ TEST(functional, send_10mb_through_window)
 
     while (output_data.size() < input_data.size()) {
         {
-            int sent;
+            unsigned sent;
             arq_err_t e = arq_send(ctx.arq, &input_data[input_idx], input_data.size() - input_idx, &sent);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
             e = arq_flush(ctx.arq);

@@ -16,7 +16,7 @@ TEST(functional, poll_until_tinygram_sends)
 
     arq_uchar_t const send_data = 0x5A;
     {
-        int sent;
+        unsigned sent;
         arq_err_t const e = arq_send(ctx.arq, &send_data, 1, &sent);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(1, sent);

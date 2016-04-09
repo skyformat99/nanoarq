@@ -65,7 +65,7 @@ TEST(functional, recv_full_window)
 
     while (test_output.size() < test_input.size()) {
         std::array< arq_uchar_t, 256 > recv;
-        int recvd;
+        unsigned recvd;
         arq_err_t const e = arq_recv(ctx.arq, recv.data(), recv.size(), &recvd);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK(recvd > 0);
