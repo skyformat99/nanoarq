@@ -65,7 +65,7 @@ TEST(functional, recv_10mb_through_window)
             h.seq_num = (h.seq_num + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
         }
 
-        int bytes_recvd_from_window;
+        unsigned bytes_recvd_from_window;
         while (ctx.arq->recv_wnd.w.size) {
             std::array< arq_uchar_t, 256 > recv;
             arq_err_t const e = arq_recv(ctx.arq, recv.data(), recv.size(), &bytes_recvd_from_window);

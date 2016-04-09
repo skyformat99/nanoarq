@@ -11,7 +11,7 @@ namespace {
 TEST(send, invalid_params)
 {
     void const *p = nullptr;
-    int size;
+    unsigned size;
     arq_t arq;
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_send(nullptr, p, 1, &size));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_send(&arq, nullptr, 1, &size));
@@ -23,11 +23,11 @@ TEST(send, fails_if_not_connected)
     // TODO
 }
 
-int MockSendWndSend(arq__send_wnd_t *sw, void const *buf, int len)
+unsigned MockSendWndSend(arq__send_wnd_t *sw, void const *buf, unsigned len)
 {
     return mock().actualCall("arq__send_wnd_send")
                  .withParameter("sw", sw).withParameter("buf", buf).withParameter("len", len)
-                 .returnIntValue();
+                 .returnUnsignedIntValue();
 }
 
 TEST(send, calls_wnd_snd)
@@ -39,7 +39,7 @@ TEST(send, calls_wnd_snd)
           .withParameter("sw", &arq.send_wnd)
           .withParameter("buf", (void const *)buf)
           .withParameter("len", (int)sizeof(buf));
-    int sent;
+    unsigned sent;
     arq_send(&arq, buf, sizeof(buf), &sent);
 }
 
@@ -49,7 +49,7 @@ TEST(send, bytes_written_is_return_value_from_wnd_send)
     char buf[16];
     ARQ_MOCK_HOOK(arq__send_wnd_send, MockSendWndSend);
     mock().expectOneCall("arq__send_wnd_send").ignoreOtherParameters().andReturnValue(1234);
-    int sent;
+    unsigned sent;
     arq_send(&arq, buf, sizeof(buf), &sent);
     CHECK_EQUAL(sent, 1234);
 }
@@ -60,7 +60,7 @@ TEST(send, returns_success)
     char buf[16];
     ARQ_MOCK_HOOK(arq__send_wnd_send, MockSendWndSend);
     mock().ignoreOtherCalls();
-    int sent;
+    unsigned sent;
     arq_err_t const e = arq_send(&arq, buf, sizeof(buf), &sent);
     CHECK_EQUAL(ARQ_OK_COMPLETED, e);
 }

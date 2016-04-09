@@ -25,11 +25,13 @@ add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
                                       test_succeeded.cpp
                                       test_check_cfg.cpp
                                       test_required_size.cpp
+                                      test_init.cpp
                                       test_send.cpp
                                       test_recv.cpp
                                       test_flush.cpp
                                       test_asserts.cpp
                                       test_lin_alloc.cpp
+                                      test_init_internal.cpp
                                       test_frame_hdr.cpp
                                       test_ntoh_hton_le.cpp
                                       test_backend_send.cpp

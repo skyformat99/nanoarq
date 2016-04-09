@@ -25,7 +25,7 @@ TEST(functional, send_full_window)
     recv_test_data.reserve(send_test_data.size());
 
     {
-        int sent;
+        unsigned sent;
         arq_err_t const e = arq_send(ctx.arq, send_test_data.data(), send_test_data.size(), &sent);
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
     }

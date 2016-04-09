@@ -27,10 +27,10 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
     recv_test_data.reserve(send_test_data.size());
 
     {
-        int sent;
+        unsigned sent;
         arq_err_t const e = arq_send(sender.arq, send_test_data.data(), send_test_data.size(), &sent);
         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-        CHECK_EQUAL((int)send_test_data.size(), sent);
+        CHECK_EQUAL(send_test_data.size(), sent);
     }
 
     for (auto i = 0u; i < cfg.message_length_in_segments * cfg.send_window_size_in_messages; ++i) {
@@ -73,7 +73,7 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
     while (recv_test_data.size() < send_test_data.size()) {
         {
             unsigned char recv_buf[256];
-            int bytes_recvd;
+            unsigned bytes_recvd;
             arq_err_t const e = arq_recv(receiver.arq, recv_buf, sizeof(recv_buf), &bytes_recvd);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK(bytes_recvd > 0);

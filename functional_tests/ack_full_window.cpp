@@ -32,10 +32,10 @@ TEST(functional, ack_full_window)
 
     // send a full message into the sender
     {
-        int sent;
+        unsigned sent;
         arq_err_t const e = arq_send(sender.arq, send_test_data.data(), send_test_data.size(), &sent);
         CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL((int)send_test_data.size(), sent);
+        CHECK_EQUAL(send_test_data.size(), sent);
     }
 
     for (auto i = 0u; i < cfg.message_length_in_segments * sender.arq->send_wnd.w.cap; ++i) {
@@ -118,7 +118,7 @@ TEST(functional, ack_full_window)
     // drain the receiver's receive window
     {
         std::array< arq_uchar_t, 128 > data;
-        int bytes_read;
+        unsigned bytes_read;
         do {
             arq_err_t const e = arq_recv(receiver.arq, data.data(), data.size(), &bytes_read);
             CHECK(ARQ_SUCCEEDED(e));

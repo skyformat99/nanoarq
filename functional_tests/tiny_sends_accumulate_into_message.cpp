@@ -22,7 +22,7 @@ TEST(functional, tiny_sends_accumulate_into_message)
 
     for (auto i = 0u; i < cfg.tinygram_send_delay - 1; ++i) {
         {
-            int sent;
+            unsigned sent;
             arq_err_t const e = arq_send(ctx.arq, &send_test_data[i], 1, &sent);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(1, sent);

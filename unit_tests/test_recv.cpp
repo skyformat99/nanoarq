@@ -11,7 +11,7 @@ namespace {
 TEST(recv, invalid_params)
 {
     void *p = nullptr;
-    int size;
+    unsigned size;
     arq_t arq;
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_recv(nullptr, p, 1, &size));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_recv(&arq, nullptr, 1, &size));
@@ -39,7 +39,7 @@ struct Fixture
     }
     arq_t arq;
     char recv[20];
-    int recvd;
+    unsigned recvd;
 };
 
 TEST(recv, calls_wnd_recv)
