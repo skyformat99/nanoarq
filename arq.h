@@ -103,6 +103,8 @@ struct arq_t;
 
 arq_err_t arq_assert_handler_set(arq_assert_cb_t assert_cb);
 arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb);
+
+arq_err_t arq_seg_len_from_frame_len(unsigned frame_len, unsigned *out_seg_len);
 arq_err_t arq_required_size(arq_cfg_t const *cfg, unsigned *out_required_size);
 
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, unsigned arq_seat_size, struct arq_t **out_arq);
@@ -426,6 +428,18 @@ arq_err_t arq_assert_handler_get(arq_assert_cb_t *out_assert_cb)
 #else
     *out_assert_cb = ARQ_NULL_PTR;
 #endif
+    return ARQ_OK_COMPLETED;
+}
+
+arq_err_t arq_seg_len_from_frame_len(unsigned frame_len, unsigned *out_seg_len)
+{
+    if (!out_seg_len) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    if (frame_len < (ARQ__FRAME_COBS_OVERHEAD + ARQ__FRAME_HEADER_SIZE + 4 + 1)) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    *out_seg_len = frame_len - ARQ__FRAME_COBS_OVERHEAD - ARQ__FRAME_HEADER_SIZE - 4;
     return ARQ_OK_COMPLETED;
 }
 

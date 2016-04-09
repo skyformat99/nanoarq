@@ -23,6 +23,7 @@ add_dependencies(arq_test_support CppUTest_external)
 
 add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
                                       test_succeeded.cpp
+                                      test_seg_len_from_frame_len.cpp
                                       test_check_cfg.cpp
                                       test_required_size.cpp
                                       test_init.cpp
