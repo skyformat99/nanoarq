@@ -15,6 +15,7 @@ struct Fixture
         std::memset(rtx.data(), 0, sizeof(arq_time_t) * rtx.size());
         sw.w.cap = rtx.size();
         sw.w.size = 0;
+        sw.w.seq = 0;
         sw.tiny_on = 0;
     };
     arq__send_wnd_t sw;
