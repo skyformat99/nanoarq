@@ -614,11 +614,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
     if (psh && emit) {
         void *seg = ARQ_NULL_PTR;
         if (psh->seg) {
-            arq__wnd_seg(&arq->send_wnd.w,
-                         (unsigned)sh.seq_num,
-                         (unsigned)sh.seg_id,
-                         &seg,
-                         &psh->seg_len);
+            arq__wnd_seg(&arq->send_wnd.w, (unsigned)sh.seq_num, (unsigned)sh.seg_id, &seg, &psh->seg_len);
             ARQ_ASSERT(psh->seg_len);
         }
         arq->send_frame.len =
