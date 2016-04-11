@@ -38,6 +38,7 @@ add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
                                       test_backend_send.cpp
                                       test_backend_recv.cpp
                                       test_backend_poll.cpp
+                                      test_next_poll.cpp
                                       test_window.cpp
                                       test_send_window.cpp
                                       test_send_window_ptr.cpp
