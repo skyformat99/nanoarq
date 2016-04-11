@@ -8,6 +8,9 @@
 #ifndef ARQ_COMPILE_CRC32
     #error You must define ARQ_COMPILE_CRC32 to 0 or 1 before including arq.h
 #endif
+#ifndef ARQ_LITTLE_ENDIAN_CPU
+    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h
+#endif
 
 #if ARQ_USE_C_STDLIB == 1
     #include <stdint.h>
@@ -352,6 +355,7 @@ arq_uint32_t arq__hton32(arq_uint32_t x);
 arq_uint32_t arq__ntoh32(arq_uint32_t x);
 
 #define ARQ__ALIGNOF(x) __alignof__(x)
+#define ARQ__COUNT_TRAILING_ZERO_BITS(x) __builtin_ctz(x)
 
 #if defined(__cplusplus)
 }
@@ -367,10 +371,7 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
 #define ARQ_IMPLEMENTATION_INCLUDED
 
 #ifndef ARQ_ASSERTS_ENABLED
-    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h with ARQ_IMPLEMENTATION
-#endif
-#ifndef ARQ_LITTLE_ENDIAN_CPU
-    #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h with ARQ_IMPLEMENTATION
+    #error You must define ARQ_ASSERTS_ENABLED to 0 or 1 before including arq.h
 #endif
 
 #if ARQ_USE_C_STDLIB == 1
@@ -391,8 +392,6 @@ arq_uint32_t arq__ntoh32(arq_uint32_t x);
         #error You must define ARQ_MEMCPY before including arq.h with ARQ_IMPLEMENTATION
     #endif
 #endif
-
-#define ARQ_COUNT_TRAILING_ZERO_BITS(x) __builtin_ctz(x)
 
 typedef ARQ_UINTPTR_TYPE arq_uintptr_t;
 
@@ -1078,7 +1077,7 @@ arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_w
     if (p->valid) {
         arq__msg_t const *m = &sw->w.msg[p->seq % sw->w.cap];
         unsigned const rem = (unsigned)m->cur_ack_vec >> (p->seg + 1);
-        p->seg += (1 + ARQ_COUNT_TRAILING_ZERO_BITS(~rem));
+        p->seg += (1 + ARQ__COUNT_TRAILING_ZERO_BITS(~rem));
         if (((1 << p->seg) - 1) < m->full_ack_vec) {
             return ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG;
         }
@@ -1093,7 +1092,7 @@ arq__send_wnd_ptr_next_result_t ARQ_MOCKABLE(arq__send_wnd_ptr_next)(arq__send_w
         if ((sw->rtx[seq % sw->w.cap] == 0) && (m->len > 0) && (m->cur_ack_vec < m->full_ack_vec)) {
             p->seq = seq;
             p->valid = 1;
-            p->seg = ARQ_COUNT_TRAILING_ZERO_BITS(~(unsigned)m->cur_ack_vec);
+            p->seg = ARQ__COUNT_TRAILING_ZERO_BITS(~(unsigned)m->cur_ack_vec);
             return rv;
         }
     }
