@@ -29,6 +29,7 @@ TEST(functional, poll_until_tinygram_sends)
         arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(0, bytes_to_drain);
+        CHECK_EQUAL(cfg.tinygram_send_delay - i - 1, next_poll);
     }
 
     {

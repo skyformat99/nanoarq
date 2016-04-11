@@ -6,6 +6,7 @@
     ARQ_MOCK(arq__lin_alloc_alloc) \
     ARQ_MOCK(arq__alloc) \
     ARQ_MOCK(arq__init) \
+    ARQ_MOCK(arq__next_poll) \
     ARQ_MOCK(arq__wnd_init) \
     ARQ_MOCK(arq__wnd_rst) \
     ARQ_MOCK(arq__wnd_seg) \

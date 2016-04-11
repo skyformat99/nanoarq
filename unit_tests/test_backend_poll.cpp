@@ -82,6 +82,13 @@ void MockWndSeg(arq__wnd_t *w, unsigned seq, unsigned seg, void **out_seg, int *
                                      .withOutputParameter("out_seg_len", out_seg_len);
 }
 
+arq_time_t MockNextPoll(arq__send_wnd_t *sw, arq__recv_wnd_t *rw)
+{
+    return (arq_time_t)mock().actualCall("arq__next_poll").withParameter("sw", sw)
+                                                          .withParameter("rw", rw)
+                                                          .returnUnsignedIntValue();
+}
+
 struct Fixture
 {
     Fixture()
@@ -91,6 +98,7 @@ struct Fixture
         ARQ_MOCK_HOOK(arq__recv_wnd_ptr_next, MockRecvWndPtrNext);
         ARQ_MOCK_HOOK(arq__frame_write, MockFrameWrite);
         ARQ_MOCK_HOOK(arq__wnd_seg, MockWndSeg);
+        ARQ_MOCK_HOOK(arq__next_poll, MockNextPoll);
         arq.cfg.checksum = &arq_crc32;
         arq__send_frame_init(&arq.send_frame, 100);
     }
@@ -280,6 +288,19 @@ TEST(poll, sets_frame_state_to_free_if_emitting_frame)
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
     CHECK_EQUAL(ARQ__SEND_FRAME_STATE_FREE, f.arq.send_frame.state);
+}
+
+TEST(poll, out_next_poll_is_result_of_arq_poll)
+{
+    DefaultMocksFixture f;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_RELEASED;
+    mock().expectOneCall("arq__recv_poll").ignoreOtherParameters().andReturnValue(1);
+    mock().expectOneCall("arq__next_poll").withParameter("sw", &f.arq.send_wnd)
+                                          .withParameter("rw", &f.arq.recv_wnd)
+                                          .andReturnValue(1234u);
+    mock().ignoreOtherCalls();
+    arq_backend_poll(&f.arq, 0, &f.send_size, &f.event, &f.time);
+    CHECK_EQUAL(1234u, f.time);
 }
 
 TEST(poll, returns_ok_completed)

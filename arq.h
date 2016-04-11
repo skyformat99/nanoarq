@@ -62,6 +62,8 @@ typedef arq_uint32_t arq_time_t;
 typedef void (*arq_assert_cb_t)(char const *file, int line, char const *cond, char const *msg);
 typedef arq_uint32_t (*arq_checksum_t)(void const *p, unsigned len);
 
+#define ARQ_TIME_INFINITY ((arq_time_t)0xFFFFFFFF)
+
 typedef struct arq_cfg_t
 {
     unsigned segment_length_in_bytes;
@@ -345,6 +347,7 @@ typedef struct arq_t
 arq_err_t arq__check_cfg(arq_cfg_t const *cfg);
 arq_t *arq__alloc(arq_cfg_t const *cfg, arq__lin_alloc_t *la);
 void arq__init(arq_t *arq);
+arq_time_t arq__next_poll(arq__send_wnd_t *sw, arq__recv_wnd_t *rw);
 
 unsigned arq__min(unsigned x, unsigned y);
 unsigned arq__max(unsigned x, unsigned y);
@@ -611,17 +614,14 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
     if (psh && emit) {
         void *seg = ARQ_NULL_PTR;
         if (psh->seg) {
-            arq__wnd_seg(&arq->send_wnd.w,
-                         (unsigned)sh.seq_num,
-                         (unsigned)sh.seg_id,
-                         &seg,
-                         &psh->seg_len);
+            arq__wnd_seg(&arq->send_wnd.w, (unsigned)sh.seq_num, (unsigned)sh.seg_id, &seg, &psh->seg_len);
             ARQ_ASSERT(psh->seg_len);
         }
         arq->send_frame.len =
             arq__frame_write(psh, seg, arq->cfg.checksum, arq->send_frame.buf, arq->send_frame.cap);
         arq->send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     }
+    *out_next_poll = arq__next_poll(&arq->send_wnd, &arq->recv_wnd);
     *out_backend_send_size = arq->send_frame.len;
     return ARQ_OK_COMPLETED;
 }
@@ -1345,6 +1345,23 @@ void ARQ_MOCKABLE(arq__init)(arq_t *arq)
     arq__recv_wnd_ptr_init(&arq->recv_wnd_ptr);
     arq__send_wnd_rst(&arq->send_wnd);
     arq__recv_wnd_rst(&arq->recv_wnd);
+}
+
+arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw)
+{
+    arq_time_t np = ARQ_TIME_INFINITY;
+    unsigned i;
+    ARQ_ASSERT(sw && rw);
+    for (i = 0; i < sw->w.size; ++i) {
+        arq_time_t const t = sw->rtx[(sw->w.seq + i) % sw->w.cap];
+        if (t > 0) {
+            np = arq__min(np, t);
+        }
+    }
+    if (sw->tiny_on && (sw->tiny > 0)) {
+        np = arq__min(np, sw->tiny);
+    }
+    return np;
 }
 
 #if ARQ_COMPILE_CRC32 == 1
