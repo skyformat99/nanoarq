@@ -35,10 +35,10 @@ TEST(functional, send_full_window)
         {
             arq_event_t event;
             arq_time_t next_poll;
-            int bytes_to_drain;
-            arq_err_t e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
+            arq_bool_t send_pending, recv_pending;
+            arq_err_t e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
             CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-            CHECK(bytes_to_drain > 0);
+            CHECK(send_pending);
         }
 
         int size;

@@ -23,28 +23,23 @@ TEST(functional, tiny_sends_accumulate_into_message)
     for (auto i = 0u; i < cfg.tinygram_send_delay - 1; ++i) {
         {
             unsigned sent;
-            arq_err_t const e = arq_send(ctx.arq, &send_test_data[i], 1, &sent);
+            arq_err_t e = arq_send(ctx.arq, &send_test_data[i], 1, &sent);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(1, sent);
-        }
-
-        {
             arq_event_t event;
             arq_time_t next_poll;
-            int bytes_to_drain;
-            arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
-            CHECK(ARQ_SUCCEEDED(e));
-            CHECK_EQUAL(0, bytes_to_drain);
+            arq_bool_t send_pending, recv_pending;
+            e = arq_backend_poll(ctx.arq, 1, &event, &send_pending, &recv_pending, &next_poll);
+            CHECK(ARQ_SUCCEEDED(e) && !send_pending);
         }
     }
 
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK(bytes_to_drain);
+        arq_bool_t send_pending, recv_pending;
+        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && send_pending);
     }
 
     int size;
