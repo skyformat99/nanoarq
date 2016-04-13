@@ -48,17 +48,14 @@ TEST(functional, recv_10mb_through_window)
 
                 int bytes_pushed_into_window;
                 {
-                    arq_err_t const e =
+                    arq_err_t e =
                         arq_backend_recv_fill(ctx.arq, frame.data(), frame_len, &bytes_pushed_into_window);
                     CHECK(ARQ_SUCCEEDED(e));
                     CHECK_EQUAL(frame_len, bytes_pushed_into_window);
-                }
-
-                {
-                    int send_len;
+                    arq_bool_t s, r;
                     arq_event_t event;
                     arq_time_t next_poll;
-                    arq_err_t const e = arq_backend_poll(ctx.arq, 0, &send_len, &event, &next_poll);
+                    e = arq_backend_poll(ctx.arq, 0, &event, &s, &r, &next_poll);
                     CHECK(ARQ_SUCCEEDED(e));
                 }
             }

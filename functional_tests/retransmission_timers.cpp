@@ -41,12 +41,11 @@ TEST(functional, retransmission_timers)
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
+        arq_bool_t send_pending, recv_pending;
         void const *p;
         int size;
-        arq_err_t e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(arq__frame_len(cfg.segment_length_in_bytes), (unsigned)bytes_to_drain);
+        arq_err_t e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && send_pending);
         e = arq_backend_send_ptr_get(ctx.arq, &p, &size);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(arq__frame_len(cfg.segment_length_in_bytes), (unsigned)size);
@@ -63,12 +62,11 @@ TEST(functional, retransmission_timers)
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
+        arq_bool_t send_pending, recv_pending;
         void const *p;
         int size;
-        arq_err_t e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(arq__frame_len(cfg.segment_length_in_bytes), (unsigned)bytes_to_drain);
+        arq_err_t e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && send_pending);
         e = arq_backend_send_ptr_get(ctx.arq, &p, &size);
         CHECK(ARQ_SUCCEEDED(e));
         e = arq_backend_send_ptr_release(ctx.arq);
@@ -79,12 +77,11 @@ TEST(functional, retransmission_timers)
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
+        arq_bool_t send_pending, recv_pending;
         void const *p;
         int size;
-        arq_err_t e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(arq__frame_len(cfg.segment_length_in_bytes), (unsigned)bytes_to_drain);
+        arq_err_t e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && send_pending);
         e = arq_backend_send_ptr_get(ctx.arq, &p, &size);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(arq__frame_len(cfg.segment_length_in_bytes), (unsigned)size);
@@ -95,9 +92,8 @@ TEST(functional, retransmission_timers)
         CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
         CHECK_EQUAL(2, hdr.seq_num);
         std::memcpy(&recv_test_data[cfg.segment_length_in_bytes * 2], seg, hdr.seg_len);
-        e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(0, (unsigned)bytes_to_drain);
+        e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && send_pending);
     }
 
     // ack message 0
@@ -114,10 +110,9 @@ TEST(functional, retransmission_timers)
         CHECK_EQUAL(len, (unsigned)recvd);
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(0, (unsigned)bytes_to_drain);
+        arq_bool_t send_pending, recv_pending;
+        e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && !send_pending);
     }
 
     // ack message 2
@@ -134,20 +129,18 @@ TEST(functional, retransmission_timers)
         CHECK_EQUAL(len, (unsigned)recvd);
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(0, (unsigned)bytes_to_drain);
+        arq_bool_t send_pending, recv_pending;
+        e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && !send_pending);
     }
 
     // confirm that message 1's retransmission timer is active
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(0, (unsigned)bytes_to_drain);
+        arq_bool_t send_pending, recv_pending;
+        arq_err_t const e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && !send_pending);
         CHECK_EQUAL(cfg.retransmission_timeout, next_poll);
     }
 
@@ -155,10 +148,9 @@ TEST(functional, retransmission_timers)
     for (auto i = 0u; i < cfg.retransmission_timeout - 1; ++i) {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(0, (unsigned)bytes_to_drain);
+        arq_bool_t send_pending, recv_pending;
+        arq_err_t const e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && !send_pending);
         CHECK_EQUAL(cfg.retransmission_timeout - i - 1, next_poll);
     }
 
@@ -166,12 +158,11 @@ TEST(functional, retransmission_timers)
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
+        arq_bool_t send_pending, recv_pending;
         void const *p;
         int size;
-        arq_err_t e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(arq__frame_len(cfg.segment_length_in_bytes), (unsigned)bytes_to_drain);
+        arq_err_t e = arq_backend_poll(ctx.arq, 1, &event, &send_pending, &recv_pending, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && send_pending);
         e = arq_backend_send_ptr_get(ctx.arq, &p, &size);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(arq__frame_len(cfg.segment_length_in_bytes), (unsigned)size);
@@ -182,7 +173,7 @@ TEST(functional, retransmission_timers)
         CHECK_EQUAL(ARQ__FRAME_READ_RESULT_SUCCESS, r);
         CHECK_EQUAL(1, hdr.seq_num);
         std::memcpy(&recv_test_data[cfg.segment_length_in_bytes], seg, hdr.seg_len);
-        e = arq_backend_poll(ctx.arq, 0, &bytes_to_drain, &event, &next_poll);
+        e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
         CHECK(ARQ_SUCCEEDED(e));
     }
     MEMCMP_EQUAL(recv_test_data.data(), send_test_data.data(), send_test_data.size());

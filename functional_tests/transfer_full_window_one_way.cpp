@@ -37,10 +37,10 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
         {
             arq_event_t event;
             arq_time_t next_poll;
-            int bytes_to_drain;
-            arq_err_t const e = arq_backend_poll(sender.arq, 0, &bytes_to_drain, &event, &next_poll);
+            arq_bool_t s, r;
+            arq_err_t const e = arq_backend_poll(sender.arq, 0, &event, &s, &r, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
-            CHECK(bytes_to_drain > 0);
+            CHECK(s);
         }
 
         int size;
@@ -64,8 +64,8 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
         {
             arq_event_t event;
             arq_time_t next_poll;
-            int bytes_to_drain;
-            arq_err_t const e = arq_backend_poll(receiver.arq, 0, &bytes_to_drain, &event, &next_poll);
+            arq_bool_t s, r;
+            arq_err_t const e = arq_backend_poll(receiver.arq, 0, &event, &s, &r, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
         }
     }

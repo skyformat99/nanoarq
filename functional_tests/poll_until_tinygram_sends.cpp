@@ -25,20 +25,19 @@ TEST(functional, poll_until_tinygram_sends)
     for (auto i = 0u; i < cfg.tinygram_send_delay - 1; ++i) {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
+        arq_bool_t send_pending, r;
+        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &event, &send_pending, &r, &next_poll);
         CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(0, bytes_to_drain);
+        CHECK_EQUAL(0, send_pending);
         CHECK_EQUAL(cfg.tinygram_send_delay - i - 1, next_poll);
     }
 
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &bytes_to_drain, &event, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e));
-        CHECK(bytes_to_drain);
+        arq_bool_t send_pending, r;
+        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &event, &send_pending, &r, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e) && send_pending);
     }
 
     int size;

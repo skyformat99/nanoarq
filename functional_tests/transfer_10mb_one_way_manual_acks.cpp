@@ -27,36 +27,30 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
     std::array< arq_uchar_t, 256 > frame;
     auto send_idx = 0u;
     while (recv_test_data.size() < send_test_data.size()) {
-        {
-            int send_size;
-            arq_event_t event;
-            arq_time_t next_poll;
-            arq_err_t const e = arq_backend_poll(sender.arq, 0, &send_size, &event, &next_poll);
-            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-        }
-
         // fill the send window
         {
-            unsigned sent_this_turn;
-            arq_err_t e = arq_send(sender.arq,
-                                   &send_test_data[send_idx],
-                                   send_test_data.size() - send_idx,
-                                   &sent_this_turn);
+            arq_event_t event;
+            arq_time_t next_poll;
+            arq_bool_t s, r;
+            arq_err_t e = arq_backend_poll(sender.arq, 0, &event, &s, &r, &next_poll);
+            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            unsigned sent;
+            e = arq_send(sender.arq, &send_test_data[send_idx], send_test_data.size() - send_idx, &sent);
             CHECK(ARQ_SUCCEEDED(e));
             e = arq_flush(sender.arq);
             CHECK(ARQ_SUCCEEDED(e));
-            send_idx += sent_this_turn;
+            send_idx += sent;
         }
 
         while (sender.arq->send_wnd.w.size) {
             // prepare a segment from send window
             {
-                int send_size;
                 arq_event_t event;
                 arq_time_t next_poll;
-                arq_err_t const e = arq_backend_poll(sender.arq, 0, &send_size, &event, &next_poll);
+                arq_bool_t send_pending, r;
+                arq_err_t e = arq_backend_poll(sender.arq, 0, &event, &send_pending, &r, &next_poll);
                 CHECK_EQUAL(ARQ_OK_COMPLETED, e);
-                CHECK(send_size > 0);
+                CHECK(send_pending);
             }
 
             // copy frame from send window into local frame array
@@ -91,17 +85,13 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
             // push frame into receiver
             {
                 int filled;
-                arq_err_t const e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &filled);
+                arq_err_t e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &filled);
                 CHECK(ARQ_SUCCEEDED(e));
                 CHECK_EQUAL(frame_len, filled);
-            }
-
-            // poll receiver to load frame into recv window
-            {
                 arq_event_t event;
                 arq_time_t next_poll;
-                int bytes_to_drain;
-                arq_err_t const e = arq_backend_poll(receiver.arq, 0, &bytes_to_drain, &event, &next_poll);
+                arq_bool_t s, r;
+                e = arq_backend_poll(receiver.arq, 0, &event, &s, &r, &next_poll);
                 CHECK(ARQ_SUCCEEDED(e));
             }
         }

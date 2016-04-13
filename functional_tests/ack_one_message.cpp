@@ -40,10 +40,10 @@ TEST(functional, ack_one_message)
         {
             arq_event_t event;
             arq_time_t next_poll;
-            int bytes_to_drain;
-            arq_err_t const e = arq_backend_poll(sender.arq, 0, &bytes_to_drain, &event, &next_poll);
+            arq_bool_t send_pending, r;
+            arq_err_t const e = arq_backend_poll(sender.arq, 0, &event, &send_pending, &r, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
-            CHECK(bytes_to_drain > 0);
+            CHECK(send_pending);
         }
 
         // drain the send frame
@@ -59,17 +59,13 @@ TEST(functional, ack_one_message)
         // load the send frame into the receiver
         {
             int bytes_filled;
-            arq_err_t const e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &bytes_filled);
+            arq_err_t e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &bytes_filled);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(frame_len, bytes_filled);
-        }
-
-        // poll the receiver to process the frame
-        {
             arq_event_t event;
             arq_time_t next_poll;
-            int bytes_to_drain;
-            arq_err_t const e = arq_backend_poll(receiver.arq, 0, &bytes_to_drain, &event, &next_poll);
+            arq_bool_t s, r;
+            e = arq_backend_poll(receiver.arq, 0, &event, &s, &r, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
         }
     }
@@ -96,8 +92,8 @@ TEST(functional, ack_one_message)
     {
         arq_event_t event;
         arq_time_t next_poll;
-        int bytes_to_drain;
-        arq_err_t const e = arq_backend_poll(sender.arq, 0, &bytes_to_drain, &event, &next_poll);
+        arq_bool_t s, r;
+        arq_err_t const e = arq_backend_poll(sender.arq, 0, &event, &s, &r, &next_poll);
         CHECK(ARQ_SUCCEEDED(e));
     }
 
