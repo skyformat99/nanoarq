@@ -93,7 +93,7 @@ TEST(functional, retransmission_timers)
         CHECK_EQUAL(2, hdr.seq_num);
         std::memcpy(&recv_test_data[cfg.segment_length_in_bytes * 2], seg, hdr.seg_len);
         e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e) && send_pending);
+        CHECK(ARQ_SUCCEEDED(e));
     }
 
     // ack message 0
@@ -149,7 +149,7 @@ TEST(functional, retransmission_timers)
         arq_event_t event;
         arq_time_t next_poll;
         arq_bool_t send_pending, recv_pending;
-        arq_err_t const e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
+        arq_err_t const e = arq_backend_poll(ctx.arq, 1, &event, &send_pending, &recv_pending, &next_poll);
         CHECK(ARQ_SUCCEEDED(e) && !send_pending);
         CHECK_EQUAL(cfg.retransmission_timeout - i - 1, next_poll);
     }

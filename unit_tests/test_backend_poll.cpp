@@ -59,6 +59,11 @@ int MockRecvWndPtrNext(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t *rw)
                                                       .returnIntValue();
 }
 
+arq_bool_t MockRecvWndPending(arq__recv_wnd_t *rw)
+{
+    return (arq_bool_t)mock().actualCall("arq__recv_wnd_pending").withParameter("rw", rw).returnIntValue();
+}
+
 unsigned MockFrameWrite(arq__frame_hdr_t const *h,
                    void const *seg,
                    arq_checksum_t checksum,
@@ -95,6 +100,7 @@ struct Fixture
     {
         ARQ_MOCK_HOOK(arq__frame_hdr_init, MockFrameHdrInit);
         ARQ_MOCK_HOOK(arq__recv_poll, MockRecvPoll);
+        ARQ_MOCK_HOOK(arq__recv_wnd_pending, MockRecvWndPending);
         ARQ_MOCK_HOOK(arq__recv_wnd_ptr_next, MockRecvWndPtrNext);
         ARQ_MOCK_HOOK(arq__frame_write, MockFrameWrite);
         ARQ_MOCK_HOOK(arq__wnd_seg, MockWndSeg);
@@ -281,6 +287,26 @@ TEST(poll, frame_write_return_value_becomes_send_frame_length)
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq,  0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
     CHECK_EQUAL(543, f.arq.send_frame.len);
+}
+
+TEST(poll, recv_pending_flag_is_result_of_recv_pending_call_true)
+{
+    DefaultMocksFixture f;
+    mock().expectOneCall("arq__recv_wnd_pending").withParameter("rw", &f.arq.recv_wnd)
+                                                 .andReturnValue(ARQ_TRUE);
+    mock().ignoreOtherCalls();
+    arq_backend_poll(&f.arq,  0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
+    CHECK_EQUAL(ARQ_TRUE, f.recv_ready);
+}
+
+TEST(poll, recv_pending_flag_is_result_of_recv_pending_call_false)
+{
+    DefaultMocksFixture f;
+    mock().expectOneCall("arq__recv_wnd_pending").withParameter("rw", &f.arq.recv_wnd)
+                                                 .andReturnValue(ARQ_FALSE);
+    mock().ignoreOtherCalls();
+    arq_backend_poll(&f.arq,  0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
+    CHECK_EQUAL(ARQ_FALSE, f.recv_ready);
 }
 
 TEST(poll, sets_frame_state_to_free_if_emitting_frame)

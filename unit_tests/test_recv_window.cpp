@@ -634,5 +634,30 @@ TEST(recv_wnd, recv_one_full_msg_one_tinygram_one_full_msg)
     }
 }
 
+TEST(recv_wnd, pending_returns_false_if_window_is_empty)
+{
+    Fixture f;
+    f.rw.w.size = 0;
+    CHECK_EQUAL(ARQ_FALSE, arq__recv_wnd_pending(&f.rw));
+}
+
+TEST(recv_wnd, pending_returns_false_if_first_message_ack_vector_isnt_full)
+{
+    Fixture f;
+    f.rw.w.size = 1;
+    f.rw.w.msg[0].full_ack_vec = f.rw.w.full_ack_vec;
+    f.rw.w.msg[0].cur_ack_vec = 0;
+    CHECK_EQUAL(ARQ_FALSE, arq__recv_wnd_pending(&f.rw));
+}
+
+TEST(recv_wnd, pending_returns_true_if_first_message_ack_vector_is_full)
+{
+    Fixture f;
+    f.rw.w.size = 1;
+    f.rw.w.msg[0].full_ack_vec = 7;
+    f.rw.w.msg[0].cur_ack_vec = 7;
+    CHECK_EQUAL(ARQ_TRUE, arq__recv_wnd_pending(&f.rw));
+}
+
 }
 
