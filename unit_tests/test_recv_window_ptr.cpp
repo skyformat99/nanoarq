@@ -246,20 +246,5 @@ TEST(recv_wnd_ptr, next_sets_seq_to_base_when_ack_set_and_ptr_is_invalid)
     CHECK(f.p.pending);
 }
 
-TEST(recv_wnd_ptr, set_sets_seq_and_ack)
-{
-    arq__recv_wnd_ptr_t p;
-    p.seq = p.cur_ack_vec = p.pending = 0xAA;
-    arq__recv_wnd_ptr_set(&p, 12, 34);
-}
-
-TEST(recv_wnd_ptr, set_sets_pending_to_1)
-{
-    arq__recv_wnd_ptr_t p;
-    p.pending = 0;
-    arq__recv_wnd_ptr_set(&p, 0, 0);
-    CHECK_EQUAL(1, p.pending);
-}
-
 }
 

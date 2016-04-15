@@ -310,7 +310,6 @@ typedef struct arq__recv_wnd_ptr_t
 } arq__recv_wnd_ptr_t;
 
 void arq__recv_wnd_ptr_init(arq__recv_wnd_ptr_t *p);
-void arq__recv_wnd_ptr_set(arq__recv_wnd_ptr_t *p, unsigned seq, unsigned ack_vec);
 void arq__recv_wnd_ptr_next(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t const *rw);
 
 typedef enum
@@ -1222,14 +1221,6 @@ void ARQ_MOCKABLE(arq__recv_wnd_ptr_next)(arq__recv_wnd_ptr_t *p, arq__recv_wnd_
         }
     }
     p->cur_ack_vec = rw->w.msg[p->seq % rw->w.cap].cur_ack_vec;
-}
-
-void ARQ_MOCKABLE(arq__recv_wnd_ptr_set)(arq__recv_wnd_ptr_t *p, unsigned seq, unsigned ack_vec)
-{
-    ARQ_ASSERT(p);
-    p->seq = (arq_uint16_t)seq;
-    p->cur_ack_vec = (arq_uint16_t)ack_vec;
-    p->pending = 1;
 }
 
 void ARQ_MOCKABLE(arq__recv_frame_init)(arq__recv_frame_t *f, unsigned cap)
