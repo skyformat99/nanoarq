@@ -47,10 +47,10 @@ TEST(functional, tiny_sends_accumulate_into_message)
     {
         void const *p;
         arq_err_t e = arq_backend_send_ptr_get(ctx.arq, &p, &size);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+        CHECK(ARQ_SUCCEEDED(e));
         std::memcpy(decode_buf, p, size);
         e = arq_backend_send_ptr_release(ctx.arq);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+        CHECK(ARQ_SUCCEEDED(e));
     }
 
     {

@@ -27,7 +27,7 @@ TEST(functional, send_full_window)
     {
         unsigned sent;
         arq_err_t const e = arq_send(ctx.arq, send_test_data.data(), send_test_data.size(), &sent);
-        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+        CHECK(ARQ_SUCCEEDED(e));
     }
 
     while (recv_test_data.size() < send_test_data.size()) {
@@ -37,7 +37,7 @@ TEST(functional, send_full_window)
             arq_time_t next_poll;
             arq_bool_t send_pending, recv_pending;
             arq_err_t e = arq_backend_poll(ctx.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
-            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            CHECK(ARQ_SUCCEEDED(e));
             CHECK(send_pending);
         }
 
@@ -45,10 +45,10 @@ TEST(functional, send_full_window)
         {
             void const *p;
             arq_err_t e = arq_backend_send_ptr_get(ctx.arq, &p, &size);
-            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            CHECK(ARQ_SUCCEEDED(e));
             std::memcpy(decode_buf, p, size);
             e = arq_backend_send_ptr_release(ctx.arq);
-            CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+            CHECK(ARQ_SUCCEEDED(e));
         }
 
         {

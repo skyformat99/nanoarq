@@ -58,6 +58,15 @@ struct Fixture
     arq_t arq;
 };
 
+TEST(init_intl, sets_need_poll_to_false)
+{
+    Fixture f;
+    f.arq.need_poll = ARQ_TRUE;
+    mock().ignoreOtherCalls();
+    arq__init(&f.arq);
+    CHECK_EQUAL(ARQ_FALSE, f.arq.need_poll);
+}
+
 TEST(init_intl, initializes_send_window)
 {
     Fixture f;

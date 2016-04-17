@@ -48,7 +48,7 @@ typedef enum
     ARQ_ERR_INVALID_PARAM = -1,
     ARQ_ERR_NO_ASSERT_HANDLER = -2,
     ARQ_ERR_SEND_PTR_NOT_HELD = -3,
-    ARQ_ERR_NEED_POLL = -4
+    ARQ_ERR_POLL_REQUIRED = -4
 } arq_err_t;
 
 #define ARQ_SUCCEEDED(ARQ_RESULT) ((ARQ_RESULT) >= 0)
@@ -345,6 +345,7 @@ typedef struct arq_t
     arq__send_frame_t send_frame;
     arq__recv_wnd_t recv_wnd;
     arq__recv_frame_t recv_frame;
+    arq_bool_t need_poll;
 } arq_t;
 
 arq_err_t arq__check_cfg(arq_cfg_t const *cfg);
@@ -499,6 +500,9 @@ arq_err_t arq_recv(struct arq_t *arq, void *recv, unsigned recv_max, unsigned *o
     if (!arq || !recv || !out_recv_size) {
         return ARQ_ERR_INVALID_PARAM;
     }
+    if (arq->need_poll) {
+        return ARQ_ERR_POLL_REQUIRED;
+    }
     *out_recv_size = arq__recv_wnd_recv(&arq->recv_wnd, recv, recv_max);
     return ARQ_OK_COMPLETED;
 }
@@ -507,6 +511,9 @@ arq_err_t arq_send(struct arq_t *arq, void const *send, unsigned send_max, unsig
 {
     if (!arq || !send || !out_sent_size) {
         return ARQ_ERR_INVALID_PARAM;
+    }
+    if (arq->need_poll) {
+        return ARQ_ERR_POLL_REQUIRED;
     }
     *out_sent_size = arq__send_wnd_send(&arq->send_wnd, send, send_max, arq->cfg.tinygram_send_delay);
     return ARQ_OK_COMPLETED;
@@ -615,6 +622,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
     *out_next_poll = arq__next_poll(&arq->send_wnd, &arq->recv_wnd);
     *out_send_ready = (arq->send_frame.len > 0) ? ARQ_TRUE : ARQ_FALSE;
     *out_recv_ready = arq__recv_wnd_pending(&arq->recv_wnd);
+    arq->need_poll = ARQ_FALSE;
     return ARQ_OK_COMPLETED;
 }
 
@@ -645,7 +653,8 @@ arq_err_t arq_backend_send_ptr_release(struct arq_t *arq)
     }
     arq->send_frame.len = 0;
     arq->send_frame.state = ARQ__SEND_FRAME_STATE_RELEASED;
-    return ARQ_OK_COMPLETED;
+    arq->need_poll = ARQ_TRUE;
+    return ARQ_OK_POLL_REQUIRED;
 }
 
 arq_err_t arq_backend_recv_fill(struct arq_t *arq,
@@ -657,8 +666,11 @@ arq_err_t arq_backend_recv_fill(struct arq_t *arq,
         return ARQ_ERR_INVALID_PARAM;
     }
     *out_recv_size = arq__recv_frame_fill(&arq->recv_frame, recv, recv_max);
-    return (arq->recv_frame.state == ARQ__RECV_FRAME_STATE_ACCUMULATING) ?
-        ARQ_OK_COMPLETED : ARQ_OK_POLL_REQUIRED;
+    if (arq->recv_frame.state == ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT) {
+        arq->need_poll = ARQ_TRUE;
+        return ARQ_OK_POLL_REQUIRED;
+    }
+    return ARQ_OK_COMPLETED;
 }
 
 void ARQ_MOCKABLE(arq__lin_alloc_init)(arq__lin_alloc_t *a, void *base, unsigned capacity)
@@ -1332,6 +1344,7 @@ arq_t *ARQ_MOCKABLE(arq__alloc)(arq_cfg_t const *cfg, arq__lin_alloc_t *la)
 void ARQ_MOCKABLE(arq__init)(arq_t *arq)
 {
     ARQ_ASSERT(arq);
+    arq->need_poll = ARQ_FALSE;
     arq__wnd_init(&arq->send_wnd.w,
                   arq->cfg.send_window_size_in_messages,
                   arq->cfg.message_length_in_segments * arq->cfg.segment_length_in_bytes,

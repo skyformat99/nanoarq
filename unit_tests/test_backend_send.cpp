@@ -101,9 +101,25 @@ TEST(backend_send, send_ptr_release_sets_state_to_released)
 {
     Fixture f;
     f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_HELD;
-    arq_err_t const e = arq_backend_send_ptr_release(&f.arq);
-    CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+    arq_backend_send_ptr_release(&f.arq);
     CHECK_EQUAL(ARQ__SEND_FRAME_STATE_RELEASED, f.arq.send_frame.state);
+}
+
+TEST(backend_send, send_ptr_release_sets_need_poll_flag)
+{
+    Fixture f;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_HELD;
+    f.arq.need_poll = ARQ_FALSE;
+    arq_backend_send_ptr_release(&f.arq);
+    CHECK_EQUAL(ARQ_TRUE, f.arq.need_poll);
+}
+
+TEST(backend_send, send_ptr_release_returns_need_poll_code_on_success)
+{
+    Fixture f;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_HELD;
+    arq_err_t const e = arq_backend_send_ptr_release(&f.arq);
+    CHECK_EQUAL(ARQ_OK_POLL_REQUIRED, e);
 }
 
 }
