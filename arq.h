@@ -287,10 +287,16 @@ arq_bool_t arq__send_poll(arq__send_wnd_t *sw,
                           arq_time_t dt,
                           arq_time_t rtx);
 
+enum
+{
+    ARQ__RECV_WND_FLAG_ACK = 1,
+    ARQ__RECV_WND_FLAG_SEEN = 2
+};
+
 typedef struct arq__recv_wnd_t
 {
     arq__wnd_t w;
-    arq_uchar_t *ack;
+    arq_uchar_t *flag;
     arq_uint16_t copy_seq;
     arq_uint16_t copy_ofs;
 } arq__recv_wnd_t;
@@ -1097,7 +1103,7 @@ void ARQ_MOCKABLE(arq__recv_wnd_rst)(arq__recv_wnd_t *rw)
     rw->copy_seq = 0;
     rw->copy_ofs = 0;
     for (i = 0; i < rw->w.cap; ++i) {
-        rw->ack[i] = 0;
+        rw->flag[i] = 0;
     }
 }
 
@@ -1116,8 +1122,8 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     new_size = (seq - rw->w.seq + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
     if (new_size > rw->w.cap) {
         for (slide = 0; slide < rw->w.size; ++slide) {
-            m = &rw->w.msg[(rw->w.seq + slide) % rw->w.cap];
-            if (m->len) {
+            unsigned const idx = (rw->w.seq + slide) % rw->w.cap;
+            if (rw->w.msg[idx].len) {
                 break;
             }
         }
@@ -1138,8 +1144,9 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     m->full_ack_vec = full_ack_vec;
     m->cur_ack_vec |= (1 << seg);
     m->len += len;
+    rw->flag[seq % rw->w.cap] |= ARQ__RECV_WND_FLAG_SEEN;
     if (seg == seg_cnt - 1) {
-        rw->ack[seq % rw->w.cap] = 1;
+        rw->flag[seq % rw->w.cap] |= ARQ__RECV_WND_FLAG_ACK;
     }
     return len;
 }
@@ -1197,10 +1204,10 @@ arq_bool_t ARQ_MOCKABLE(arq__recv_wnd_ack)(arq__recv_wnd_t const *rw,
     ARQ_ASSERT(rw && out_ack_seq && out_ack_vec);
     for (i = 0; i < rw->w.size; ++i) {
         unsigned const idx = (rw->w.seq + i) % rw->w.cap;
-        if (rw->ack[idx]) {
+        if (rw->flag[idx] & ARQ__RECV_WND_FLAG_ACK) {
             *out_ack_seq = (rw->w.seq + i) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
             *out_ack_vec = rw->w.msg[idx].cur_ack_vec;
-            rw->ack[idx] = 0;
+            rw->flag[idx] &= ~ARQ__RECV_WND_FLAG_ACK;
             return ARQ_TRUE;
         }
     }
@@ -1294,7 +1301,7 @@ arq_t *ARQ_MOCKABLE(arq__alloc)(arq_cfg_t const *cfg, arq__lin_alloc_t *la)
     p = arq__lin_alloc_alloc(la, cfg->recv_window_size_in_messages, 1);
     ok = ok && p;
     if (arq) {
-        arq->recv_wnd.ack = (arq_uchar_t *)p;
+        arq->recv_wnd.flag = (arq_uchar_t *)p;
     }
     len = sizeof(arq__msg_t) * cfg->recv_window_size_in_messages;
     p = arq__lin_alloc_alloc(la, len, ARQ__ALIGNOF(arq__msg_t));
