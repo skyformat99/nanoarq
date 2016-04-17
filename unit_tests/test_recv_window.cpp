@@ -307,7 +307,7 @@ TEST(recv_wnd, frame_slides_window_by_cap_when_full_and_all_messages_received_an
     f.seg.resize(13);
     unsigned const new_seq = (f.rw.w.cap * 2) - 1;
     arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(new_seq, f.rw.w.seq + f.rw.w.size - 1);
+    CHECK_EQUAL(new_seq, f.rw.w.seq + f.rw.w.size - 1u);
     CHECK_EQUAL(13, f.rw.w.msg[new_seq % f.rw.w.cap].len);
 }
 
