@@ -18,11 +18,6 @@ TEST(recv, invalid_params)
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_recv(&arq, p, 1, nullptr));
 }
 
-TEST(recv, fails_if_not_connected)
-{
-    // TODO
-}
-
 unsigned MockRecvWndRecv(arq__recv_wnd_t *rw, void *dst, unsigned dst_max)
 {
     return mock().actualCall("arq__recv_wnd_recv").withParameter("rw", rw)
@@ -36,11 +31,21 @@ struct Fixture
     Fixture()
     {
         ARQ_MOCK_HOOK(arq__recv_wnd_recv, MockRecvWndRecv);
+        arq.need_poll = ARQ_FALSE;
     }
     arq_t arq;
     char recv[20];
     unsigned recvd;
 };
+
+TEST(recv, need_poll)
+{
+    Fixture f;
+    f.arq.need_poll = ARQ_TRUE;
+    mock().ignoreOtherCalls();
+    arq_err_t const e = arq_recv(&f.arq, f.recv, sizeof(f.recv), &f.recvd);
+    CHECK_EQUAL(ARQ_ERR_POLL_REQUIRED, e);
+}
 
 TEST(recv, calls_wnd_recv)
 {

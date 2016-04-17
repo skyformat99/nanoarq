@@ -47,10 +47,10 @@ TEST(functional, send_10mb_through_window)
 
                 {
                     arq_bool_t s, r;
-                    arq_event_t e;
+                    arq_event_t event;
                     arq_time_t next_poll;
-                    arq_err_t const err = arq_backend_poll(ctx.arq, 0, &e, &s, &r, &next_poll);
-                    CHECK_EQUAL(ARQ_OK_COMPLETED, err);
+                    arq_err_t const e = arq_backend_poll(ctx.arq, 0, &event, &s, &r, &next_poll);
+                    CHECK(ARQ_SUCCEEDED(e));
                 }
 
                 unsigned frame_len;
@@ -58,13 +58,13 @@ TEST(functional, send_10mb_through_window)
                     void const *p;
                     {
                         arq_err_t const e = arq_backend_send_ptr_get(ctx.arq, &p, &frame_len);
-                        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                        CHECK(ARQ_SUCCEEDED(e));
                         CHECK(p && frame_len > 0);
                     }
                     std::memcpy(frame.data(), p, frame_len);
                     if (frame_len) {
                         arq_err_t const e = arq_backend_send_ptr_release(ctx.arq);
-                        CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                        CHECK(ARQ_SUCCEEDED(e));
                     }
                     arq_bool_t s, r;
                     arq_event_t e;

@@ -49,7 +49,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
                 arq_time_t next_poll;
                 arq_bool_t send_pending, r;
                 arq_err_t e = arq_backend_poll(sender.arq, 0, &event, &send_pending, &r, &next_poll);
-                CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                CHECK(ARQ_SUCCEEDED(e));
                 CHECK(send_pending);
             }
 
@@ -59,13 +59,13 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
                 void const *p;
                 {
                     arq_err_t const e = arq_backend_send_ptr_get(sender.arq, &p, &frame_len);
-                    CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                    CHECK(ARQ_SUCCEEDED(e));
                     CHECK(p && frame_len > 0);
                 }
                 std::memcpy(frame.data(), p, frame_len);
                 if (frame_len) {
                     arq_err_t const e = arq_backend_send_ptr_release(sender.arq);
-                    CHECK_EQUAL(ARQ_OK_COMPLETED, e);
+                    CHECK(ARQ_SUCCEEDED(e));
                 }
             }
 

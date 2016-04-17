@@ -41,15 +41,11 @@ TEST(functional, ack_one_message)
             arq_event_t event;
             arq_time_t next_poll;
             arq_bool_t send_pending, r;
-            arq_err_t const e = arq_backend_poll(sender.arq, 0, &event, &send_pending, &r, &next_poll);
+            arq_err_t e = arq_backend_poll(sender.arq, 0, &event, &send_pending, &r, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK(send_pending);
-        }
-
-        // drain the send frame
-        {
             void const *p;
-            arq_err_t e = arq_backend_send_ptr_get(sender.arq, &p, &frame_len);
+            e = arq_backend_send_ptr_get(sender.arq, &p, &frame_len);
             CHECK(ARQ_SUCCEEDED(e));
             std::memcpy(frame.data(), p, frame_len);
             e = arq_backend_send_ptr_release(sender.arq);
@@ -78,22 +74,23 @@ TEST(functional, ack_one_message)
         std::memcpy(frame.data(), p, frame_len);
         e = arq_backend_send_ptr_release(receiver.arq);
         CHECK(ARQ_SUCCEEDED(e));
+        arq_event_t event;
+        arq_time_t next_poll;
+        arq_bool_t s, r;
+        e = arq_backend_poll(receiver.arq, 0, &event, &s, &r, &next_poll);
+        CHECK(ARQ_SUCCEEDED(e));
     }
 
     // load the ACK frame into the sender
     {
         unsigned bytes_filled;
-        arq_err_t const e = arq_backend_recv_fill(sender.arq, frame.data(), frame_len, &bytes_filled);
+        arq_err_t e = arq_backend_recv_fill(sender.arq, frame.data(), frame_len, &bytes_filled);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(frame_len, bytes_filled);
-    }
-
-    // poll the sender to slide the send window
-    {
         arq_event_t event;
         arq_time_t next_poll;
         arq_bool_t s, r;
-        arq_err_t const e = arq_backend_poll(sender.arq, 0, &event, &s, &r, &next_poll);
+        e = arq_backend_poll(sender.arq, 0, &event, &s, &r, &next_poll);
         CHECK(ARQ_SUCCEEDED(e));
     }
 

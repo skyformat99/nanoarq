@@ -71,5 +71,14 @@ TEST(backend_recv, returns_ok_poll_if_frame_state_is_complete)
     CHECK_EQUAL(ARQ_OK_POLL_REQUIRED, rv);
 }
 
+TEST(backend_recv, sets_need_poll_to_true_if_frame_state_is_complete)
+{
+    Fixture f;
+    mock().ignoreOtherCalls();
+    f.arq.recv_frame.state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
+    arq_backend_recv_fill(&f.arq, f.recv, sizeof(f.recv), &f.recvd);
+    CHECK_EQUAL(ARQ_TRUE, f.arq.need_poll);
+}
+
 }
 
