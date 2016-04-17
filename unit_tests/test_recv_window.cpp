@@ -306,6 +306,21 @@ TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_is_full_and
     for (auto i = 0u; i < f.rw.w.cap; ++i) {
         f.rw.w.msg[i].len = f.rw.w.msg_len;
     }
+    for (auto i = 0u; i < f.rw.w.cap; ++i) {
+        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
+    }
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(0, f.rw.w.seq);
+}
+
+TEST(recv_wnd, frame_doesnt_slide_window_when_full_and_msg_requires_slide_but_havent_seen_base_seq_yet)
+{
+    Fixture f;
+    f.rw.w.size = f.rw.w.cap;
+    for (auto i = 1u; i < f.rw.w.cap; ++i) {
+        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
+    }
     f.seg.resize(1);
     arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
     CHECK_EQUAL(0, f.rw.w.seq);
@@ -317,6 +332,9 @@ TEST(recv_wnd, frame_slides_window_by_one_when_full_and_first_message_is_receive
     f.rw.w.size = f.rw.w.cap;
     for (auto i = 1u; i < f.rw.w.cap; ++i) {
         f.rw.w.msg[i].len = f.rw.w.msg_len;
+    }
+    for (auto i = 0u; i < f.rw.w.cap; ++i) {
+        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
     }
     f.seg.resize(13);
     unsigned const new_seq = f.rw.w.size;
@@ -332,6 +350,9 @@ TEST(recv_wnd, frame_slides_window_by_two_when_full_and_first_2_messages_receive
     for (auto i = 2u; i < f.rw.w.cap; ++i) {
         f.rw.w.msg[i].len = f.rw.w.msg_len;
     }
+    for (auto i = 0u; i < f.rw.w.cap; ++i) {
+        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
+    }
     f.seg.resize(13);
     unsigned const new_seq = f.rw.w.size + 1;
     arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size());
@@ -344,6 +365,9 @@ TEST(recv_wnd, frame_slides_window_by_cap_when_full_and_all_messages_received_an
     Fixture f;
     f.rw.w.size = f.rw.w.cap;
     f.seg.resize(13);
+    for (auto i = 0u; i < f.rw.w.cap; ++i) {
+        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
+    }
     unsigned const new_seq = (f.rw.w.cap * 2) - 1;
     arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size());
     CHECK_EQUAL(new_seq, f.rw.w.seq + f.rw.w.size - 1u);

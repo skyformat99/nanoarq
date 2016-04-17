@@ -1123,7 +1123,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     if (new_size > rw->w.cap) {
         for (slide = 0; slide < rw->w.size; ++slide) {
             unsigned const idx = (rw->w.seq + slide) % rw->w.cap;
-            if (rw->w.msg[idx].len) {
+            if (rw->w.msg[idx].len || !(rw->flag[idx] & ARQ__RECV_WND_FLAG_SEEN)) {
                 break;
             }
         }
