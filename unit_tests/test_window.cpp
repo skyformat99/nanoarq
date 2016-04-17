@@ -68,7 +68,7 @@ struct Fixture : UninitializedWindowFixture
 
     std::vector< unsigned char > buf;
     std::vector< unsigned char > snd;
-    int n = 0;
+    unsigned n = 0;
     void *p = nullptr;
 };
 

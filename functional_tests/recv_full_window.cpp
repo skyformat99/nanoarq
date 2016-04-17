@@ -39,15 +39,15 @@ TEST(functional, recv_full_window)
         h.seg_len = arq__min(cfg.segment_length_in_bytes, test_input.size() - test_input_offset);
         frame.resize(arq__frame_len(h.seg_len));
 
-        int const frame_len =
+        unsigned const frame_len =
             arq__frame_write(&h, &test_input[test_input_offset], arq_crc32, frame.data(), frame.size());
 
         test_input_offset += h.seg_len;
-        h.seq_num += ((unsigned)h.seg_id == cfg.message_length_in_segments - 1);
+        h.seq_num += (h.seg_id == cfg.message_length_in_segments - 1);
         h.seg_id = (h.seg_id + 1) % cfg.message_length_in_segments;
 
         {
-            int recvd;
+            unsigned recvd;
             arq_err_t e = arq_backend_recv_fill(ctx.arq, frame.data(), frame_len, &recvd);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(frame_len, recvd);

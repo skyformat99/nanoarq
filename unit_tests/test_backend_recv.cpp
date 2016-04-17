@@ -11,7 +11,7 @@ TEST(backend_recv, invalid_params)
 {
     arq_t arq;
     void *recv = nullptr;
-    int recv_size = 0, bytes_recvd;
+    unsigned recv_size = 0, bytes_recvd;
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_recv_fill(nullptr, recv,    recv_size, &bytes_recvd));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_recv_fill(&arq,    nullptr, recv_size, &bytes_recvd));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_recv_fill(&arq,    recv,    recv_size, nullptr));
@@ -33,7 +33,7 @@ struct Fixture
     }
     arq_t arq;
     char recv[29];
-    int recvd;
+    unsigned recvd;
 };
 
 TEST(backend_recv, forwards_to_arq_recv_frame_fill)

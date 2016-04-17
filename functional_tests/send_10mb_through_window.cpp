@@ -53,7 +53,7 @@ TEST(functional, send_10mb_through_window)
                     CHECK_EQUAL(ARQ_OK_COMPLETED, err);
                 }
 
-                int frame_len;
+                unsigned frame_len;
                 {
                     void const *p;
                     {
@@ -66,9 +66,6 @@ TEST(functional, send_10mb_through_window)
                         arq_err_t const e = arq_backend_send_ptr_release(ctx.arq);
                         CHECK_EQUAL(ARQ_OK_COMPLETED, e);
                     }
-                }
-
-                {
                     arq_bool_t s, r;
                     arq_event_t e;
                     arq_time_t next_poll;

@@ -23,7 +23,7 @@ TEST(functional, lost_ack_payload_retransmitted_already_received)
 
     std::vector< unsigned char > recv_test_data(send_test_data.size());
     std::array< arq_uchar_t, 256 > frame;
-    auto frame_len = 0;
+    auto frame_len = 0u;
 
     // send a full message
     {
@@ -48,7 +48,7 @@ TEST(functional, lost_ack_payload_retransmitted_already_received)
 
     // receive the message
     {
-        int bytes_filled;
+        unsigned bytes_filled;
         arq_err_t e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &bytes_filled);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(frame_len, bytes_filled);
@@ -62,7 +62,6 @@ TEST(functional, lost_ack_payload_retransmitted_already_received)
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(send_test_data.size(), recvd);
         MEMCMP_EQUAL(send_test_data.data(), recv_test_data.data(), send_test_data.size());
-        CHECK_EQUAL(0, receiver.arq->recv_wnd.w.size);
     }
 
     // lose the ACK from receiver to sender
@@ -111,7 +110,7 @@ TEST(functional, lost_ack_payload_retransmitted_already_received)
 
     // receive the retransmitted message
     {
-        int bytes_filled;
+        unsigned bytes_filled;
         arq_err_t e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &bytes_filled);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK_EQUAL(frame_len, bytes_filled);
@@ -119,7 +118,7 @@ TEST(functional, lost_ack_payload_retransmitted_already_received)
         arq_time_t next_poll;
         arq_bool_t send_pending, recv_pending;
         e = arq_backend_poll(receiver.arq, 0, &event, &send_pending, &recv_pending, &next_poll);
-        CHECK(ARQ_SUCCEEDED(e) && !recv_pending && send_pending);
+        CHECK(ARQ_SUCCEEDED(e) && recv_pending && send_pending);
     }
 
     // examine and confirm the ACK
@@ -127,7 +126,7 @@ TEST(functional, lost_ack_payload_retransmitted_already_received)
         void const *p;
         arq_err_t e = arq_backend_send_ptr_get(receiver.arq, &p, &frame_len);
         CHECK(ARQ_SUCCEEDED(e));
-        CHECK_EQUAL(arq__frame_len(0), (unsigned)frame_len);
+        CHECK_EQUAL(arq__frame_len(0), frame_len);
         std::memcpy(frame.data(), p, frame_len);
         e = arq_backend_send_ptr_release(receiver.arq);
         CHECK(ARQ_SUCCEEDED(e));

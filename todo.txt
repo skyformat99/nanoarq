@@ -3,15 +3,12 @@ features:
 optional checksums
 arq__send_wnd_init
 arq__recv_wnd_init
-hook the linear allocator up to the various data structures
 metrics on crc failures, bad frames (too long before cobs 0)
-backend_poll needs to return # of bytes ready to be recvd
-arq_select?
 
 timers:
 =======
 recv "send ack" timers (if we don't recv last seg in a msg, possibly corrupted, we don't ACK the send)
-inter-byte and intra-frame timers
+inter-byte and intra-frame timers (in the receive window in case segments in message get corrupted)
 
 correctness?
 ============
@@ -24,10 +21,10 @@ do we NAK sequence numbers off the top end of the recv window? or just ignore?
 if send window receives a NAK, should reset send window pointer if NAK is < current pointer seq/seg
 where / when do send + recv wnd ptrs get reset?
 ARQ_ERR_NEED_POLL after send_ptr_release
+'arrived' flag array in recv window in case window slides by > 1 more than once before rtx (len == 0 not good)
 
 optimizations:
 ==============
-ACK timers in the receive window in case final segment in message gets corrupted?
 big bit vector to hold 'ready' message state of entire send window? rtx == 0 => msg bit set?
 instead of % and / all over the place for indexing + iterating, use 2 loops: pre-wrap, post-wrap
 maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for empty frame
@@ -43,7 +40,6 @@ compilation tests don't run by default?
 
 hygiene:
 ========
-unsigned everywhere, none of this stuff is ever legit negative
 normalize naming: size is the size of a struct / header / whatever. len is the length of a buffer.
 send_ptr_release() errors if the send pointer isn't owned by the user? new error enum?
 better return values for send_ptr_get and send_ptr_release (you already have ptr, there's nothing to send, etc)
