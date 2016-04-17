@@ -8,41 +8,41 @@ TEST_GROUP(poll) {};
 namespace {
 
 template< int SequenceNumber, int SegmentID, bool SegmentPresent >
-int MockSendPoll(arq__send_wnd_t *sw,
-                 arq__send_frame_t *f,
-                 arq__send_wnd_ptr_t *p,
-                 arq__frame_hdr_t *sh,
-                 arq__frame_hdr_t *rh,
-                 arq_time_t dt,
-                 arq_time_t rtx)
+arq_bool_t MockSendPoll(arq__send_wnd_t *sw,
+                        arq__send_frame_t *f,
+                        arq__send_wnd_ptr_t *p,
+                        arq__frame_hdr_t *sh,
+                        arq__frame_hdr_t *rh,
+                        arq_time_t dt,
+                        arq_time_t rtx)
 {
     if (sh) {
         sh->seq_num = SequenceNumber;
         sh->seg_id = SegmentID;
         sh->seg = SegmentPresent;
     }
-    return mock().actualCall("arq__send_poll").withParameter("sw", sw)
-                                              .withParameter("p", p)
-                                              .withParameter("f", f)
-                                              .withParameter("sh", sh)
-                                              .withParameter("rh", rh)
-                                              .withParameter("dt", dt)
-                                              .withParameter("rtx", rtx)
-                                              .returnIntValue();
+    return (arq_bool_t)mock().actualCall("arq__send_poll").withParameter("sw", sw)
+                                                          .withParameter("p", p)
+                                                          .withParameter("f", f)
+                                                          .withParameter("sh", sh)
+                                                          .withParameter("rh", rh)
+                                                          .withParameter("dt", dt)
+                                                          .withParameter("rtx", rtx)
+                                                          .returnUnsignedIntValue();
 }
 
-int MockRecvPoll(arq__recv_wnd_t *rw,
-                 arq__recv_frame_t *f,
-                 arq_checksum_t checksum,
-                 arq__frame_hdr_t *sh,
-                 arq__frame_hdr_t *rh)
+arq_bool_t MockRecvPoll(arq__recv_wnd_t *rw,
+                        arq__recv_frame_t *f,
+                        arq_checksum_t checksum,
+                        arq__frame_hdr_t *sh,
+                        arq__frame_hdr_t *rh)
 {
-    return mock().actualCall("arq__recv_poll").withParameter("rw", rw)
-                                              .withParameter("f", f)
-                                              .withParameter("sh", sh)
-                                              .withParameter("rh", rh)
-                                              .withParameter("checksum", (void *)checksum)
-                                              .returnUnsignedIntValue();
+    return (arq_bool_t)mock().actualCall("arq__recv_poll").withParameter("rw", rw)
+                                                          .withParameter("f", f)
+                                                          .withParameter("sh", sh)
+                                                          .withParameter("rh", rh)
+                                                          .withParameter("checksum", (void *)checksum)
+                                                          .returnUnsignedIntValue();
 }
 
 void MockFrameHdrInit(arq__frame_hdr_t *h)
