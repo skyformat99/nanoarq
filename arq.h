@@ -561,7 +561,7 @@ int ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
         }
         if (sp->valid) {
             arq__msg_t const *m = &sw->w.msg[sp->seq % sw->w.cap];
-            sh->msg_len = (m->len + sw->w.seg_len - 1u) / sw->w.seg_len;
+            sh->msg_len = (m->len + (unsigned)sw->w.seg_len - 1) / sw->w.seg_len;
             sh->seq_num = sp->seq;
             sh->seg_id = sp->seg;
             sh->seg = 1;
