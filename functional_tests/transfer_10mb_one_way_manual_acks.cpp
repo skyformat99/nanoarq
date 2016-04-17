@@ -54,7 +54,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
             }
 
             // copy frame from send window into local frame array
-            int frame_len;
+            unsigned frame_len;
             {
                 void const *p;
                 {
@@ -84,7 +84,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
 
             // push frame into receiver
             {
-                int filled;
+                unsigned filled;
                 arq_err_t e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &filled);
                 CHECK(ARQ_SUCCEEDED(e));
                 CHECK_EQUAL(frame_len, filled);
@@ -98,14 +98,13 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
         CHECK_EQUAL(0, sender.arq->send_wnd.w.size);
 
         // drain the receive window
-        while (receiver.arq->recv_wnd.w.size) {
-            unsigned char recv_buf[1024];
-            unsigned bytes_recvd;
-            arq_err_t const e = arq_recv(receiver.arq, recv_buf, sizeof(recv_buf), &bytes_recvd);
+        unsigned bytes_recvd;
+        do {
+            std::array< arq_uchar_t, 1024 > recv_buf;
+            arq_err_t const e = arq_recv(receiver.arq, recv_buf.data(), recv_buf.size(), &bytes_recvd);
             CHECK(ARQ_SUCCEEDED(e));
-            CHECK(bytes_recvd > 0);
-            std::copy(recv_buf, recv_buf + bytes_recvd, std::back_inserter(recv_test_data));
-        }
+            std::copy(recv_buf.data(), recv_buf.data() + bytes_recvd, std::back_inserter(recv_test_data));
+        } while (bytes_recvd);
     }
 
     CHECK_EQUAL(send_test_data.size(), recv_test_data.size());

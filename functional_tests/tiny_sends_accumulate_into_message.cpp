@@ -42,7 +42,7 @@ TEST(functional, tiny_sends_accumulate_into_message)
         CHECK(ARQ_SUCCEEDED(e) && send_pending);
     }
 
-    int size;
+    unsigned size;
     arq_uchar_t decode_buf[256];
     {
         void const *p;

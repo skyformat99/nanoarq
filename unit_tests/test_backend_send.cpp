@@ -10,7 +10,7 @@ TEST(backend_send, send_ptr_get_invalid_params)
 {
     arq_t arq;
     void const *send;
-    int size;
+    unsigned size;
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_send_ptr_get(nullptr, &send, &size));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_send_ptr_get(&arq, nullptr, &size));
     CHECK_EQUAL(ARQ_ERR_INVALID_PARAM, arq_backend_send_ptr_get(&arq, &send, nullptr));
@@ -27,7 +27,7 @@ struct Fixture
 
     arq_t arq;
     void const *send = nullptr;
-    int size = 0;
+    unsigned size = 0;
 };
 
 TEST(backend_send, send_ptr_returns_success_when_nothing_to_send)

@@ -41,7 +41,7 @@ TEST(functional, send_full_window)
             CHECK(send_pending);
         }
 
-        int size;
+        unsigned size;
         {
             void const *p;
             arq_err_t e = arq_backend_send_ptr_get(ctx.arq, &p, &size);

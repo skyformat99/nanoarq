@@ -43,7 +43,7 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
             CHECK(s);
         }
 
-        int size;
+        unsigned size;
         unsigned char decode_buf[256];
         {
             void const *p;
@@ -55,17 +55,14 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
         }
 
         {
-            int bytes_filled;
-            arq_err_t const e = arq_backend_recv_fill(receiver.arq, decode_buf, size, &bytes_filled);
+            unsigned bytes_filled;
+            arq_err_t e = arq_backend_recv_fill(receiver.arq, decode_buf, size, &bytes_filled);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(size, bytes_filled);
-        }
-
-        {
             arq_event_t event;
             arq_time_t next_poll;
             arq_bool_t s, r;
-            arq_err_t const e = arq_backend_poll(receiver.arq, 0, &event, &s, &r, &next_poll);
+            e = arq_backend_poll(receiver.arq, 0, &event, &s, &r, &next_poll);
             CHECK(ARQ_SUCCEEDED(e));
         }
     }

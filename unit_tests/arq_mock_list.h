@@ -21,11 +21,9 @@
     ARQ_MOCK(arq__send_poll) \
     ARQ_MOCK(arq__recv_wnd_rst) \
     ARQ_MOCK(arq__recv_wnd_frame) \
+    ARQ_MOCK(arq__recv_wnd_ack) \
     ARQ_MOCK(arq__recv_wnd_pending) \
     ARQ_MOCK(arq__recv_wnd_recv) \
-    ARQ_MOCK(arq__recv_wnd_ptr_init) \
-    ARQ_MOCK(arq__recv_wnd_ptr_next) \
-    ARQ_MOCK(arq__recv_wnd_ptr_set) \
     ARQ_MOCK(arq__recv_frame_init) \
     ARQ_MOCK(arq__recv_frame_fill) \
     ARQ_MOCK(arq__recv_frame_rst) \

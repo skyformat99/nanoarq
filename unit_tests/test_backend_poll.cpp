@@ -33,13 +33,11 @@ int MockSendPoll(arq__send_wnd_t *sw,
 
 int MockRecvPoll(arq__recv_wnd_t *rw,
                  arq__recv_frame_t *f,
-                 arq__recv_wnd_ptr_t *p,
                  arq_checksum_t checksum,
                  arq__frame_hdr_t *sh,
                  arq__frame_hdr_t *rh)
 {
     return mock().actualCall("arq__recv_poll").withParameter("rw", rw)
-                                              .withParameter("p", p)
                                               .withParameter("f", f)
                                               .withParameter("sh", sh)
                                               .withParameter("rh", rh)
@@ -50,13 +48,6 @@ int MockRecvPoll(arq__recv_wnd_t *rw,
 void MockFrameHdrInit(arq__frame_hdr_t *h)
 {
     mock().actualCall("arq__frame_hdr_init").withParameter("h", h);
-}
-
-int MockRecvWndPtrNext(arq__recv_wnd_ptr_t *p, arq__recv_wnd_t *rw)
-{
-    return mock().actualCall("arq__recv_wnd_ptr_next").withParameter("p", p)
-                                                      .withParameter("rw", rw)
-                                                      .returnIntValue();
 }
 
 arq_bool_t MockRecvWndPending(arq__recv_wnd_t *rw)
@@ -101,7 +92,6 @@ struct Fixture
         ARQ_MOCK_HOOK(arq__frame_hdr_init, MockFrameHdrInit);
         ARQ_MOCK_HOOK(arq__recv_poll, MockRecvPoll);
         ARQ_MOCK_HOOK(arq__recv_wnd_pending, MockRecvWndPending);
-        ARQ_MOCK_HOOK(arq__recv_wnd_ptr_next, MockRecvWndPtrNext);
         ARQ_MOCK_HOOK(arq__frame_write, MockFrameWrite);
         ARQ_MOCK_HOOK(arq__wnd_seg, MockWndSeg);
         ARQ_MOCK_HOOK(arq__next_poll, MockNextPoll);
@@ -167,7 +157,6 @@ TEST(poll, calls_recv_poll_with_arq_context)
     f.arq.cfg.checksum = (arq_checksum_t)0x12345678;
     mock().expectOneCall("arq__recv_poll").withParameter("rw", &f.arq.recv_wnd)
                                           .withParameter("f", &f.arq.recv_frame)
-                                          .withParameter("p", &f.arq.recv_wnd_ptr)
                                           .withParameter("checksum", (void *)f.arq.cfg.checksum)
                                           .ignoreOtherParameters();
     mock().ignoreOtherCalls();

@@ -28,7 +28,7 @@ TEST(functional, ack_full_window)
     recv_test_data.reserve(send_test_data.size());
 
     std::array< arq_uchar_t, 256 > frame;
-    auto frame_len = 0;
+    auto frame_len = 0u;
 
     // send a full message into the sender
     {
@@ -56,7 +56,7 @@ TEST(functional, ack_full_window)
 
         // load the send frame into the receiver
         {
-            int bytes_filled;
+            unsigned bytes_filled;
             arq_err_t e = arq_backend_recv_fill(receiver.arq, frame.data(), frame_len, &bytes_filled);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(frame_len, bytes_filled);
@@ -86,7 +86,7 @@ TEST(functional, ack_full_window)
 
         // load the ACK frame into the sender
         {
-            int bytes_filled;
+            unsigned bytes_filled;
             arq_err_t e = arq_backend_recv_fill(sender.arq, frame.data(), frame_len, &bytes_filled);
             CHECK(ARQ_SUCCEEDED(e));
             CHECK_EQUAL(frame_len, bytes_filled);
