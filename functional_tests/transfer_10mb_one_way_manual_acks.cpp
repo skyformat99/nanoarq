@@ -96,7 +96,6 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
             }
         }
         CHECK_EQUAL(0, sender.arq->send_wnd.w.size);
-
         // drain the receive window
         unsigned bytes_recvd;
         do {

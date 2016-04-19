@@ -21,18 +21,18 @@ struct UninitializedFixture
     {
         rw.w.cap = msg.size();
         buf.resize(1024 * 1024);
-        rw.flag = flag.data();
+        rw.ack = ack.data();
         rw.w.msg = msg.data();
         rw.w.buf = buf.data();
         recv.resize(buf.size());
         std::fill(std::begin(buf), std::end(buf), 0xFE);
         std::fill(std::begin(recv), std::end(recv), 0xFE);
-        std::fill(std::begin(flag), std::end(flag), 0xFE);
+        std::fill(std::begin(ack), std::end(ack), 0xFE);
     }
 
     arq__recv_wnd_t rw;
     std::array< arq__msg_t, 64 > msg;
-    std::array< arq_uchar_t, 64 > flag;
+    std::array< arq_uchar_t, 64 > ack;
     std::vector< arq_uchar_t > buf;
     std::vector< arq_uchar_t > seg;
     std::vector< arq_uchar_t > recv;
@@ -59,14 +59,25 @@ TEST(recv_wnd, rst_sets_copy_seq_and_copy_ofs_to_zero)
     CHECK_EQUAL(0, f.rw.copy_ofs);
 }
 
-TEST(recv_wnd, rst_clears_flag_array)
+TEST(recv_wnd, rst_sets_slide_to_zero)
+{
+    UninitializedFixture f;
+    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
+    mock().ignoreOtherCalls();
+    f.rw.w.cap = 0;
+    f.rw.slide = 1234;
+    arq__recv_wnd_rst(&f.rw);
+    CHECK_EQUAL(0, f.rw.slide);
+}
+
+TEST(recv_wnd, rst_clears_ack_array)
 {
     UninitializedFixture f;
     ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
     mock().ignoreOtherCalls();
     arq__recv_wnd_rst(&f.rw);
-    for (auto const &flag : f.flag) {
-        CHECK_EQUAL(0, flag);
+    for (auto const &ack : f.ack) {
+        CHECK_EQUAL(0, ack);
     }
 }
 
@@ -210,41 +221,6 @@ TEST(recv_wnd, frame_updates_window_size_correctly_when_new_segment_wraps_sequen
     CHECK_EQUAL(2, f.rw.w.size);
 }
 
-TEST(recv_wnd, frame_sets_recv_window_seen_flag_for_full_inbound_message)
-{
-    Fixture f;
-    f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
-    CHECK(f.rw.flag[0] & ARQ__RECV_WND_FLAG_SEEN);
-}
-
-TEST(recv_wnd, frame_sets_recv_window_seen_flag_for_partial_inbound_message)
-{
-    Fixture f;
-    f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, 0, 0, 2, f.seg.data(), f.seg.size());
-    CHECK(f.rw.flag[0] & ARQ__RECV_WND_FLAG_SEEN);
-}
-
-TEST(recv_wnd, frame_sets_recv_window_seen_flag_for_partial_inbound_message_nonzero_seq)
-{
-    Fixture f;
-    f.rw.w.seq = 3;
-    f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, 3, 0, 2, f.seg.data(), f.seg.size());
-    CHECK(f.rw.flag[3] & ARQ__RECV_WND_FLAG_SEEN);
-}
-
-TEST(recv_wnd, frame_sets_recv_window_seen_flag_for_partial_inbound_message_seq_greater_than_cap)
-{
-    Fixture f;
-    unsigned const seq = f.rw.w.cap * 2;
-    f.rw.w.seq = seq;
-    f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, seq, 0, 2, f.seg.data(), f.seg.size());
-    CHECK(f.rw.flag[seq % f.rw.w.cap] & ARQ__RECV_WND_FLAG_SEEN);
-}
-
 TEST(recv_wnd, frame_returns_segment_length_if_inside_window_and_valid)
 {
     Fixture f;
@@ -266,27 +242,27 @@ TEST(recv_wnd, frame_doesnt_set_ack_entry_for_first_segment_of_message_in_window
 {
     Fixture f;
     f.seg.resize(1);
-    CHECK_EQUAL(0, f.rw.flag[0] & ARQ__RECV_WND_FLAG_ACK);
+    CHECK_EQUAL(0, f.rw.ack[0]);
     arq__recv_wnd_frame(&f.rw, 0, 0, 2, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(0, f.rw.flag[0] & ARQ__RECV_WND_FLAG_ACK);
+    CHECK_EQUAL(0, f.rw.ack[0]);
 }
 
 TEST(recv_wnd, frame_doesnt_set_ack_entry_for_internal_segment_of_message_in_window)
 {
     Fixture f;
     f.seg.resize(1);
-    CHECK_EQUAL(0, f.rw.flag[0] & ARQ__RECV_WND_FLAG_ACK);
+    CHECK_EQUAL(0, f.rw.ack[0]);
     arq__recv_wnd_frame(&f.rw, 0, 1, 3, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(0, f.rw.flag[0] & ARQ__RECV_WND_FLAG_ACK);
+    CHECK_EQUAL(0, f.rw.ack[0]);
 }
 
 TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_window)
 {
     Fixture f;
     f.seg.resize(1);
-    CHECK_EQUAL(0, f.rw.flag[0]);
+    CHECK_EQUAL(0, f.rw.ack[0]);
     arq__recv_wnd_frame(&f.rw, 0, 6, 7, f.seg.data(), f.seg.size());
-    CHECK(f.rw.flag[0] & ARQ__RECV_WND_FLAG_ACK);
+    CHECK_EQUAL(1, f.rw.ack[0]);
 }
 
 TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_window_big_seq)
@@ -294,20 +270,18 @@ TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_
     Fixture f;
     f.seg.resize(1);
     f.rw.w.seq = ARQ__FRAME_MAX_SEQ_NUM;
-    CHECK_EQUAL(0, f.rw.flag[f.rw.w.seq % f.rw.w.cap]);
+    CHECK_EQUAL(0, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
     arq__recv_wnd_frame(&f.rw, ARQ__FRAME_MAX_SEQ_NUM, 0, 1, f.seg.data(), f.seg.size());
-    CHECK(f.rw.flag[f.rw.w.seq % f.rw.w.cap] & ARQ__RECV_WND_FLAG_ACK);
+    CHECK_EQUAL(1, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
 }
 
 TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_is_full_and_not_received_by_user)
 {
     Fixture f;
     f.rw.w.size = f.rw.w.cap;
+    f.rw.slide = 0;
     for (auto i = 0u; i < f.rw.w.cap; ++i) {
         f.rw.w.msg[i].len = f.rw.w.msg_len;
-    }
-    for (auto i = 0u; i < f.rw.w.cap; ++i) {
-        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
     }
     f.seg.resize(1);
     arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
@@ -318,9 +292,7 @@ TEST(recv_wnd, frame_doesnt_slide_window_when_full_and_msg_requires_slide_but_ha
 {
     Fixture f;
     f.rw.w.size = f.rw.w.cap;
-    for (auto i = 1u; i < f.rw.w.cap; ++i) {
-        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
-    }
+    f.rw.slide = 0;
     f.seg.resize(1);
     arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
     CHECK_EQUAL(0, f.rw.w.seq);
@@ -330,11 +302,9 @@ TEST(recv_wnd, frame_slides_window_by_one_when_full_and_first_message_is_receive
 {
     Fixture f;
     f.rw.w.size = f.rw.w.cap;
+    f.rw.slide = 1;
     for (auto i = 1u; i < f.rw.w.cap; ++i) {
         f.rw.w.msg[i].len = f.rw.w.msg_len;
-    }
-    for (auto i = 0u; i < f.rw.w.cap; ++i) {
-        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
     }
     f.seg.resize(13);
     unsigned const new_seq = f.rw.w.size;
@@ -347,11 +317,9 @@ TEST(recv_wnd, frame_slides_window_by_two_when_full_and_first_2_messages_receive
 {
     Fixture f;
     f.rw.w.size = f.rw.w.cap;
+    f.rw.slide = 2;
     for (auto i = 2u; i < f.rw.w.cap; ++i) {
         f.rw.w.msg[i].len = f.rw.w.msg_len;
-    }
-    for (auto i = 0u; i < f.rw.w.cap; ++i) {
-        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
     }
     f.seg.resize(13);
     unsigned const new_seq = f.rw.w.size + 1;
@@ -364,10 +332,8 @@ TEST(recv_wnd, frame_slides_window_by_cap_when_full_and_all_messages_received_an
 {
     Fixture f;
     f.rw.w.size = f.rw.w.cap;
+    f.rw.slide = f.rw.w.size;
     f.seg.resize(13);
-    for (auto i = 0u; i < f.rw.w.cap; ++i) {
-        f.rw.flag[i] |= ARQ__RECV_WND_FLAG_SEEN;
-    }
     unsigned const new_seq = (f.rw.w.cap * 2) - 1;
     arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size());
     CHECK_EQUAL(new_seq, f.rw.w.seq + f.rw.w.size - 1u);
@@ -378,9 +344,9 @@ TEST(recv_wnd, frame_leaves_ack_set_entry_to_one_if_ack_is_already_noticed)
 {
     Fixture f;
     f.seg.resize(1);
-    f.rw.flag[0] |= ARQ__RECV_WND_FLAG_ACK;
+    f.rw.ack[0] = 1;
     arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
-    CHECK(f.rw.flag[0] & ARQ__RECV_WND_FLAG_ACK);
+    CHECK_EQUAL(1, f.rw.ack[0]);
 }
 
 TEST(recv_wnd, recv_empty_window_copies_nothing)
@@ -487,6 +453,15 @@ TEST(recv_wnd, recv_dst_less_than_one_message_len_copies_partial_msg)
     CHECK_EQUAL(0xFE, f.buf[f.rw.w.msg_len - 1]);
 }
 
+TEST(recv_wnd, recv_entire_first_message_in_window_increments_slide)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len);
+    f.rw.slide = 13;
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
+    CHECK_EQUAL(14, f.rw.slide);
+}
+
 TEST(recv_wnd, recv_tinygram_returns_tinygram_size)
 {
     Fixture f;
@@ -502,6 +477,15 @@ TEST(recv_wnd, recv_dst_two_full_messages_copies_both_messages_to_dst)
     arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
     MEMCMP_EQUAL(f.buf.data(), f.recv.data(), f.rw.w.msg_len * 2);
     CHECK_EQUAL(0xFE, f.buf[f.rw.w.msg_len * 2]);
+}
+
+TEST(recv_wnd, recv_dst_two_full_messages_increments_slide_by_two)
+{
+    Fixture f;
+    PopulateReceiveWindow(f, f.rw.w.msg_len * 2);
+    f.rw.slide = 123;
+    arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
+    CHECK_EQUAL(125, f.rw.slide);
 }
 
 TEST(recv_wnd, recv_dst_two_full_messages_returns_two_times_msg_len)
