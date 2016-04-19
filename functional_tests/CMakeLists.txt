@@ -18,6 +18,8 @@ set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                 send_full_window.cpp
                                 send_10mb_through_window.cpp
                                 recv_full_window.cpp
+                                recv_full_window_in_one_call.cpp
+                                recv_full_window_one_byte_at_a_time.cpp
                                 recv_10mb_through_window.cpp
                                 transfer_full_window_one_way.cpp
                                 transfer_10mb_one_way_manual_acks.cpp

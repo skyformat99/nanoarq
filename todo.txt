@@ -26,7 +26,7 @@ optimizations:
 big bit vector to hold 'ready' message state of entire send window? rtx == 0 => msg bit set?
 instead of % and / all over the place for indexing + iterating, use 2 loops: pre-wrap, post-wrap
 maybe a builtin_expect in recv_frame_fill, 1/16 chance of terminator byte for empty frame
-multiple frames can fit in the ingoing / outgoing frame buffers, exploit that
+multiple frames can fit in the ingoing / outgoing frame buffers, exploit that (or round-robin frame bufs)
 recv window ack flag array => bitfield? might not be much smaller / faster
 
 build / infra:
