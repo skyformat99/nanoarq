@@ -2,7 +2,7 @@
 
 namespace {
 
-TEST(functional, recv_full_window)
+TEST(functional, recv_full_window_one_segment_at_a_time)
 {
     arq_cfg_t cfg;
     cfg.segment_length_in_bytes = 220;
@@ -60,8 +60,8 @@ TEST(functional, recv_full_window)
     }
     CHECK_EQUAL(test_input.size(), test_input_offset);
 
+    std::vector< arq_uchar_t > recv(cfg.segment_length_in_bytes);
     while (test_output.size() < test_input.size()) {
-        std::array< arq_uchar_t, 256 > recv;
         unsigned recvd;
         arq_err_t const e = arq_recv(ctx.arq, recv.data(), recv.size(), &recvd);
         CHECK(ARQ_SUCCEEDED(e));

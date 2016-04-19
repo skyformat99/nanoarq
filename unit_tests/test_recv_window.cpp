@@ -275,6 +275,18 @@ TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_
     CHECK_EQUAL(1, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
 }
 
+TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_can_grow_to_hold_it)
+{
+    Fixture f;
+    f.rw.w.size = f.rw.w.cap - 1;
+    unsigned const slide = f.rw.w.size;
+    f.rw.slide = slide;
+    f.seg.resize(1);
+    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(slide, f.rw.slide);
+    CHECK_EQUAL(0, f.rw.w.seq);
+}
+
 TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_is_full_and_not_received_by_user)
 {
     Fixture f;
