@@ -238,7 +238,7 @@ typedef struct arq__send_wnd_t
     arq__wnd_t w;
     arq_time_t *rtx;
     arq_time_t tiny;
-    arq_uchar_t tiny_on;
+    arq_bool_t tiny_on;
 } arq__send_wnd_t;
 
 void arq__send_wnd_rst(arq__send_wnd_t *sw);
@@ -576,7 +576,7 @@ arq_bool_t ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
     arq__send_wnd_step(sw, dt);
     if (sw->tiny_on && (sw->tiny == 0)) {
         arq__send_wnd_flush(sw);
-        sw->tiny_on = 0;
+        sw->tiny_on = ARQ_FALSE;
     }
     if (sh) {
         unsigned const p_seq = sp->seq;
@@ -981,7 +981,7 @@ void ARQ_MOCKABLE(arq__send_wnd_rst)(arq__send_wnd_t *sw)
         sw->rtx[i] = 0;
     }
     sw->tiny = 0;
-    sw->tiny_on = 0;
+    sw->tiny_on = ARQ_FALSE;
 }
 
 unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw,
@@ -1016,7 +1016,7 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw,
     if (bytes_rem) {
         sw->w.msg[(sw->w.seq + sw->w.size - 1) % sw->w.cap].len = bytes_rem;
     }
-    sw->tiny_on = bytes_rem > 0;
+    sw->tiny_on = (bytes_rem > 0);
     if (sw->tiny_on && (sw->w.size > orig_size)) {
         sw->rtx[(sw->w.seq + sw->w.size - 1) % sw->w.cap] = tiny;
         sw->tiny = tiny;
@@ -1027,14 +1027,19 @@ unsigned ARQ_MOCKABLE(arq__send_wnd_send)(arq__send_wnd_t *sw,
 void ARQ_MOCKABLE(arq__send_wnd_ack)(arq__send_wnd_t *sw, unsigned seq, arq_uint16_t cur_ack_vec)
 {
     unsigned ack_msg_idx, i;
+    arq__msg_t *m;
     ARQ_ASSERT(sw);
     if ((sw->w.size == 0) || (sw->w.seq > seq) || (((unsigned)sw->w.seq + sw->w.size - 1) < seq)) {
         return;
     }
     ack_msg_idx = seq % sw->w.cap;
-    sw->w.msg[ack_msg_idx].cur_ack_vec = cur_ack_vec;
+    m = &sw->w.msg[ack_msg_idx];
+    m->cur_ack_vec = cur_ack_vec;
+    if (m->cur_ack_vec != m->full_ack_vec) {
+        sw->rtx[ack_msg_idx] = 0;
+    }
     for (i = 0; i < sw->w.size; ++i) {
-        arq__msg_t *m = &sw->w.msg[(sw->w.seq + i) % sw->w.cap];
+        m = &sw->w.msg[(sw->w.seq + i) % sw->w.cap];
         if (m->cur_ack_vec != m->full_ack_vec) {
             break;
         }
@@ -1397,6 +1402,9 @@ arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw
     }
     if (sw->tiny_on && (sw->tiny > 0)) {
         np = arq__min(np, sw->tiny);
+    }
+    if (rw->inter_seg_ack_on && (rw->inter_seg_ack > 0)) {
+        np = arq__min(np, rw->inter_seg_ack);
     }
     return np;
 }

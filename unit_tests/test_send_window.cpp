@@ -562,6 +562,16 @@ TEST(send_wnd, ack_the_entire_send_window)
     CHECK_EQUAL(f.sw.w.cap, f.sw.w.seq);
 }
 
+TEST(send_wnd, ack_nak_sets_associated_rtx_to_zero)
+{
+    Fixture f;
+    f.sw.w.size = 1;
+    f.sw.w.msg[0].cur_ack_vec = 0;
+    f.sw.rtx[0] = 100;
+    arq__send_wnd_ack(&f.sw, 0, f.sw.w.full_ack_vec - 1);
+    CHECK_EQUAL(0, f.sw.rtx[0]);
+}
+
 TEST(send_wnd, flush_does_nothing_on_empty_window)
 {
     Fixture f;

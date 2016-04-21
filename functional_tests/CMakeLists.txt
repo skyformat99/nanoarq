@@ -28,7 +28,8 @@ set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                 poll_until_tinygram_sends.cpp
                                 tiny_sends_accumulate_into_message.cpp
                                 retransmission_timers.cpp
-                                lost_ack_payload_retransmitted_already_received.cpp)
+                                lost_ack_payload_retransmitted_already_received.cpp
+                                lose_last_segment_in_message_triggers_nak.cpp)
 
 string(REPLACE ";" " " ARQ_RUNTIME_FLAGS_STR "${ARQ_RUNTIME_FLAGS}")
 set_source_files_properties(arq_in_test_project.c PROPERTIES COMPILE_FLAGS "${ARQ_RUNTIME_FLAGS_STR}")
