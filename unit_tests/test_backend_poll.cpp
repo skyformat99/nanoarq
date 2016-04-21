@@ -35,13 +35,15 @@ arq_bool_t MockRecvPoll(arq__recv_wnd_t *rw,
                         arq__recv_frame_t *f,
                         arq_checksum_t checksum,
                         arq__frame_hdr_t *sh,
-                        arq__frame_hdr_t *rh)
+                        arq__frame_hdr_t *rh,
+                        arq_time_t dt)
 {
     return (arq_bool_t)mock().actualCall("arq__recv_poll").withParameter("rw", rw)
                                                           .withParameter("f", f)
                                                           .withParameter("sh", sh)
                                                           .withParameter("rh", rh)
                                                           .withParameter("checksum", (void *)checksum)
+                                                          .withParameter("dt", dt)
                                                           .returnUnsignedIntValue();
 }
 
@@ -158,6 +160,7 @@ TEST(poll, calls_recv_poll_with_arq_context)
     mock().expectOneCall("arq__recv_poll").withParameter("rw", &f.arq.recv_wnd)
                                           .withParameter("f", &f.arq.recv_frame)
                                           .withParameter("checksum", (void *)f.arq.cfg.checksum)
+                                          .withParameter("dt", f.time)
                                           .ignoreOtherParameters();
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
