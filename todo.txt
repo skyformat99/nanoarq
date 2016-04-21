@@ -6,10 +6,6 @@ arq__send_wnd_init
 arq__recv_wnd_init
 metrics on crc failures, bad frames (too long before cobs 0)
 
-timers:
-=======
-inter-byte and intra-frame timers (in the receive window in case segments in message get corrupted)
-
 correctness?
 ============
 unit tests for ARQ__ALIGNOF
