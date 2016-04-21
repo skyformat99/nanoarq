@@ -111,7 +111,7 @@ TEST(recv_poll, calls_recv_wnd_frame_if_frame_read_returns_success)
     f.rh.seg_id = 3;
     f.rh.msg_len = 64;
     f.rh.seg_len = 16;
-    mock().expectOneCall("arq__frame_read").withOutputParameterReturning("out_hdr", &f.rh, sizeof(f.rh, 0, 0))
+    mock().expectOneCall("arq__frame_read").withOutputParameterReturning("out_hdr", &f.rh, sizeof(f.rh))
                                            .ignoreOtherParameters()
                                            .andReturnValue(ARQ__FRAME_READ_RESULT_SUCCESS);
     mock().expectOneCall("arq__recv_wnd_frame").withParameter("rw", &f.arq.recv_wnd)
@@ -129,7 +129,7 @@ TEST(recv_poll, doesnt_call_recv_wnd_frame_if_frame_has_no_segment)
 {
     Fixture f;
     f.arq.recv_frame.state = ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT;
-    mock().expectOneCall("arq__frame_read").withOutputParameterReturning("out_hdr", &f.rh, sizeof(f.rh, 0, 0))
+    mock().expectOneCall("arq__frame_read").withOutputParameterReturning("out_hdr", &f.rh, sizeof(f.rh))
                                            .ignoreOtherParameters()
                                            .andReturnValue(ARQ__FRAME_READ_RESULT_SUCCESS);
     mock().expectOneCall("arq__recv_frame_rst").ignoreOtherParameters();
