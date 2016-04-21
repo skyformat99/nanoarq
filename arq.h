@@ -291,6 +291,8 @@ typedef struct arq__recv_wnd_t
 {
     arq__wnd_t w;
     arq_uchar_t *ack;
+    arq_time_t inter_seg_ack;
+    arq_bool_t inter_seg_ack_on;
     arq_uint16_t copy_seq;
     arq_uint16_t copy_ofs;
     arq_uint16_t slide;
@@ -1110,6 +1112,8 @@ void ARQ_MOCKABLE(arq__recv_wnd_rst)(arq__recv_wnd_t *rw)
     rw->copy_seq = 0;
     rw->copy_ofs = 0;
     rw->slide = 0;
+    rw->inter_seg_ack_on = ARQ_FALSE;
+    rw->inter_seg_ack = ARQ_TIME_INFINITY;
     for (i = 0; i < rw->w.cap; ++i) {
         rw->ack[i] = 0;
     }
@@ -1125,7 +1129,7 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     arq__msg_t *m;
     void *seg_dst;
     unsigned const full_ack_vec = (1u << seg_cnt) - 1;
-    unsigned new_size, unused;
+    unsigned new_size, idx, unused;
     ARQ_ASSERT(rw && p && (len <= rw->w.seg_len));
     new_size = (seq - rw->w.seq + 1) % (ARQ__FRAME_MAX_SEQ_NUM + 1);
     if (new_size > rw->w.cap) {
@@ -1138,8 +1142,10 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     } else {
         rw->w.size = arq__max(rw->w.size, new_size);
     }
-    m = &rw->w.msg[seq % rw->w.cap];
+    idx = seq % rw->w.cap;
+    m = &rw->w.msg[idx];
     if (m->cur_ack_vec & (1 << seg)) {
+        rw->ack[idx] = 1;
         return 0;
     }
     arq__wnd_seg(&rw->w, seq, seg, &seg_dst, &unused);
@@ -1147,8 +1153,11 @@ unsigned ARQ_MOCKABLE(arq__recv_wnd_frame)(arq__recv_wnd_t *rw,
     m->full_ack_vec = full_ack_vec;
     m->cur_ack_vec |= (1 << seg);
     m->len += len;
-    if (seg == seg_cnt - 1) {
-        rw->ack[seq % rw->w.cap] = 1;
+    if (seg == (seg_cnt - 1)) {
+        rw->ack[idx] = 1;
+        rw->inter_seg_ack_on = ARQ_FALSE;
+    } else {
+        rw->inter_seg_ack_on = ARQ_TRUE;
     }
     return len;
 }

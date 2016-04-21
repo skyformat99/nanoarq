@@ -81,6 +81,18 @@ TEST(recv_wnd, rst_clears_ack_array)
     }
 }
 
+TEST(recv_wnd, rst_resets_inter_seg_ack_timer)
+{
+    UninitializedFixture f;
+    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
+    mock().ignoreOtherCalls();
+    f.rw.inter_seg_ack_on = ARQ_TRUE;
+    f.rw.inter_seg_ack = 1234;
+    arq__recv_wnd_rst(&f.rw);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.inter_seg_ack_on);
+    CHECK_EQUAL(ARQ_TIME_INFINITY, f.rw.inter_seg_ack);
+}
+
 struct Fixture : UninitializedFixture
 {
     Fixture()
@@ -359,6 +371,44 @@ TEST(recv_wnd, frame_leaves_ack_set_entry_to_one_if_ack_is_already_noticed)
     f.rw.ack[0] = 1;
     arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
     CHECK_EQUAL(1, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_sets_ack_entry_if_already_received_segment_is_received)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.w.size = 1;
+    f.rw.w.msg[0].cur_ack_vec = 1;
+    f.rw.ack[0] = 0;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 3, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(1, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_doesnt_enable_inter_seg_ack_timer_when_single_segment_message_arrives)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.inter_seg_ack_on = ARQ_FALSE;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(ARQ_FALSE, f.rw.inter_seg_ack_on);
+}
+
+TEST(recv_wnd, frame_enables_inter_seg_ack_timer_when_first_segment_of_multi_seg_msg_arrives)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.inter_seg_ack_on = ARQ_FALSE;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 2, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(ARQ_TRUE, f.rw.inter_seg_ack_on);
+}
+
+TEST(recv_wnd, frame_disables_inter_seg_ack_timer_when_last_segment_of_multi_seg_msg_arrives)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.inter_seg_ack_on = ARQ_TRUE;
+    arq__recv_wnd_frame(&f.rw, 0, 1, 2, f.seg.data(), f.seg.size());
+    CHECK_EQUAL(ARQ_FALSE, f.rw.inter_seg_ack_on);
 }
 
 TEST(recv_wnd, recv_empty_window_copies_nothing)
