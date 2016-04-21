@@ -81,6 +81,20 @@ TEST(recv_wnd, rst_clears_ack_array)
     }
 }
 
+TEST(recv_wnd, rst_resets_inter_seg_ack_timer)
+{
+    UninitializedFixture f;
+    ARQ_MOCK_HOOK(arq__wnd_rst, MockWndRst);
+    mock().ignoreOtherCalls();
+    f.rw.inter_seg_ack_on = ARQ_TRUE;
+    f.rw.inter_seg_ack = 1234;
+    f.rw.inter_seg_ack_seq = 5;
+    arq__recv_wnd_rst(&f.rw);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.inter_seg_ack_on);
+    CHECK_EQUAL(ARQ_TIME_INFINITY, f.rw.inter_seg_ack);
+    CHECK_EQUAL(0, f.rw.inter_seg_ack_seq);
+}
+
 struct Fixture : UninitializedFixture
 {
     Fixture()
@@ -94,7 +108,7 @@ TEST(recv_wnd, frame_writes_len_to_msg)
 {
     Fixture f;
     f.seg.resize(30);
-    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(f.seg.size(), f.msg[0].len);
 }
 
@@ -103,7 +117,7 @@ TEST(recv_wnd, frame_accumulates_seg_len_to_partially_full_msg)
     Fixture f;
     f.seg.resize(29);
     f.msg[0].len = 17;
-    arq__recv_wnd_frame(&f.rw, 0, 1, 2, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, 0, 1, 2, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(17 + 29, f.msg[0].len);
 }
 
@@ -112,7 +126,7 @@ TEST(recv_wnd, frame_indexes_msg_by_seq)
     Fixture f;
     f.seg.resize(1);
     f.rw.w.seq = 12344;
-    arq__recv_wnd_frame(&f.rw, 12345, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, 12345, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(1, f.msg[12345 % f.rw.w.cap].len);
 }
 
@@ -143,7 +157,7 @@ TEST(recv_wnd, frame_copies_data_into_seat_provided_by_seg_call)
           .withParameter("seg", seg)
           .withOutputParameterReturning("out_seg", &seat, sizeof(void *))
           .ignoreOtherParameters();
-    arq__recv_wnd_frame(&f.rw, seq, seg, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, seq, seg, 1, f.seg.data(), f.seg.size(), 0);
     MEMCMP_EQUAL(f.seg.data(), seat, f.seg.size());
 }
 
@@ -152,7 +166,7 @@ TEST(recv_wnd, frame_writes_full_ack_vec_to_msg)
     Fixture f;
     f.seg.resize(1);
     f.msg[0].full_ack_vec = 0;
-    arq__recv_wnd_frame(&f.rw, 0, 0, 7, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, 0, 0, 7, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(0b1111111, f.msg[0].full_ack_vec);
 }
 
@@ -162,7 +176,7 @@ TEST(recv_wnd, frame_ors_in_current_seg_to_cur_ack_vector)
     f.seg.resize(1);
     f.msg[0].full_ack_vec = 0b1111;
     f.msg[0].cur_ack_vec = 0b0101;
-    arq__recv_wnd_frame(&f.rw, 0, 3, 4, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, 0, 3, 4, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(0b1101, f.msg[0].cur_ack_vec);
 }
 
@@ -171,7 +185,7 @@ TEST(recv_wnd, frame_does_not_update_window_size_if_segment_in_existing_message)
     Fixture f;
     f.rw.w.size = 1;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.seq, 1, 2, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.seq, 1, 2, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(1, f.rw.w.size);
 }
 
@@ -180,7 +194,7 @@ TEST(recv_wnd, frame_increments_window_size_for_first_segment_in_next_message)
     Fixture f;
     f.rw.w.size = 1;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 1, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 1, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(2, f.rw.w.size);
 }
 
@@ -189,7 +203,7 @@ TEST(recv_wnd, frame_increments_window_size_for_non_first_segment_in_next_messag
     Fixture f;
     f.rw.w.size = 1;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 1, 1, 2, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 1, 1, 2, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(2, f.rw.w.size);
 }
 
@@ -198,7 +212,7 @@ TEST(recv_wnd, frame_updates_window_size_for_first_segment_in_non_adjacent_messa
     Fixture f;
     f.rw.w.size = 0;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 4, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 4, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(5, f.rw.w.size);
 }
 
@@ -207,7 +221,7 @@ TEST(recv_wnd, frame_updates_window_size_for_non_first_segment_in_non_adjacent_m
     Fixture f;
     f.rw.w.size = 0;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 4, 2, 4, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.seq + 4, 2, 4, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(5, f.rw.w.size);
 }
 
@@ -217,7 +231,7 @@ TEST(recv_wnd, frame_updates_window_size_correctly_when_new_segment_wraps_sequen
     f.rw.w.size = 1;
     f.rw.w.seq = ARQ__FRAME_MAX_SEQ_NUM;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, 0, 1, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, 0, 1, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(2, f.rw.w.size);
 }
 
@@ -225,7 +239,7 @@ TEST(recv_wnd, frame_returns_segment_length_if_inside_window_and_valid)
 {
     Fixture f;
     f.seg.resize(19);
-    unsigned const len = arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
+    unsigned const len = arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(f.seg.size(), len);
 }
 
@@ -234,7 +248,7 @@ TEST(recv_wnd, frame_returns_zero_if_segment_already_received)
     Fixture f;
     f.seg.resize(1);
     f.msg[0].cur_ack_vec = 0b010;
-    unsigned const len = arq__recv_wnd_frame(&f.rw, 0, 1, 3, f.seg.data(), f.seg.size());
+    unsigned const len = arq__recv_wnd_frame(&f.rw, 0, 1, 3, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(0, len);
 }
 
@@ -242,27 +256,27 @@ TEST(recv_wnd, frame_doesnt_set_ack_entry_for_first_segment_of_message_in_window
 {
     Fixture f;
     f.seg.resize(1);
-    CHECK_EQUAL(0, f.rw.ack[0]);
-    arq__recv_wnd_frame(&f.rw, 0, 0, 2, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(0, f.rw.ack[0]);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.ack[0]);
+    arq__recv_wnd_frame(&f.rw, 0, 0, 2, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.ack[0]);
 }
 
 TEST(recv_wnd, frame_doesnt_set_ack_entry_for_internal_segment_of_message_in_window)
 {
     Fixture f;
     f.seg.resize(1);
-    CHECK_EQUAL(0, f.rw.ack[0]);
-    arq__recv_wnd_frame(&f.rw, 0, 1, 3, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(0, f.rw.ack[0]);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.ack[0]);
+    arq__recv_wnd_frame(&f.rw, 0, 1, 3, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.ack[0]);
 }
 
-TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_window)
+TEST(recv_wnd, frame_sets_ack_set_entry_to_true_if_last_segment_of_message_is_in_window)
 {
     Fixture f;
     f.seg.resize(1);
-    CHECK_EQUAL(0, f.rw.ack[0]);
-    arq__recv_wnd_frame(&f.rw, 0, 6, 7, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(1, f.rw.ack[0]);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.ack[0]);
+    arq__recv_wnd_frame(&f.rw, 0, 6, 7, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_TRUE, f.rw.ack[0]);
 }
 
 TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_window_big_seq)
@@ -270,9 +284,9 @@ TEST(recv_wnd, frame_sets_ack_set_entry_to_one_if_last_segment_of_message_is_in_
     Fixture f;
     f.seg.resize(1);
     f.rw.w.seq = ARQ__FRAME_MAX_SEQ_NUM;
-    CHECK_EQUAL(0, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
-    arq__recv_wnd_frame(&f.rw, ARQ__FRAME_MAX_SEQ_NUM, 0, 1, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(1, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
+    arq__recv_wnd_frame(&f.rw, ARQ__FRAME_MAX_SEQ_NUM, 0, 1, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_TRUE, f.rw.ack[f.rw.w.seq % f.rw.w.cap]);
 }
 
 TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_can_grow_to_hold_it)
@@ -282,7 +296,7 @@ TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_can_grow_to
     unsigned const slide = f.rw.w.size;
     f.rw.slide = slide;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(slide, f.rw.slide);
     CHECK_EQUAL(0, f.rw.w.seq);
 }
@@ -296,7 +310,7 @@ TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_is_full_and
         f.rw.w.msg[i].len = f.rw.w.msg_len;
     }
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(0, f.rw.w.seq);
 }
 
@@ -306,7 +320,7 @@ TEST(recv_wnd, frame_doesnt_slide_window_when_full_and_msg_requires_slide_but_ha
     f.rw.w.size = f.rw.w.cap;
     f.rw.slide = 0;
     f.seg.resize(1);
-    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(0, f.rw.w.seq);
 }
 
@@ -320,7 +334,7 @@ TEST(recv_wnd, frame_slides_window_by_one_when_full_and_first_message_is_receive
     }
     f.seg.resize(13);
     unsigned const new_seq = f.rw.w.size;
-    arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(1, f.rw.w.seq);
     CHECK_EQUAL(13, f.rw.w.msg[new_seq % f.rw.w.cap].len);
 }
@@ -335,7 +349,7 @@ TEST(recv_wnd, frame_slides_window_by_two_when_full_and_first_2_messages_receive
     }
     f.seg.resize(13);
     unsigned const new_seq = f.rw.w.size + 1;
-    arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(2, f.rw.w.seq);
     CHECK_EQUAL(13, f.rw.w.msg[new_seq % f.rw.w.cap].len);
 }
@@ -347,7 +361,7 @@ TEST(recv_wnd, frame_slides_window_by_cap_when_full_and_all_messages_received_an
     f.rw.slide = f.rw.w.size;
     f.seg.resize(13);
     unsigned const new_seq = (f.rw.w.cap * 2) - 1;
-    arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size());
+    arq__recv_wnd_frame(&f.rw, new_seq, 0, 1, f.seg.data(), f.seg.size(), 0);
     CHECK_EQUAL(new_seq, f.rw.w.seq + f.rw.w.size - 1u);
     CHECK_EQUAL(13, f.rw.w.msg[new_seq % f.rw.w.cap].len);
 }
@@ -356,9 +370,58 @@ TEST(recv_wnd, frame_leaves_ack_set_entry_to_one_if_ack_is_already_noticed)
 {
     Fixture f;
     f.seg.resize(1);
-    f.rw.ack[0] = 1;
-    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size());
-    CHECK_EQUAL(1, f.rw.ack[0]);
+    f.rw.ack[0] = ARQ_TRUE;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_TRUE, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_sets_ack_entry_if_already_received_segment_is_received)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.w.size = 1;
+    f.rw.w.msg[0].cur_ack_vec = 1;
+    f.rw.ack[0] = ARQ_FALSE;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 3, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_TRUE, f.rw.ack[0]);
+}
+
+TEST(recv_wnd, frame_doesnt_enable_inter_seg_ack_timer_when_single_segment_message_arrives)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.inter_seg_ack_on = ARQ_FALSE;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 1, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.inter_seg_ack_on);
+}
+
+TEST(recv_wnd, frame_enables_inter_seg_ack_timer_when_first_segment_of_multi_seg_msg_arrives)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.inter_seg_ack_on = ARQ_FALSE;
+    arq__recv_wnd_frame(&f.rw, 0, 0, 2, f.seg.data(), f.seg.size(), 321);
+    CHECK_EQUAL(ARQ_TRUE, f.rw.inter_seg_ack_on);
+    CHECK_EQUAL(321, f.rw.inter_seg_ack);
+}
+
+TEST(recv_wnd, frame_sets_inter_seg_ack_seq_to_msg_seq)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.inter_seg_ack_on = ARQ_FALSE;
+    arq__recv_wnd_frame(&f.rw, 3, 0, 2, f.seg.data(), f.seg.size(), 321);
+    CHECK_EQUAL(ARQ_TRUE, f.rw.inter_seg_ack_on);
+    CHECK_EQUAL(3, f.rw.inter_seg_ack_seq);
+}
+
+TEST(recv_wnd, frame_disables_inter_seg_ack_timer_when_last_segment_of_multi_seg_msg_arrives)
+{
+    Fixture f;
+    f.seg.resize(1);
+    f.rw.inter_seg_ack_on = ARQ_TRUE;
+    arq__recv_wnd_frame(&f.rw, 0, 1, 2, f.seg.data(), f.seg.size(), 0);
+    CHECK_EQUAL(ARQ_FALSE, f.rw.inter_seg_ack_on);
 }
 
 TEST(recv_wnd, recv_empty_window_copies_nothing)

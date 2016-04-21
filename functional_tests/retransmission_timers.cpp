@@ -13,6 +13,7 @@ TEST(functional, retransmission_timers)
     cfg.send_window_size_in_messages = 16;
     cfg.recv_window_size_in_messages = 16;
     cfg.retransmission_timeout = 100;
+    cfg.inter_segment_timeout = 100;
     cfg.tinygram_send_delay = 50;
     cfg.checksum = &arq_crc32;
     ArqContext ctx(cfg);

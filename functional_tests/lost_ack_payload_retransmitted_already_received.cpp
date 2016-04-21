@@ -11,6 +11,7 @@ TEST(functional, lost_ack_payload_retransmitted_already_received)
     cfg.send_window_size_in_messages = 1;
     cfg.recv_window_size_in_messages = 1;
     cfg.retransmission_timeout = 100;
+    cfg.inter_segment_timeout = 100;
     cfg.checksum = &arq_crc32;
 
     ArqContext sender(cfg), receiver(cfg);
