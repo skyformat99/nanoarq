@@ -10,10 +10,13 @@ compiler:
     - gcc
 
 before_install:
-    - if [ `uname` = "Linux" ] && [ "$CXX" = "g++" ]; then
+    - if [ "$TRAVIS_OS_NAME" = "linux" ] && [ "$CXX" = "g++" ]; then
         sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y;
         sudo apt-get update -qq;
         sudo apt-get install -qq g++-4.8;
+        export CXX="g++-4.8" CC="gcc-4.8";
+      fi
+    - if [ "$TRAVIS_OS_NAME" = "osx" ] && [ "$CXX" = "g++" ]; then
         export CXX="g++-4.8" CC="gcc-4.8";
       fi
 
