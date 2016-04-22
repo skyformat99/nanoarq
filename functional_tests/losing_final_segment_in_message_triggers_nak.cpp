@@ -3,7 +3,7 @@
 
 namespace {
 
-TEST(functional, lose_last_segment_in_message_triggers_nak)
+TEST(functional, losing_final_segment_in_message_triggers_nak)
 {
     arq_cfg_t cfg;
     cfg.segment_length_in_bytes = 128;
