@@ -26,6 +26,7 @@ set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                 ack_one_message.cpp
                                 ack_full_window.cpp
                                 poll_until_tinygram_sends.cpp
+                                flush_tinygram.cpp
                                 tiny_sends_accumulate_into_message.cpp
                                 retransmission_timers.cpp
                                 lost_ack_payload_retransmitted_already_received.cpp
