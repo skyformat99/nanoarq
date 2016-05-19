@@ -20,24 +20,9 @@ void MockSendFrameInit(arq__send_frame_t *f, unsigned cap)
     mock().actualCall("arq__send_frame_init").withParameter("f", f).withParameter("cap", cap);
 }
 
-void MockSendWndPtrInit(arq__send_wnd_ptr_t *p)
-{
-    mock().actualCall("arq__send_wnd_ptr_init").withParameter("p", p);
-}
-
 void MockRecvFrameInit(arq__recv_frame_t *f, unsigned cap)
 {
     mock().actualCall("arq__recv_frame_init").withParameter("f", f).withParameter("cap", cap);
-}
-
-void MockSendWndRst(arq__send_wnd_t *sw)
-{
-    mock().actualCall("arq__send_wnd_rst").withParameter("sw", sw);
-}
-
-void MockRecvWndRst(arq__recv_wnd_t *rw)
-{
-    mock().actualCall("arq__recv_wnd_rst").withParameter("rw", rw);
 }
 
 struct Fixture
@@ -46,10 +31,7 @@ struct Fixture
     {
         ARQ_MOCK_HOOK(arq__wnd_init, MockWndInit);
         ARQ_MOCK_HOOK(arq__send_frame_init, MockSendFrameInit);
-        ARQ_MOCK_HOOK(arq__send_wnd_ptr_init, MockSendWndPtrInit);
         ARQ_MOCK_HOOK(arq__recv_frame_init, MockRecvFrameInit);
-        ARQ_MOCK_HOOK(arq__recv_wnd_rst, MockRecvWndRst);
-        ARQ_MOCK_HOOK(arq__send_wnd_rst, MockSendWndRst);
         arq.cfg.message_length_in_segments = 16;
         arq.cfg.segment_length_in_bytes = 64;
         arq.cfg.send_window_size_in_messages = 32;
@@ -57,15 +39,6 @@ struct Fixture
     }
     arq_t arq;
 };
-
-TEST(init_intl, sets_need_poll_to_false)
-{
-    Fixture f;
-    f.arq.need_poll = ARQ_TRUE;
-    mock().ignoreOtherCalls();
-    arq__init(&f.arq);
-    CHECK_EQUAL(ARQ_FALSE, f.arq.need_poll);
-}
 
 TEST(init_intl, initializes_send_window)
 {
@@ -109,30 +82,6 @@ TEST(init_intl, initializes_recv_frame)
     unsigned const frame_len = arq__frame_len(f.arq.cfg.segment_length_in_bytes);
     mock().expectOneCall("arq__recv_frame_init").withParameter("f", &f.arq.recv_frame)
                                                 .withParameter("cap", frame_len);
-    mock().ignoreOtherCalls();
-    arq__init(&f.arq);
-}
-
-TEST(init_intl, initializes_send_wnd_ptr)
-{
-    Fixture f;
-    mock().expectOneCall("arq__send_wnd_ptr_init").withParameter("p", &f.arq.send_wnd_ptr);
-    mock().ignoreOtherCalls();
-    arq__init(&f.arq);
-}
-
-TEST(init_intl, resets_send_window)
-{
-    Fixture f;
-    mock().expectOneCall("arq__send_wnd_rst").withParameter("sw", &f.arq.send_wnd);
-    mock().ignoreOtherCalls();
-    arq__init(&f.arq);
-}
-
-TEST(init_intl, resets_recv_window)
-{
-    Fixture f;
-    mock().expectOneCall("arq__recv_wnd_rst").withParameter("rw", &f.arq.recv_wnd);
     mock().ignoreOtherCalls();
     arq__init(&f.arq);
 }

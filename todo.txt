@@ -2,8 +2,6 @@ features:
 =========
 connections
 optional checksums
-arq__send_wnd_init
-arq__recv_wnd_init
 metrics on crc failures, bad frames (too long before cobs 0)
 
 correctness?

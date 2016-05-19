@@ -118,8 +118,8 @@ arq_err_t arq_seg_len_from_frame_len(unsigned frame_len, unsigned *out_seg_len);
 arq_err_t arq_required_size(arq_cfg_t const *cfg, unsigned *out_required_size);
 
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, unsigned arq_seat_size, struct arq_t **out_arq);
-arq_err_t arq_connect(struct arq_t *arq);
 arq_err_t arq_reset(struct arq_t *arq);
+arq_err_t arq_connect(struct arq_t *arq);
 arq_err_t arq_close(struct arq_t *arq);
 arq_err_t arq_recv(struct arq_t *arq, void *recv, unsigned recv_max, unsigned *out_recv_size);
 arq_err_t arq_send(struct arq_t *arq, void const *send, unsigned send_max, unsigned *out_sent_size);
@@ -254,7 +254,7 @@ typedef struct arq__send_wnd_ptr_t
     arq_uchar_t valid;
 } arq__send_wnd_ptr_t;
 
-void arq__send_wnd_ptr_init(arq__send_wnd_ptr_t *p);
+void arq__send_wnd_ptr_rst(arq__send_wnd_ptr_t *p);
 
 typedef enum
 {
@@ -280,6 +280,7 @@ typedef struct arq__send_frame_t
 } arq__send_frame_t;
 
 void arq__send_frame_init(arq__send_frame_t *f, unsigned cap);
+void arq__send_frame_rst(arq__send_frame_t *f);
 arq_bool_t arq__send_poll(arq__send_wnd_t *sw,
                           arq__send_frame_t *sf,
                           arq__send_wnd_ptr_t *sp,
@@ -353,6 +354,7 @@ typedef struct arq_t
 arq_err_t arq__check_cfg(arq_cfg_t const *cfg);
 arq_t *arq__alloc(arq_cfg_t const *cfg, arq__lin_alloc_t *la);
 void arq__init(arq_t *arq);
+void arq__rst(arq_t *arq);
 arq_time_t arq__next_poll(arq__send_wnd_t *sw, arq__recv_wnd_t *rw);
 
 unsigned arq__min(unsigned x, unsigned y);
@@ -487,7 +489,18 @@ arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, unsigned arq_seat_size,
     }
     arq->cfg = *cfg;
     arq__init(arq);
+    arq__rst(arq);
     *out_arq = arq;
+    return ARQ_OK_COMPLETED;
+}
+
+arq_err_t arq_reset(struct arq_t *arq)
+{
+    if (!arq) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+
+    arq__rst(arq);
     return ARQ_OK_COMPLETED;
 }
 
@@ -1081,7 +1094,7 @@ void ARQ_MOCKABLE(arq__send_wnd_step)(arq__send_wnd_t *sw, arq_time_t dt)
     }
 }
 
-void ARQ_MOCKABLE(arq__send_wnd_ptr_init)(arq__send_wnd_ptr_t *p)
+void ARQ_MOCKABLE(arq__send_wnd_ptr_rst)(arq__send_wnd_ptr_t *p)
 {
     ARQ_ASSERT(p);
     p->valid = 0;
@@ -1093,6 +1106,11 @@ void ARQ_MOCKABLE(arq__send_frame_init)(arq__send_frame_t *f, unsigned cap)
 {
     ARQ_ASSERT(f);
     f->cap = (arq_uint16_t)cap;
+}
+
+void ARQ_MOCKABLE(arq__send_frame_rst)(arq__send_frame_t *f)
+{
+    ARQ_ASSERT(f);
     f->len = 0;
     f->state = ARQ__SEND_FRAME_STATE_FREE;
 }
@@ -1259,7 +1277,6 @@ void ARQ_MOCKABLE(arq__recv_frame_init)(arq__recv_frame_t *f, unsigned cap)
 {
     ARQ_ASSERT(f && (cap < (arq_uint16_t)-1));
     f->cap = cap;
-    arq__recv_frame_rst(f);
 }
 
 void ARQ_MOCKABLE(arq__recv_frame_rst)(arq__recv_frame_t *f)
@@ -1373,20 +1390,27 @@ arq_t *ARQ_MOCKABLE(arq__alloc)(arq_cfg_t const *cfg, arq__lin_alloc_t *la)
 void ARQ_MOCKABLE(arq__init)(arq_t *arq)
 {
     ARQ_ASSERT(arq);
-    arq->need_poll = ARQ_FALSE;
     arq__wnd_init(&arq->send_wnd.w,
                   arq->cfg.send_window_size_in_messages,
                   arq->cfg.message_length_in_segments * arq->cfg.segment_length_in_bytes,
                   arq->cfg.segment_length_in_bytes);
     arq__send_frame_init(&arq->send_frame, arq__frame_len(arq->cfg.segment_length_in_bytes));
-    arq__send_wnd_ptr_init(&arq->send_wnd_ptr);
     arq__wnd_init(&arq->recv_wnd.w,
                   arq->cfg.recv_window_size_in_messages,
                   arq->cfg.message_length_in_segments * arq->cfg.segment_length_in_bytes,
                   arq->cfg.segment_length_in_bytes);
     arq__recv_frame_init(&arq->recv_frame, arq__frame_len(arq->cfg.segment_length_in_bytes));
+}
+
+void ARQ_MOCKABLE(arq__rst)(arq_t *arq)
+{
+    ARQ_ASSERT(arq);
     arq__send_wnd_rst(&arq->send_wnd);
+    arq__send_wnd_ptr_rst(&arq->send_wnd_ptr);
+    arq__send_frame_rst(&arq->send_frame);
     arq__recv_wnd_rst(&arq->recv_wnd);
+    arq__recv_frame_rst(&arq->recv_frame);
+    arq->need_poll = ARQ_FALSE;
 }
 
 arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw)
