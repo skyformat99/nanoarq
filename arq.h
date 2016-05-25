@@ -731,10 +731,10 @@ void ARQ_MOCKABLE(arq__frame_hdr_init)(arq__frame_hdr_t *h)
     h->seg_id = 0;
     h->ack_num = 0;
     h->cur_ack_vec = 0;
-    h->rst = 0;
-    h->fin = 0;
-    h->seg = 0;
-    h->ack = 0;
+    h->rst = ARQ_FALSE;
+    h->fin = ARQ_FALSE;
+    h->seg = ARQ_FALSE;
+    h->ack = ARQ_FALSE;
 }
 
 unsigned ARQ_MOCKABLE(arq__frame_hdr_write)(arq__frame_hdr_t const *h, void *out_buf)
@@ -1426,7 +1426,7 @@ arq_bool_t ARQ_MOCKABLE(arq__send_poll)(arq__send_wnd_t *sw,
             sh->msg_len = (m->len + (unsigned)sw->w.seg_len - 1) / sw->w.seg_len;
             sh->seq_num = sp->seq;
             sh->seg_id = sp->seg;
-            sh->seg = 1;
+            sh->seg = ARQ_TRUE;
         }
         return sh->seg;
     }
