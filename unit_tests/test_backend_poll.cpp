@@ -130,6 +130,8 @@ TEST(poll, invalid_params)
 TEST(poll, initializes_frame_headers)
 {
     DefaultMocksFixture f;
+    f.arq.send_frame.len = 0;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     mock().expectNCalls(2, "arq__frame_hdr_init").ignoreOtherParameters();
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
@@ -220,6 +222,9 @@ TEST(poll, non_zero_send_frame_length_sets_send_ready_flag)
 TEST(poll, loads_segment_from_send_window_if_header_segment_flag_is_set)
 {
     Fixture f;
+    f.arq.send_frame.len = 0;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
+
     {
         void *msp = reinterpret_cast< void * >(&MockSendPoll<12, 34, true>);
         ARQ_MOCK_HOOK(arq__send_poll, msp);
@@ -260,6 +265,8 @@ TEST(poll, emits_a_frame_if_send_poll_returns_one_and_send_frame_available)
 TEST(poll, emits_a_frame_if_recv_poll_returns_one_and_send_frame_available)
 {
     DefaultMocksFixture f;
+    f.arq.send_frame.len = 0;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     mock().expectOneCall("arq__recv_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__frame_write").ignoreOtherParameters();
     mock().ignoreOtherCalls();
