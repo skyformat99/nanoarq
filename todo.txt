@@ -1,8 +1,10 @@
 features:
 =========
 connections
+optional connections (compile code out with flag, and have runtime cfg flag)
 optional checksums
 metrics on crc failures, bad frames (too long before cobs 0)
+optional COBS encoding (might have native natural unambiguous framing like usb hid)
 
 correctness?
 ============
