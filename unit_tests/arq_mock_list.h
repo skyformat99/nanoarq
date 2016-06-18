@@ -8,6 +8,7 @@
     ARQ_MOCK(arq__init) \
     ARQ_MOCK(arq__rst) \
     ARQ_MOCK(arq__next_poll) \
+    ARQ_MOCK(arq__connect) \
     ARQ_MOCK(arq__wnd_init) \
     ARQ_MOCK(arq__wnd_rst) \
     ARQ_MOCK(arq__wnd_seg) \

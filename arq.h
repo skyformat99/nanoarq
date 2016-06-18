@@ -41,20 +41,19 @@ typedef arq_uchar_t arq_bool_t;
 #define ARQ_TRUE 1
 #define ARQ_FALSE 0
 
-typedef enum
-{
+typedef enum {
     ARQ_OK_COMPLETED = 0,
     ARQ_OK_POLL_REQUIRED = 1,
     ARQ_ERR_INVALID_PARAM = -1,
     ARQ_ERR_NO_ASSERT_HANDLER = -2,
     ARQ_ERR_SEND_PTR_NOT_HELD = -3,
-    ARQ_ERR_POLL_REQUIRED = -4
+    ARQ_ERR_POLL_REQUIRED = -4,
+    ARQ_ERR_NOT_DISCONNECTED = -5
 } arq_err_t;
 
 #define ARQ_SUCCEEDED(ARQ_RESULT) ((ARQ_RESULT) >= 0)
 
-typedef enum
-{
+typedef enum {
     ARQ_EVENT_NONE,
     ARQ_EVENT_CONN_ESTABLISHED,
     ARQ_EVENT_CONN_CLOSED,
@@ -68,8 +67,7 @@ typedef arq_uint32_t (*arq_checksum_t)(void const *p, unsigned len);
 
 #define ARQ_TIME_INFINITY ((arq_time_t)0xFFFFFFFF)
 
-typedef struct arq_cfg_t
-{
+typedef struct arq_cfg_t {
     unsigned segment_length_in_bytes;
     unsigned message_length_in_segments;
     unsigned send_window_size_in_messages;
@@ -82,8 +80,7 @@ typedef struct arq_cfg_t
     arq_checksum_t checksum;
 } arq_cfg_t;
 
-typedef struct arq_stats_t
-{
+typedef struct arq_stats_t {
     int bytes_sent;
     int bytes_recvd;
     int frames_sent;
@@ -95,19 +92,18 @@ typedef struct arq_stats_t
     int retransmitted_frames_sent;
 } arq_stats_t;
 
-typedef enum
-{
-    ARQ_STATE_CLOSED,
-    ARQ_STATE_RST_RECVD,
-    ARQ_STATE_RST_SENT,
-    ARQ_STATE_ESTABLISHED,
-    ARQ_STATE_CLOSE_WAIT,
-    ARQ_STATE_LAST_ACK,
-    ARQ_STATE_FIN_WAIT_1,
-    ARQ_STATE_FIN_WAIT_2,
-    ARQ_STATE_CLOSING,
-    ARQ_STATE_TIME_WAIT
-} arq_state_t;
+typedef enum {
+    ARQ_CONN_STATE_CLOSED,
+    ARQ_CONN_STATE_RST_RECVD,
+    ARQ_CONN_STATE_RST_SENT,
+    ARQ_CONN_STATE_ESTABLISHED,
+    ARQ_CONN_STATE_CLOSE_WAIT,
+    ARQ_CONN_STATE_LAST_ACK,
+    ARQ_CONN_STATE_FIN_WAIT_1,
+    ARQ_CONN_STATE_FIN_WAIT_2,
+    ARQ_CONN_STATE_CLOSING,
+    ARQ_CONN_STATE_TIME_WAIT
+} arq_conn_state_t;
 
 struct arq_t;
 
@@ -145,18 +141,19 @@ arq_uint32_t arq_crc32(void const *buf, unsigned size);
 
 /* Internal API */
 
-typedef struct arq__lin_alloc_t
-{
-    arq_uchar_t *base;
-    unsigned size;
-    unsigned capacity;
-} arq__lin_alloc_t;
+typedef struct {
+    arq_conn_state_t state;
+    union {
+        struct {
+            int cnt;
+            arq_time_t tmr;
+        } rst_sent;
+    } ctx;
+} arq_conn_t;
 
-void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, unsigned capacity);
-void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, unsigned size, unsigned align);
+void arq__connect(arq_conn_t *conn);
 
-enum
-{
+enum {
     ARQ__FRAME_HEADER_SIZE = 12,
     ARQ__FRAME_COBS_OVERHEAD = 2,
     ARQ__FRAME_MAX_SEQ_NUM = (1 << 12) - 1
@@ -164,8 +161,7 @@ enum
 
 unsigned arq__frame_len(unsigned seg_len);
 
-typedef struct arq__frame_hdr_t
-{
+typedef struct arq__frame_hdr_t {
     unsigned version;
     unsigned seg_len;
     unsigned win_size;
@@ -189,8 +185,7 @@ unsigned arq__frame_write(arq__frame_hdr_t const *h,
                           arq_checksum_t checksum,
                           void *out_frame,
                           unsigned frame_max);
-typedef enum
-{
+typedef enum {
     ARQ__FRAME_READ_RESULT_SUCCESS,
     ARQ__FRAME_READ_RESULT_ERR_CHECKSUM,
     ARQ__FRAME_READ_RESULT_ERR_MALFORMED
@@ -210,15 +205,13 @@ arq__frame_read_result_t arq__frame_checksum_read(void const *frame,
 void arq__cobs_encode(void *p, unsigned len);
 void arq__cobs_decode(void *p, unsigned len);
 
-typedef struct arq__msg_t
-{
+typedef struct arq__msg_t {
     arq_uint16_t len; /* in bytes */
     arq_uint16_t cur_ack_vec;
     arq_uint16_t full_ack_vec;
 } arq__msg_t;
 
-typedef struct arq__wnd_t
-{
+typedef struct arq__wnd_t {
     arq__msg_t *msg;
     arq_uchar_t *buf;
     arq_uint16_t seq;
@@ -233,8 +226,7 @@ void arq__wnd_init(arq__wnd_t *w, unsigned wnd_cap, unsigned msg_len, unsigned s
 void arq__wnd_rst(arq__wnd_t *w);
 void arq__wnd_seg(arq__wnd_t *w, unsigned msg, unsigned seg, void **out_seg, unsigned *out_seg_len);
 
-typedef struct arq__send_wnd_t
-{
+typedef struct arq__send_wnd_t {
     arq__wnd_t w;
     arq_time_t *rtx;
     arq_time_t tiny;
@@ -247,8 +239,7 @@ void arq__send_wnd_ack(arq__send_wnd_t *sw, unsigned seq, arq_uint16_t cur_ack_v
 void arq__send_wnd_flush(arq__send_wnd_t *sw);
 void arq__send_wnd_step(arq__send_wnd_t *sw, arq_time_t dt);
 
-typedef struct arq__send_wnd_ptr_t
-{
+typedef struct arq__send_wnd_ptr_t {
     arq_uint16_t seq;
     arq_uint16_t seg;
     arq_uchar_t valid;
@@ -256,23 +247,20 @@ typedef struct arq__send_wnd_ptr_t
 
 void arq__send_wnd_ptr_rst(arq__send_wnd_ptr_t *p);
 
-typedef enum
-{
+typedef enum {
     ARQ__SEND_WND_PTR_NEXT_INSIDE_MSG,
     ARQ__SEND_WND_PTR_NEXT_COMPLETED_MSG
 } arq__send_wnd_ptr_next_result_t;
 
 arq__send_wnd_ptr_next_result_t arq__send_wnd_ptr_next(arq__send_wnd_ptr_t *p, arq__send_wnd_t const *sw);
 
-typedef enum
-{
+typedef enum {
     ARQ__SEND_FRAME_STATE_FREE,
     ARQ__SEND_FRAME_STATE_HELD,
     ARQ__SEND_FRAME_STATE_RELEASED
 } arq__send_frame_state_t;
 
-typedef struct arq__send_frame_t
-{
+typedef struct arq__send_frame_t {
     arq_uchar_t *buf;
     arq__send_frame_state_t state;
     arq_uint16_t cap;
@@ -289,8 +277,7 @@ arq_bool_t arq__send_poll(arq__send_wnd_t *sw,
                           arq_time_t dt,
                           arq_time_t rtx);
 
-typedef struct arq__recv_wnd_t
-{
+typedef struct arq__recv_wnd_t {
     arq__wnd_t w;
     arq_bool_t *ack;
     arq_time_t inter_seg_ack;
@@ -313,14 +300,12 @@ unsigned arq__recv_wnd_frame(arq__recv_wnd_t *rw,
                              arq_time_t inter_seg_ack);
 arq_bool_t arq__recv_wnd_pending(arq__recv_wnd_t *rw);
 
-typedef enum
-{
+typedef enum {
     ARQ__RECV_FRAME_STATE_ACCUMULATING,
     ARQ__RECV_FRAME_STATE_FULL_FRAME_PRESENT
 } arq__recv_frame_state_t;
 
-typedef struct arq__recv_frame_t
-{
+typedef struct arq__recv_frame_t {
     arq_uchar_t *buf;
     arq__recv_frame_state_t state;
     arq_uint16_t cap;
@@ -338,11 +323,19 @@ arq_bool_t arq__recv_poll(arq__recv_wnd_t *rw,
                           arq_time_t dt,
                           arq_time_t inter_seg_ack);
 
-typedef struct arq_t
-{
+typedef struct arq__lin_alloc_t {
+    arq_uchar_t *base;
+    unsigned size;
+    unsigned capacity;
+} arq__lin_alloc_t;
+
+void arq__lin_alloc_init(arq__lin_alloc_t *a, void *base, unsigned capacity);
+void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, unsigned size, unsigned align);
+
+typedef struct arq_t {
     arq_cfg_t cfg;
     arq_stats_t stats;
-    arq_state_t state;
+    arq_conn_t conn;
     arq__send_wnd_t send_wnd;
     arq__send_wnd_ptr_t send_wnd_ptr;
     arq__send_frame_t send_frame;
@@ -506,8 +499,16 @@ arq_err_t arq_reset(struct arq_t *arq)
 
 arq_err_t arq_connect(struct arq_t *arq)
 {
-    (void)arq;
-    return ARQ_OK_COMPLETED;
+    if (!arq) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+
+    if (arq->conn.state != ARQ_CONN_STATE_CLOSED) {
+        return ARQ_ERR_NOT_DISCONNECTED;
+    }
+
+    arq__connect(&arq->conn);
+    return ARQ_OK_POLL_REQUIRED;
 }
 
 arq_err_t arq_recv(struct arq_t *arq, void *recv, unsigned recv_max, unsigned *out_recv_size)
@@ -636,6 +637,13 @@ arq_err_t arq_backend_recv_fill(struct arq_t *arq,
         return ARQ_OK_POLL_REQUIRED;
     }
     return ARQ_OK_COMPLETED;
+}
+
+void ARQ_MOCKABLE(arq__connect)(arq_conn_t *conn)
+{
+    ARQ_ASSERT(conn && (conn->state == ARQ_CONN_STATE_CLOSED));
+    conn->state = ARQ_CONN_STATE_RST_SENT;
+    conn->ctx.rst_sent.cnt = 0;
 }
 
 void ARQ_MOCKABLE(arq__lin_alloc_init)(arq__lin_alloc_t *a, void *base, unsigned capacity)
@@ -1346,6 +1354,7 @@ void ARQ_MOCKABLE(arq__rst)(arq_t *arq)
     arq__recv_wnd_rst(&arq->recv_wnd);
     arq__recv_frame_rst(&arq->recv_frame);
     arq->need_poll = ARQ_FALSE;
+    arq->conn.state = ARQ_CONN_STATE_CLOSED;
 }
 
 arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw)

@@ -94,5 +94,14 @@ TEST(rst, resets_recv_frame)
     arq__rst(&f.arq);
 }
 
+TEST(rst, resets_connection_state_to_closed)
+{
+    Fixture f;
+    f.arq.conn.state = ARQ_CONN_STATE_ESTABLISHED;
+    mock().ignoreOtherCalls();
+    arq__rst(&f.arq);
+    CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, f.arq.conn.state);
+}
+
 }
 
