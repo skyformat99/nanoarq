@@ -19,18 +19,18 @@ TEST(connect_intl, sets_cnt_to_zero)
 {
     arq_conn_t c;
     c.state = ARQ_CONN_STATE_CLOSED;
-    c.ctx.rst_sent.cnt = 123;
+    c.u.rst_sent.cnt = 123;
     arq__connect(&c);
-    CHECK_EQUAL(0, c.ctx.rst_sent.cnt);
+    CHECK_EQUAL(0, c.u.rst_sent.cnt);
 }
 
 TEST(connect_intl, sets_tmr_to_zero)
 {
     arq_conn_t c;
     c.state = ARQ_CONN_STATE_CLOSED;
-    c.ctx.rst_sent.tmr = 123;
+    c.u.rst_sent.tmr = 123;
     arq__connect(&c);
-    CHECK_EQUAL(0, c.ctx.rst_sent.tmr);
+    CHECK_EQUAL(0, c.u.rst_sent.tmr);
 }
 
 }

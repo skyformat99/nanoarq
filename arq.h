@@ -148,7 +148,7 @@ typedef struct {
             int cnt;
             arq_time_t tmr;
         } rst_sent;
-    } ctx;
+    } u;
 } arq_conn_t;
 
 void arq__connect(arq_conn_t *conn);
@@ -643,8 +643,8 @@ void ARQ_MOCKABLE(arq__connect)(arq_conn_t *conn)
 {
     ARQ_ASSERT(conn && (conn->state == ARQ_CONN_STATE_CLOSED));
     conn->state = ARQ_CONN_STATE_RST_SENT;
-    conn->ctx.rst_sent.cnt = 0;
-    conn->ctx.rst_sent.tmr = 0;
+    conn->u.rst_sent.cnt = 0;
+    conn->u.rst_sent.tmr = 0;
 }
 
 void ARQ_MOCKABLE(arq__lin_alloc_init)(arq__lin_alloc_t *a, void *base, unsigned capacity)
