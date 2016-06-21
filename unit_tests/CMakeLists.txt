@@ -50,6 +50,7 @@ add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
                                       test_recv_window.cpp
                                       test_recv_frame.cpp
                                       test_recv_poll.cpp
+                                      test_conn_poll.cpp
                                       test_frame.cpp
                                       test_cobs.cpp
                                       test_minmax.cpp

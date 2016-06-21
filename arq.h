@@ -650,9 +650,8 @@ arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq_conn_t *conn,
                                         arq__frame_hdr_t const *rh,
                                         arq_time_t dt)
 {
-    (void)conn;
+    ARQ_ASSERT(conn && rh);
     (void)sh;
-    (void)rh;
     (void)dt;
     return ARQ_FALSE;
 }
