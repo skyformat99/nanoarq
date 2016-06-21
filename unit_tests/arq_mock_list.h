@@ -8,7 +8,6 @@
     ARQ_MOCK(arq__init) \
     ARQ_MOCK(arq__rst) \
     ARQ_MOCK(arq__next_poll) \
-    ARQ_MOCK(arq__connect) \
     ARQ_MOCK(arq__wnd_init) \
     ARQ_MOCK(arq__wnd_rst) \
     ARQ_MOCK(arq__wnd_seg) \
@@ -31,6 +30,7 @@
     ARQ_MOCK(arq__recv_frame_fill) \
     ARQ_MOCK(arq__recv_frame_rst) \
     ARQ_MOCK(arq__recv_poll) \
+    ARQ_MOCK(arq__conn_poll) \
     ARQ_MOCK(arq__frame_len) \
     ARQ_MOCK(arq__frame_hdr_init) \
     ARQ_MOCK(arq__frame_hdr_read) \

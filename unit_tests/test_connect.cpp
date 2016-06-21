@@ -19,22 +19,30 @@ TEST(connect, returns_err_not_disconnected_if_state_is_not_disconnected)
     CHECK_EQUAL(ARQ_ERR_NOT_DISCONNECTED, arq_connect(&arq));
 }
 
-TEST(connect, calls_arq__connect)
+TEST(connect, changes_state_to_rst_sent)
 {
-    struct Local
-    {
-        static void MockArqConnect(arq_conn_t *conn)
-        {
-            mock().actualCall("arq__connect").withParameter("conn", conn);
-        }
-    };
-
-    ARQ_MOCK_HOOK(arq__connect, Local::MockArqConnect);
-
     arq_t arq;
     arq.conn.state = ARQ_CONN_STATE_CLOSED;
-    mock().expectOneCall("arq__connect").withParameter("conn", &arq.conn);
     arq_connect(&arq);
+    CHECK_EQUAL(ARQ_CONN_STATE_RST_SENT, arq.conn.state);
+}
+
+TEST(connect, sets_cnt_to_zero)
+{
+    arq_t arq;
+    arq.conn.state = ARQ_CONN_STATE_CLOSED;
+    arq.conn.u.rst_sent.cnt = 123;
+    arq_connect(&arq);
+    CHECK_EQUAL(0, arq.conn.u.rst_sent.cnt);
+}
+
+TEST(connect, sets_tmr_to_zero)
+{
+    arq_t arq;
+    arq.conn.state = ARQ_CONN_STATE_CLOSED;
+    arq.conn.u.rst_sent.tmr = 123;
+    arq_connect(&arq);
+    CHECK_EQUAL(0, arq.conn.u.rst_sent.tmr);
 }
 
 TEST(connect, returns_success)
