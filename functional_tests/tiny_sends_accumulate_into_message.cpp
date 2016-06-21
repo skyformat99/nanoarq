@@ -12,6 +12,8 @@ TEST(functional, tiny_sends_accumulate_into_message)
     cfg.retransmission_timeout = 1000;
     cfg.tinygram_send_delay = cfg.segment_length_in_bytes;
     cfg.checksum = &arq_crc32;
+    cfg.connection_rst_attempts = 10;
+    cfg.connection_rst_period = 100;
     ArqContext ctx(cfg);
 
     std::vector< arq_uchar_t > send_test_data(cfg.segment_length_in_bytes - 1);

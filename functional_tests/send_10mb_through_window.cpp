@@ -12,6 +12,8 @@ TEST(functional, send_10mb_through_window)
     cfg.retransmission_timeout = 100;
     cfg.tinygram_send_delay = 10;
     cfg.checksum = &arq_crc32;
+    cfg.connection_rst_attempts = 10;
+    cfg.connection_rst_period = 100;
 
     ArqContext ctx(cfg);
 

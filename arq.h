@@ -72,6 +72,8 @@ typedef struct arq_cfg_t {
     unsigned message_length_in_segments;
     unsigned send_window_size_in_messages;
     unsigned recv_window_size_in_messages;
+    unsigned connection_rst_attempts;
+    arq_time_t connection_rst_period;
     arq_time_t retransmission_timeout;
     arq_time_t tinygram_send_delay;
     arq_time_t inter_segment_timeout;
@@ -145,7 +147,7 @@ typedef struct {
     arq_conn_state_t state;
     union {
         struct {
-            int cnt;
+            unsigned cnt;
             arq_time_t tmr;
         } rst_sent;
     } u;
@@ -324,7 +326,8 @@ arq_bool_t arq__recv_poll(arq__recv_wnd_t *rw,
 arq_bool_t arq__conn_poll(arq_conn_t *conn,
                           arq__frame_hdr_t *sh,
                           arq__frame_hdr_t const *rh,
-                          arq_time_t dt);
+                          arq_time_t dt,
+                          arq_cfg_t const *cfg);
 
 typedef struct arq__lin_alloc_t {
     arq_uchar_t *base;
@@ -580,7 +583,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            &rh,
                            dt,
                            arq->cfg.retransmission_timeout);
-    emit |= arq__conn_poll(&arq->conn, psh, &rh, dt);
+    emit |= arq__conn_poll(&arq->conn, psh, &rh, dt, &arq->cfg);
     if (psh && emit) {
         void *seg = ARQ_NULL_PTR;
         if (psh->seg) {
@@ -648,12 +651,33 @@ arq_err_t arq_backend_recv_fill(struct arq_t *arq,
 arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq_conn_t *conn,
                                         arq__frame_hdr_t *sh,
                                         arq__frame_hdr_t const *rh,
-                                        arq_time_t dt)
+                                        arq_time_t dt,
+                                        arq_cfg_t const *cfg)
 {
-    ARQ_ASSERT(conn && rh);
-    (void)sh;
-    (void)dt;
-    return ARQ_FALSE;
+    arq_bool_t emit = ARQ_FALSE;
+    ARQ_ASSERT(conn && rh && cfg);
+    switch (conn->state) {
+        case ARQ_CONN_STATE_RST_SENT: {
+            if (rh->rst && rh->ack) {
+                /* rst/ack received from peer, send ack */
+            } else if (rh->rst) {
+                /* simultaneous open */
+            } else {
+                conn->u.rst_sent.tmr = arq__sub_sat(conn->u.rst_sent.tmr, dt);
+                if ((conn->u.rst_sent.tmr == 0) && sh) {
+                    sh->rst = ARQ_TRUE;
+                    emit = ARQ_TRUE;
+                    ++conn->u.rst_sent.cnt;
+                    conn->u.rst_sent.tmr = cfg->connection_rst_period;
+                    if (conn->u.rst_sent.cnt == cfg->connection_rst_attempts) {
+                        /* peer not responding */
+                    }
+                }
+            }
+        } break;
+        default: break;
+    };
+    return sh && emit;
 }
 
 void ARQ_MOCKABLE(arq__lin_alloc_init)(arq__lin_alloc_t *a, void *base, unsigned capacity)
@@ -1277,6 +1301,12 @@ arq_err_t ARQ_MOCKABLE(arq__check_cfg)(arq_cfg_t const *cfg)
         return ARQ_ERR_INVALID_PARAM;
     }
     if (cfg->recv_window_size_in_messages == 0) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    if (cfg->connection_rst_attempts <= 1) {
+        return ARQ_ERR_INVALID_PARAM;
+    }
+    if (cfg->connection_rst_period == 0) {
         return ARQ_ERR_INVALID_PARAM;
     }
     return ARQ_OK_COMPLETED;
