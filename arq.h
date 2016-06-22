@@ -1413,7 +1413,11 @@ void ARQ_MOCKABLE(arq__rst)(arq_t *arq)
     arq__recv_wnd_rst(&arq->recv_wnd);
     arq__recv_frame_rst(&arq->recv_frame);
     arq->need_poll = ARQ_FALSE;
+#if ARQ_USE_CONNECTIONS == 1
     arq->conn.state = ARQ_CONN_STATE_CLOSED;
+#else
+    arq->conn.state = ARQ_CONN_STATE_ESTABLISHED;
+#endif
 }
 
 arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t const *sw,
