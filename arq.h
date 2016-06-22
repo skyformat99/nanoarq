@@ -669,7 +669,7 @@ arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq_conn_t *conn,
                     emit = ARQ_TRUE;
                     ++conn->u.rst_sent.cnt;
                     conn->u.rst_sent.tmr = cfg->connection_rst_period;
-                    if (conn->u.rst_sent.cnt == cfg->connection_rst_attempts) {
+                    if (conn->u.rst_sent.cnt > cfg->connection_rst_attempts) {
                         /* peer not responding */
                     }
                 }
