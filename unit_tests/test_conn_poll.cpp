@@ -17,7 +17,7 @@ struct Fixture
         arq__frame_hdr_init(&sh);
         arq__frame_hdr_init(&rh);
     }
-    arq_conn_t c;
+    arq__conn_t c;
     arq_cfg_t cfg;
     arq__frame_hdr_t sh, rh;
 };

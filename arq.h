@@ -11,6 +11,9 @@
 #ifndef ARQ_LITTLE_ENDIAN_CPU
     #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h
 #endif
+#ifndef ARQ_USE_CONNECTIONS
+    #error You must define ARQ_USE_CONNECTIONS to 0 or 1 before including arq.h
+#endif
 
 #if ARQ_USE_C_STDLIB == 1
     #include <stdint.h>
@@ -116,12 +119,12 @@ arq_err_t arq_seg_len_from_frame_len(unsigned frame_len, unsigned *out_seg_len);
 arq_err_t arq_required_size(arq_cfg_t const *cfg, unsigned *out_required_size);
 
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, unsigned arq_seat_size, struct arq_t **out_arq);
-arq_err_t arq_reset(struct arq_t *arq);
 arq_err_t arq_connect(struct arq_t *arq);
 arq_err_t arq_close(struct arq_t *arq);
 arq_err_t arq_recv(struct arq_t *arq, void *recv, unsigned recv_max, unsigned *out_recv_size);
 arq_err_t arq_send(struct arq_t *arq, void const *send, unsigned send_max, unsigned *out_sent_size);
 arq_err_t arq_flush(struct arq_t *arq);
+arq_err_t arq_reset(struct arq_t *arq);
 
 arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_time_t dt,
@@ -151,7 +154,7 @@ typedef struct {
             arq_time_t tmr;
         } rst_sent;
     } u;
-} arq_conn_t;
+} arq__conn_t;
 
 enum {
     ARQ__FRAME_HEADER_SIZE = 12,
@@ -323,7 +326,7 @@ arq_bool_t arq__recv_poll(arq__recv_wnd_t *rw,
                           arq_time_t dt,
                           arq_time_t inter_seg_ack);
 
-arq_bool_t arq__conn_poll(arq_conn_t *conn,
+arq_bool_t arq__conn_poll(arq__conn_t *conn,
                           arq__frame_hdr_t *sh,
                           arq__frame_hdr_t const *rh,
                           arq_time_t dt,
@@ -341,20 +344,20 @@ void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, unsigned size, unsigned align);
 typedef struct arq_t {
     arq_cfg_t cfg;
     arq_stats_t stats;
-    arq_conn_t conn;
     arq__send_wnd_t send_wnd;
     arq__send_wnd_ptr_t send_wnd_ptr;
     arq__send_frame_t send_frame;
     arq__recv_wnd_t recv_wnd;
     arq__recv_frame_t recv_frame;
     arq_bool_t need_poll;
+    arq__conn_t conn;
 } arq_t;
 
 arq_err_t arq__check_cfg(arq_cfg_t const *cfg);
 arq_t *arq__alloc(arq_cfg_t const *cfg, arq__lin_alloc_t *la);
 void arq__init(arq_t *arq);
 void arq__rst(arq_t *arq);
-arq_time_t arq__next_poll(arq__send_wnd_t *sw, arq__recv_wnd_t *rw);
+arq_time_t arq__next_poll(arq__send_wnd_t const *sw, arq__recv_wnd_t const *rw, arq__conn_t const *c);
 
 unsigned arq__min(unsigned x, unsigned y);
 unsigned arq__max(unsigned x, unsigned y);
@@ -509,6 +512,9 @@ arq_err_t arq_connect(struct arq_t *arq)
         return ARQ_ERR_INVALID_PARAM;
     }
 
+#if ARQ_USE_CONNECTIONS == 0
+    return ARQ_OK_COMPLETED;
+#else
     if (arq->conn.state != ARQ_CONN_STATE_CLOSED) {
         return ARQ_ERR_NOT_DISCONNECTED;
     }
@@ -517,6 +523,7 @@ arq_err_t arq_connect(struct arq_t *arq)
     arq->conn.u.rst_sent.cnt = 0;
     arq->conn.u.rst_sent.tmr = 0;
     return ARQ_OK_POLL_REQUIRED;
+#endif
 }
 
 arq_err_t arq_recv(struct arq_t *arq, void *recv, unsigned recv_max, unsigned *out_recv_size)
@@ -594,7 +601,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
             arq__frame_write(psh, seg, arq->cfg.checksum, arq->send_frame.buf, arq->send_frame.cap);
         arq->send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     }
-    *out_next_poll = arq__next_poll(&arq->send_wnd, &arq->recv_wnd);
+    *out_next_poll = arq__next_poll(&arq->send_wnd, &arq->recv_wnd, &arq->conn);
     *out_send_ready = (arq->send_frame.len > 0) ? ARQ_TRUE : ARQ_FALSE;
     *out_recv_ready = arq__recv_wnd_pending(&arq->recv_wnd);
     arq->need_poll = ARQ_FALSE;
@@ -648,12 +655,20 @@ arq_err_t arq_backend_recv_fill(struct arq_t *arq,
     return ARQ_OK_COMPLETED;
 }
 
-arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq_conn_t *conn,
+arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq__conn_t *conn,
                                         arq__frame_hdr_t *sh,
                                         arq__frame_hdr_t const *rh,
                                         arq_time_t dt,
                                         arq_cfg_t const *cfg)
 {
+#if ARQ_USE_CONNECTIONS == 0
+    (void)conn;
+    (void)sh;
+    (void)rh;
+    (void)dt;
+    (void)cfg;
+    return ARQ_FALSE;
+#else
     arq_bool_t emit = ARQ_FALSE;
     ARQ_ASSERT(conn && rh && cfg);
     switch (conn->state) {
@@ -678,6 +693,7 @@ arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq_conn_t *conn,
         default: break;
     };
     return sh && emit;
+#endif
 }
 
 void ARQ_MOCKABLE(arq__lin_alloc_init)(arq__lin_alloc_t *a, void *base, unsigned capacity)
@@ -1397,11 +1413,14 @@ void ARQ_MOCKABLE(arq__rst)(arq_t *arq)
     arq->conn.state = ARQ_CONN_STATE_CLOSED;
 }
 
-arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw)
+arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t const *sw,
+                                        arq__recv_wnd_t const *rw,
+                                        arq__conn_t const *c)
 {
     arq_time_t np = ARQ_TIME_INFINITY;
     unsigned i;
     ARQ_ASSERT(sw && rw);
+    (void)c;
     for (i = 0; i < sw->w.size; ++i) {
         arq_time_t const t = sw->rtx[(sw->w.seq + i) % sw->w.cap];
         if (t > 0) {
@@ -1414,6 +1433,11 @@ arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw
     if (rw->inter_seg_ack_on && (rw->inter_seg_ack > 0)) {
         np = arq__min(np, rw->inter_seg_ack);
     }
+#if ARQ_USE_CONNECTIONS == 1
+    if (c->state == ARQ_CONN_STATE_RST_SENT) {
+        np = arq__min(np, c->u.rst_sent.tmr);
+    }
+#endif
     return np;
 }
 

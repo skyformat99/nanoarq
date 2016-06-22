@@ -8,6 +8,7 @@ flags = [
     '-DARQ_COMPILE_CRC32=1',
     '-DARQ_USE_C_STDLIB=1',
     '-DARQ_LITTLE_ENDIAN_CPU=1',
+    '-DARQ_USE_CONNECTIONS=1',
     '-Wall',
     '-Wextra',
     '-Wunreachable-code',
