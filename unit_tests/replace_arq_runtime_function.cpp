@@ -32,15 +32,6 @@ FunctionRecord const s_functionRecords[] = { ARQ_MOCK_LIST() };
     #define ARQ_SYMBOL_PREFIX ""
 #endif
 
-// gcc 4.8 on mac doesn't understand .cfi_[start|end]proc
-#if defined(__APPLE__) && defined(__GNUC__)
-    #define ARQ_STARTPROC ""
-    #define ARQ_ENDPROC ""
-#else
-    #define ARQ_STARTPROC ".cfi_startproc"
-    #define ARQ_ENDPROC ".cfi_endproc"
-#endif
-
 // create the thunk with a tail call so the parameters remain intact.
 // x64 abi: r11 is a scratch register, so load the thunk there.
 #define ARQ_MOCK(FUNCTION_NAME) \
@@ -49,10 +40,10 @@ FunctionRecord const s_functionRecords[] = { ARQ_MOCK_LIST() };
         ".p2align 4\n\t" \
         ".globl " ARQ_SYMBOL_PREFIX #FUNCTION_NAME "\n\t" \
         ARQ_SYMBOL_PREFIX #FUNCTION_NAME ":\n\t" \
-        ARQ_STARTPROC "\n\t" \
+        ".cfi_startproc\n\t" \
         "movq " ARQ_SYMBOL_PREFIX #FUNCTION_NAME "_ARQ_THUNK_TARGET (%rip), %r11\n\t" \
         "jmp *%r11\n\t" \
-        ARQ_ENDPROC "\n\t" \
+        ".cfi_endproc\n\t" \
     );
 
 ARQ_MOCK_LIST()
