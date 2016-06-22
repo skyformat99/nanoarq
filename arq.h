@@ -59,6 +59,7 @@ typedef enum {
 typedef enum {
     ARQ_EVENT_NONE,
     ARQ_EVENT_CONN_ESTABLISHED,
+    ARQ_EVENT_CONN_FAILED_NO_REPSONSE,
     ARQ_EVENT_CONN_CLOSED,
     ARQ_EVENT_CONN_RESET_BY_PEER,
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
@@ -330,7 +331,8 @@ arq_bool_t arq__conn_poll(arq__conn_t *conn,
                           arq__frame_hdr_t *sh,
                           arq__frame_hdr_t const *rh,
                           arq_time_t dt,
-                          arq_cfg_t const *cfg);
+                          arq_cfg_t const *cfg,
+                          arq_event_t *out_event);
 
 typedef struct arq__lin_alloc_t {
     arq_uchar_t *base;
@@ -590,7 +592,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            &rh,
                            dt,
                            arq->cfg.retransmission_timeout);
-    emit |= arq__conn_poll(&arq->conn, psh, &rh, dt, &arq->cfg);
+    emit |= arq__conn_poll(&arq->conn, psh, &rh, dt, &arq->cfg, out_event);
     if (psh && emit) {
         void *seg = ARQ_NULL_PTR;
         if (psh->seg) {
@@ -659,17 +661,16 @@ arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq__conn_t *conn,
                                         arq__frame_hdr_t *sh,
                                         arq__frame_hdr_t const *rh,
                                         arq_time_t dt,
-                                        arq_cfg_t const *cfg)
+                                        arq_cfg_t const *cfg,
+                                        arq_event_t *out_event)
 {
 #if ARQ_USE_CONNECTIONS == 0
-    (void)conn;
-    (void)sh;
-    (void)rh;
-    (void)dt;
-    (void)cfg;
+    (void)conn; (void)sh; (void)rh; (void)dt; (void)cfg;
+    *out_event = ARQ_EVENT_NONE;
     return ARQ_FALSE;
 #else
     arq_bool_t emit = ARQ_FALSE;
+    arq_event_t e = ARQ_EVENT_NONE;
     ARQ_ASSERT(conn && rh && cfg);
     switch (conn->state) {
         case ARQ_CONN_STATE_RST_SENT: {
@@ -685,13 +686,15 @@ arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq__conn_t *conn,
                     ++conn->u.rst_sent.cnt;
                     conn->u.rst_sent.tmr = cfg->connection_rst_period;
                     if (conn->u.rst_sent.cnt > cfg->connection_rst_attempts) {
-                        /* peer not responding */
+                        e = ARQ_EVENT_CONN_FAILED_NO_REPSONSE;
+                        conn->state = ARQ_CONN_STATE_CLOSED;
                     }
                 }
             }
         } break;
         default: break;
     };
+    *out_event = e;
     return sh && emit;
 #endif
 }
@@ -1434,8 +1437,11 @@ arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t const *sw,
         np = arq__min(np, rw->inter_seg_ack);
     }
 #if ARQ_USE_CONNECTIONS == 1
-    if (c->state == ARQ_CONN_STATE_RST_SENT) {
-        np = arq__min(np, c->u.rst_sent.tmr);
+    switch (c->state) {
+        case ARQ_CONN_STATE_RST_SENT: {
+            np = arq__min(np, c->u.rst_sent.tmr);
+        } break;
+        default: break;
     }
 #endif
     return np;
