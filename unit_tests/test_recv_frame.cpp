@@ -47,6 +47,7 @@ struct Fixture
     {
         f.buf = buf.data();
         arq__recv_frame_init(&f, buf.size());
+        arq__recv_frame_rst(&f);
         std::fill(std::begin(buf), std::end(buf), 0xFF);
     }
     arq__recv_frame_t f;

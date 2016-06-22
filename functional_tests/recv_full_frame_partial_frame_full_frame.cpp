@@ -11,6 +11,8 @@ TEST(functional, recv_full_frame_partial_frame_full_frame)
     cfg.recv_window_size_in_messages = 16;
     cfg.retransmission_timeout = 100;
     cfg.checksum = &arq_crc32;
+    cfg.connection_rst_attempts = 10;
+    cfg.connection_rst_period = 100;
 
     ArqContext ctx(cfg);
 

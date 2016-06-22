@@ -127,6 +127,8 @@ TEST(init, returns_success)
     cfg.recv_window_size_in_messages = 1;
     cfg.segment_length_in_bytes = 64;
     cfg.message_length_in_segments = 1;
+    cfg.connection_rst_period = 100;
+    cfg.connection_rst_attempts = 3;
     std::vector< arq_uchar_t > seat(1024 * 1024);
     arq_t *arq;
     arq_err_t const e = arq_init(&cfg, seat.data(), seat.size(), &arq);

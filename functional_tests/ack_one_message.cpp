@@ -13,6 +13,8 @@ TEST(functional, ack_one_message)
     cfg.retransmission_timeout = 100;
     cfg.inter_segment_timeout = 100;
     cfg.checksum = &arq_crc32;
+    cfg.connection_rst_period = 100;
+    cfg.connection_rst_attempts = 10;
 
     ArqContext sender(cfg), receiver(cfg);
 

@@ -12,6 +12,8 @@ TEST(functional, transfer_full_window_one_way_manual_acks)
     cfg.recv_window_size_in_messages = 16;
     cfg.retransmission_timeout = 100;
     cfg.checksum = &arq_crc32;
+    cfg.connection_rst_period = 100;
+    cfg.connection_rst_attempts = 10;
 
     ArqContext sender(cfg), receiver(cfg);
 

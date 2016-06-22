@@ -47,6 +47,15 @@ arq_bool_t MockRecvPoll(arq__recv_wnd_t *rw,
                                                           .returnUnsignedIntValue();
 }
 
+arq_bool_t MockConnPoll(arq_conn_t *conn, arq__frame_hdr_t *sh, arq__frame_hdr_t const *rh, arq_time_t dt)
+{
+    return (arq_bool_t)mock().actualCall("arq__conn_poll").withParameter("conn", conn)
+                                                          .withParameter("sh", sh)
+                                                          .withParameter("rh", rh)
+                                                          .withParameter("dt", dt)
+                                                          .returnUnsignedIntValue();
+}
+
 void MockFrameHdrInit(arq__frame_hdr_t *h)
 {
     mock().actualCall("arq__frame_hdr_init").withParameter("h", h);
@@ -97,6 +106,7 @@ struct Fixture
         ARQ_MOCK_HOOK(arq__frame_write, MockFrameWrite);
         ARQ_MOCK_HOOK(arq__wnd_seg, MockWndSeg);
         ARQ_MOCK_HOOK(arq__next_poll, MockNextPoll);
+        ARQ_MOCK_HOOK(arq__conn_poll, MockConnPoll);
         arq.cfg.checksum = &arq_crc32;
         arq__send_frame_init(&arq.send_frame, 100);
     }
@@ -130,6 +140,8 @@ TEST(poll, invalid_params)
 TEST(poll, initializes_frame_headers)
 {
     DefaultMocksFixture f;
+    f.arq.send_frame.len = 0;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     mock().expectNCalls(2, "arq__frame_hdr_init").ignoreOtherParameters();
     mock().ignoreOtherCalls();
     arq_backend_poll(&f.arq, 0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
@@ -208,6 +220,37 @@ TEST(poll, calls_send_poll_with_null_send_header_if_unable_to_emit_frame)
     arq_backend_poll(&f.arq, 0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
 }
 
+TEST(poll, calls_conn_poll)
+{
+    DefaultMocksFixture f;
+    arq_time_t const dt = 1532;
+    mock().expectOneCall("arq__conn_poll").withParameter("conn", &f.arq.conn)
+                                          .withParameter("dt", dt)
+                                          .ignoreOtherParameters();
+    mock().ignoreOtherCalls();
+    arq_backend_poll(&f.arq, dt, &f.event, &f.send_ready, &f.recv_ready, &f.time);
+}
+
+TEST(poll, calls_conn_poll_with_null_send_header_if_unable_to_emit_frame)
+{
+    DefaultMocksFixture f;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_HELD;
+    mock().expectOneCall("arq__conn_poll").withParameter("sh", (void *)NULL).ignoreOtherParameters();
+    mock().ignoreOtherCalls();
+    arq_backend_poll(&f.arq, 0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
+}
+
+TEST(poll, calls_conn_poll_after_send_poll_and_recv_poll)
+{
+    DefaultMocksFixture f;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_HELD;
+    mock().expectOneCall("arq__recv_poll").ignoreOtherParameters();
+    mock().expectOneCall("arq__send_poll").ignoreOtherParameters();
+    mock().expectOneCall("arq__conn_poll").ignoreOtherParameters();
+    mock().ignoreOtherCalls();
+    arq_backend_poll(&f.arq, 0, &f.event, &f.send_ready, &f.recv_ready, &f.time);
+}
+
 TEST(poll, non_zero_send_frame_length_sets_send_ready_flag)
 {
     DefaultMocksFixture f;
@@ -220,6 +263,9 @@ TEST(poll, non_zero_send_frame_length_sets_send_ready_flag)
 TEST(poll, loads_segment_from_send_window_if_header_segment_flag_is_set)
 {
     Fixture f;
+    f.arq.send_frame.len = 0;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
+
     {
         void *msp = reinterpret_cast< void * >(&MockSendPoll<12, 34, true>);
         ARQ_MOCK_HOOK(arq__send_poll, msp);
@@ -260,6 +306,8 @@ TEST(poll, emits_a_frame_if_send_poll_returns_one_and_send_frame_available)
 TEST(poll, emits_a_frame_if_recv_poll_returns_one_and_send_frame_available)
 {
     DefaultMocksFixture f;
+    f.arq.send_frame.len = 0;
+    f.arq.send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     mock().expectOneCall("arq__recv_poll").ignoreOtherParameters().andReturnValue(1);
     mock().expectOneCall("arq__frame_write").ignoreOtherParameters();
     mock().ignoreOtherCalls();

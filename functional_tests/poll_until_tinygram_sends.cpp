@@ -12,6 +12,8 @@ TEST(functional, poll_until_tinygram_sends)
     cfg.retransmission_timeout = 100;
     cfg.tinygram_send_delay = 50;
     cfg.checksum = &arq_crc32;
+    cfg.connection_rst_attempts = 10;
+    cfg.connection_rst_period = 100;
     ArqContext ctx(cfg);
 
     arq_uchar_t const send_data = 0x5A;

@@ -20,7 +20,7 @@ struct Fixture
 {
     Fixture()
     {
-        arq__send_wnd_ptr_init(&arq.send_wnd_ptr);
+        arq__send_wnd_ptr_rst(&arq.send_wnd_ptr);
         arq.send_frame.len = 1234;
         arq.send_frame.buf = (arq_uchar_t *)0x12345678;
     }

@@ -7,19 +7,19 @@ TEST_GROUP(send_wnd_ptr) {};
 
 namespace {
 
-TEST(send_wnd_ptr, init_sets_valid_to_zero)
+TEST(send_wnd_ptr, rst_sets_valid_to_zero)
 {
     arq__send_wnd_ptr_t p;
     p.valid = 1;
-    arq__send_wnd_ptr_init(&p);
+    arq__send_wnd_ptr_rst(&p);
     CHECK_EQUAL(0, p.valid);
 }
 
-TEST(send_wnd_ptr, init_sets_seq_and_seg_to_zero)
+TEST(send_wnd_ptr, rst_sets_seq_and_seg_to_zero)
 {
     arq__send_wnd_ptr_t p;
     p.valid = p.seq = p.seg = 1;
-    arq__send_wnd_ptr_init(&p);
+    arq__send_wnd_ptr_rst(&p);
     CHECK_EQUAL(0, p.seq);
     CHECK_EQUAL(0, p.seg);
 }
@@ -30,7 +30,7 @@ struct Fixture
     {
         sw.w.msg = m.data();
         sw.rtx = rtx.data();
-        arq__send_wnd_ptr_init(&p);
+        arq__send_wnd_ptr_rst(&p);
         arq__wnd_init(&sw.w, m.size(), 128, 16);
         arq__send_wnd_rst(&sw);
     }
