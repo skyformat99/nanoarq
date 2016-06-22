@@ -26,9 +26,25 @@ struct Fixture
 TEST(conn_poll, closed_returns_no_event_if_nothing_happens)
 {
     Fixture f;
-    f.e = (arq_event_t)(ARQ_EVENT_NONE + 1);
     arq__conn_poll(&f.c, &f.sh, &f.rh, 100, &f.cfg, &f.e);
     CHECK_EQUAL(ARQ_EVENT_NONE, f.e);
+}
+
+TEST(conn_poll, closed_transitions_to_rst_recvd_if_rst_arrives)
+{
+    Fixture f;
+    f.rh.rst = ARQ_TRUE;
+    arq__conn_poll(&f.c, &f.sh, &f.rh, 1, &f.cfg, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_RST_RECVD, f.c.state);
+}
+
+TEST(conn_poll, closed_emits_rst_ack_during_transition_to_rst_recvd)
+{
+    Fixture f;
+    f.rh.rst = ARQ_TRUE;
+    arq__conn_poll(&f.c, &f.sh, &f.rh, 1, &f.cfg, &f.e);
+    CHECK(f.sh.rst);
+    CHECK(f.sh.ack);
 }
 
 struct RstSentFixture : Fixture
@@ -113,7 +129,7 @@ TEST(conn_poll, rst_sent_event_connect_failed_if_max_attempts_timed_out)
     RstSentFixture f;
     f.c.u.rst_sent.cnt = f.cfg.connection_rst_attempts;
     arq__conn_poll(&f.c, &f.sh, &f.rh, f.cfg.connection_rst_period, &f.cfg, &f.e);
-    CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_NO_REPSONSE, f.e);
+    CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_NO_RESPONSE_TO_RST, f.e);
 }
 
 TEST(conn_poll, rst_sent_transitions_to_closed_if_connect_fails)

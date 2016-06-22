@@ -59,7 +59,8 @@ typedef enum {
 typedef enum {
     ARQ_EVENT_NONE,
     ARQ_EVENT_CONN_ESTABLISHED,
-    ARQ_EVENT_CONN_FAILED_NO_REPSONSE,
+    ARQ_EVENT_CONN_FAILED_NO_RESPONSE_TO_RST,
+    ARQ_EVENT_CONN_FAILED_NO_RESPONSE_TO_RST_ACK,
     ARQ_EVENT_CONN_CLOSED,
     ARQ_EVENT_CONN_RESET_BY_PEER,
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
@@ -673,6 +674,12 @@ arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq__conn_t *conn,
     arq_event_t e = ARQ_EVENT_NONE;
     ARQ_ASSERT(conn && rh && cfg);
     switch (conn->state) {
+        case ARQ_CONN_STATE_CLOSED: {
+            if (rh->rst) {
+                sh->rst = sh->ack = ARQ_TRUE;
+                conn->state = ARQ_CONN_STATE_RST_RECVD;
+            }
+        } break;
         case ARQ_CONN_STATE_RST_SENT: {
             if (rh->rst && rh->ack) {
                 /* rst/ack received from peer, send ack */
@@ -686,7 +693,7 @@ arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq__conn_t *conn,
                     ++conn->u.rst_sent.cnt;
                     conn->u.rst_sent.tmr = cfg->connection_rst_period;
                     if (conn->u.rst_sent.cnt > cfg->connection_rst_attempts) {
-                        e = ARQ_EVENT_CONN_FAILED_NO_REPSONSE;
+                        e = ARQ_EVENT_CONN_FAILED_NO_RESPONSE_TO_RST;
                         conn->state = ARQ_CONN_STATE_CLOSED;
                     }
                 }
