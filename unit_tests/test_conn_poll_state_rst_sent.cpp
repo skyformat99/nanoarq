@@ -28,90 +28,120 @@ struct Fixture
     arq_cfg_t cfg;
     arq__frame_hdr_t sh, rh;
     arq__conn_state_ctx_t ctx;
+    arq_bool_t emit = ARQ_FALSE;
     arq_event_t e = (arq_event_t)-1;
 };
 
-TEST(conn_poll_state_rst_sent, rst_sent_decrements_timer)
+TEST(conn_poll_state_rst_sent, decrements_timer)
 {
     Fixture f;
     f.c.u.rst_sent.tmr = 123;
-    arq__conn_poll(&f.c, &f.sh, &f.rh, 23, &f.cfg, &f.e);
+    f.ctx.dt = 23;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(100, f.c.u.rst_sent.tmr);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_no_event_if_nothing_happens)
+TEST(conn_poll_state_rst_sent, no_event_if_nothing_happens)
 {
     Fixture f;
     f.c.u.rst_sent.tmr = 100;
-    arq__conn_poll(&f.c, &f.sh, &f.rh, 23, &f.cfg, &f.e);
-    CHECK_EQUAL(ARQ_EVENT_NONE, f.e);
+    f.e = (arq_event_t)1234;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(1234, (int)f.e);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_returns_nothing_to_emit_if_timer_not_expired)
+TEST(conn_poll_state_rst_sent, returns_nothing_to_emit_if_timer_not_expired)
 {
     Fixture f;
     f.c.u.rst_sent.tmr = 1;
-    arq_bool_t const emit = arq__conn_poll(&f.c, &f.sh, &f.rh, 0, &f.cfg, &f.e);
-    CHECK_EQUAL(ARQ_FALSE, emit);
+    f.ctx.dt = 0;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_FALSE, f.emit);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_sends_rst_if_timer_is_zero)
+TEST(conn_poll_state_rst_sent, sends_rst_if_timer_is_zero)
 {
     Fixture f;
-    arq__conn_poll(&f.c, &f.sh, &f.rh, 23, &f.cfg, &f.e);
+    f.c.u.rst_sent.tmr = f.ctx.dt;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(ARQ_TRUE, f.sh.rst);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_returns_emit_if_timer_expired_and_rst_written)
+TEST(conn_poll_state_rst_sent, returns_emit_if_timer_expired_and_rst_written)
 {
     Fixture f;
-    arq_bool_t const emit = arq__conn_poll(&f.c, &f.sh, &f.rh, 23, &f.cfg, &f.e);
-    CHECK_EQUAL(ARQ_TRUE, emit);
+    f.c.u.rst_sent.tmr = f.ctx.dt;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_TRUE, f.emit);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_doesnt_emit_if_null_send_header)
+TEST(conn_poll_state_rst_sent, doesnt_emit_if_null_send_header)
 {
     Fixture f;
-    arq_bool_t const emit = arq__conn_poll(&f.c, nullptr, &f.rh, 23, &f.cfg, &f.e);
-    CHECK_EQUAL(ARQ_FALSE, emit);
+    f.ctx.sh = nullptr;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_FALSE, f.emit);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_doesnt_reset_timer_if_expired_and_null_send_header)
+TEST(conn_poll_state_rst_sent, doesnt_reset_timer_if_expired_and_null_send_header)
 {
     Fixture f;
-    arq__conn_poll(&f.c, nullptr, &f.rh, 23, &f.cfg, &f.e);
+    f.c.u.rst_sent.tmr = f.ctx.dt;
+    f.ctx.sh = nullptr;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(0, f.c.u.rst_sent.tmr);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_increments_count_when_timer_expires_and_can_send_rst)
+TEST(conn_poll_state_rst_sent, increments_count_when_timer_expires_and_can_send_rst)
 {
     Fixture f;
+    f.c.u.rst_sent.tmr = f.ctx.dt;
     f.c.u.rst_sent.cnt = 3;
-    arq__conn_poll(&f.c, &f.sh, &f.rh, 23, &f.cfg, &f.e);
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(4, f.c.u.rst_sent.cnt);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_resets_timer_after_sending_rst)
+TEST(conn_poll_state_rst_sent, resets_timer_after_sending_rst)
 {
     Fixture f;
-    arq__conn_poll(&f.c, &f.sh, &f.rh, 23, &f.cfg, &f.e);
+    f.c.u.rst_sent.tmr = f.ctx.dt;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(f.cfg.connection_rst_period, f.c.u.rst_sent.tmr);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_event_connect_failed_if_max_attempts_timed_out)
+TEST(conn_poll_state_rst_sent, event_connect_failed_if_max_attempts_timed_out)
 {
     Fixture f;
     f.c.u.rst_sent.cnt = f.cfg.connection_rst_attempts;
-    arq__conn_poll(&f.c, &f.sh, &f.rh, f.cfg.connection_rst_period, &f.cfg, &f.e);
+    f.c.u.rst_sent.tmr = f.ctx.dt;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_NO_RESPONSE, f.e);
 }
 
-TEST(conn_poll_state_rst_sent, rst_sent_transitions_to_closed_if_connect_fails)
+TEST(conn_poll_state_rst_sent, transitions_to_closed_if_connect_fails)
 {
     Fixture f;
     f.c.u.rst_sent.cnt = f.cfg.connection_rst_attempts;
-    arq__conn_poll(&f.c, &f.sh, &f.rh, f.cfg.connection_rst_period, &f.cfg, &f.e);
+    f.c.u.rst_sent.tmr = f.ctx.dt;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, f.c.state);
+}
+
+TEST(conn_poll_state_rst_sent, returns_stop_when_not_transitioning)
+{
+    Fixture f;
+    f.ctx.sh = nullptr;
+    arq__conn_state_next_t const go = arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ__CONN_STATE_STOP, go);
+}
+
+TEST(conn_poll_state_rst_sent, returns_stop_when_transitioning_to_closed)
+{
+    Fixture f;
+    f.c.u.rst_sent.cnt = f.cfg.connection_rst_attempts;
+    f.c.u.rst_sent.tmr = f.ctx.dt;
+    arq__conn_state_next_t const go = arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ__CONN_STATE_STOP, go);
 }
 
 }
