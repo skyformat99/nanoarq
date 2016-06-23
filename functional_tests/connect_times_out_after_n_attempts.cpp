@@ -52,7 +52,7 @@ TEST(functional, connect_times_out_after_n_attempts)
         arq_bool_t sp, rp;
         arq_err_t const e = arq_backend_poll(ctx.arq, dt, &event, &sp, &rp, &next_poll);
         CHECK(ARQ_SUCCEEDED(e) && sp);
-        CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_NO_RESPONSE_TO_RST, event);
+        CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_NO_RESPONSE, event);
         CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, ctx.arq->conn.state);
     }
 }
