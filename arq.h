@@ -60,6 +60,7 @@ typedef enum {
     ARQ_EVENT_NONE,
     ARQ_EVENT_CONN_ESTABLISHED,
     ARQ_EVENT_CONN_FAILED_NO_RESPONSE,
+    ARQ_EVENT_CONN_FAILED_DESYNC,
     ARQ_EVENT_CONN_CLOSED,
     ARQ_EVENT_CONN_RESET_BY_PEER,
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
@@ -1594,13 +1595,15 @@ arq__conn_state_next_t arq__conn_poll_state_closed(arq__conn_state_ctx_t *ctx,
                                                    arq_event_t *out_event)
 {
     (void)out_emit;
-    (void)out_event;
     if (ctx->rh->rst) {
         ctx->conn->state = ARQ_CONN_STATE_RST_RECVD;
         ctx->conn->u.rst_recvd.tmr = 0;
         ctx->conn->u.rst_recvd.cnt = 0;
         ctx->conn->u.rst_recvd.sent_rst_ack = ARQ_FALSE;
         return ARQ__CONN_STATE_CONTINUE;
+    }
+    if (ctx->rh->ack || ctx->rh->seg) {
+        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
     }
     return ARQ__CONN_STATE_STOP;
 }
@@ -1609,15 +1612,17 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
                                                      arq_bool_t *out_emit,
                                                      arq_event_t *out_event)
 {
-    if (ctx->rh->rst && ctx->rh->ack) {
+    if (ctx->rh->seg || (ctx->rh->ack && !ctx->rh->rst)) {
+        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
+        ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+    } else if (ctx->rh->rst && ctx->rh->ack) {
         /* rst/ack received from peer, send ack */
     } else if (ctx->rh->rst) {
         /* simultaneous open */
     } else {
         ctx->conn->u.rst_sent.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
         if ((ctx->conn->u.rst_sent.tmr == 0) && ctx->sh) {
-            ctx->sh->rst = ARQ_TRUE;
-            *out_emit = ARQ_TRUE;
+            ctx->sh->rst = *out_emit = ARQ_TRUE;
             ++ctx->conn->u.rst_sent.cnt;
             ctx->conn->u.rst_sent.tmr = ctx->cfg->connection_rst_period;
             if (ctx->conn->u.rst_sent.cnt > ctx->cfg->connection_rst_attempts) {
@@ -1633,20 +1638,29 @@ arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx
                                                       arq_bool_t *out_emit,
                                                       arq_event_t *out_event)
 {
-    if (ctx->conn->u.rst_recvd.sent_rst_ack) {
-        if (ctx->rh->ack) {
+    if (ctx->rh->rst || ctx->rh->seg) {
+        ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
+        return ARQ__CONN_STATE_STOP;
+    }
+    if (ctx->rh->ack) {
+        if (ctx->conn->u.rst_recvd.sent_rst_ack) {
             ctx->conn->state = ARQ_CONN_STATE_ESTABLISHED;
+            *out_event = ARQ_EVENT_CONN_ESTABLISHED;
+        } else {
+            ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+            *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
         }
-    } else {
-        ctx->conn->u.rst_recvd.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
-        if ((ctx->conn->u.rst_recvd.tmr == 0) && ctx->sh) {
-            ctx->sh->rst = ctx->sh->ack = *out_emit = ctx->conn->u.rst_recvd.sent_rst_ack = ARQ_TRUE;
-            ++ctx->conn->u.rst_recvd.cnt;
-            ctx->conn->u.rst_recvd.tmr = ctx->cfg->connection_rst_period;
-            if (ctx->conn->u.rst_recvd.cnt > ctx->cfg->connection_rst_attempts) {
-                *out_event = ARQ_EVENT_CONN_FAILED_NO_RESPONSE;
-                ctx->conn->state = ARQ_CONN_STATE_CLOSED;
-            }
+        return ARQ__CONN_STATE_STOP;
+    }
+    ctx->conn->u.rst_recvd.tmr = arq__sub_sat(ctx->conn->u.rst_recvd.tmr, ctx->dt);
+    if ((ctx->conn->u.rst_recvd.tmr == 0) && ctx->sh) {
+        ctx->sh->rst = ctx->sh->ack = *out_emit = ctx->conn->u.rst_recvd.sent_rst_ack = ARQ_TRUE;
+        ++ctx->conn->u.rst_recvd.cnt;
+        ctx->conn->u.rst_recvd.tmr = ctx->cfg->connection_rst_period;
+        if (ctx->conn->u.rst_recvd.cnt > ctx->cfg->connection_rst_attempts) {
+            *out_event = ARQ_EVENT_CONN_FAILED_NO_RESPONSE;
+            ctx->conn->state = ARQ_CONN_STATE_CLOSED;
         }
     }
     return ARQ__CONN_STATE_STOP;
@@ -1656,9 +1670,7 @@ arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
                                                  arq_bool_t *out_emit,
                                                  arq_event_t *out_event)
 {
-    (void)ctx;
-    (void)out_emit;
-    (void)out_event;
+    (void)ctx; (void)out_emit; (void)out_event;
     return ARQ__CONN_STATE_STOP;
 }
 
