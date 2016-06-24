@@ -11,6 +11,9 @@
 #ifndef ARQ_LITTLE_ENDIAN_CPU
     #error You must define ARQ_LITTLE_ENDIAN_CPU to 0 or 1 before including arq.h
 #endif
+#ifndef ARQ_USE_CONNECTIONS
+    #error You must define ARQ_USE_CONNECTIONS to 0 or 1 before including arq.h
+#endif
 
 #if ARQ_USE_C_STDLIB == 1
     #include <stdint.h>
@@ -56,6 +59,7 @@ typedef enum {
 typedef enum {
     ARQ_EVENT_NONE,
     ARQ_EVENT_CONN_ESTABLISHED,
+    ARQ_EVENT_CONN_FAILED_NO_RESPONSE,
     ARQ_EVENT_CONN_CLOSED,
     ARQ_EVENT_CONN_RESET_BY_PEER,
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
@@ -116,12 +120,12 @@ arq_err_t arq_seg_len_from_frame_len(unsigned frame_len, unsigned *out_seg_len);
 arq_err_t arq_required_size(arq_cfg_t const *cfg, unsigned *out_required_size);
 
 arq_err_t arq_init(arq_cfg_t const *cfg, void *arq_seat, unsigned arq_seat_size, struct arq_t **out_arq);
-arq_err_t arq_reset(struct arq_t *arq);
 arq_err_t arq_connect(struct arq_t *arq);
 arq_err_t arq_close(struct arq_t *arq);
 arq_err_t arq_recv(struct arq_t *arq, void *recv, unsigned recv_max, unsigned *out_recv_size);
 arq_err_t arq_send(struct arq_t *arq, void const *send, unsigned send_max, unsigned *out_sent_size);
 arq_err_t arq_flush(struct arq_t *arq);
+arq_err_t arq_reset(struct arq_t *arq);
 
 arq_err_t arq_backend_poll(struct arq_t *arq,
                            arq_time_t dt,
@@ -143,15 +147,20 @@ arq_uint32_t arq_crc32(void const *buf, unsigned size);
 
 /* Internal API */
 
-typedef struct {
+typedef struct arq__conn_t {
     arq_conn_state_t state;
     union {
         struct {
             unsigned cnt;
             arq_time_t tmr;
+            arq_bool_t sent_rst_ack;
+        } rst_recvd;
+        struct {
+            unsigned cnt;
+            arq_time_t tmr;
         } rst_sent;
     } u;
-} arq_conn_t;
+} arq__conn_t;
 
 enum {
     ARQ__FRAME_HEADER_SIZE = 12,
@@ -323,11 +332,12 @@ arq_bool_t arq__recv_poll(arq__recv_wnd_t *rw,
                           arq_time_t dt,
                           arq_time_t inter_seg_ack);
 
-arq_bool_t arq__conn_poll(arq_conn_t *conn,
+arq_bool_t arq__conn_poll(arq__conn_t *conn,
                           arq__frame_hdr_t *sh,
                           arq__frame_hdr_t const *rh,
                           arq_time_t dt,
-                          arq_cfg_t const *cfg);
+                          arq_cfg_t const *cfg,
+                          arq_event_t *out_event);
 
 typedef struct arq__lin_alloc_t {
     arq_uchar_t *base;
@@ -341,20 +351,20 @@ void *arq__lin_alloc_alloc(arq__lin_alloc_t *a, unsigned size, unsigned align);
 typedef struct arq_t {
     arq_cfg_t cfg;
     arq_stats_t stats;
-    arq_conn_t conn;
     arq__send_wnd_t send_wnd;
     arq__send_wnd_ptr_t send_wnd_ptr;
     arq__send_frame_t send_frame;
     arq__recv_wnd_t recv_wnd;
     arq__recv_frame_t recv_frame;
     arq_bool_t need_poll;
+    arq__conn_t conn;
 } arq_t;
 
 arq_err_t arq__check_cfg(arq_cfg_t const *cfg);
 arq_t *arq__alloc(arq_cfg_t const *cfg, arq__lin_alloc_t *la);
 void arq__init(arq_t *arq);
 void arq__rst(arq_t *arq);
-arq_time_t arq__next_poll(arq__send_wnd_t *sw, arq__recv_wnd_t *rw);
+arq_time_t arq__next_poll(arq__send_wnd_t const *sw, arq__recv_wnd_t const *rw, arq__conn_t const *c);
 
 unsigned arq__min(unsigned x, unsigned y);
 unsigned arq__max(unsigned x, unsigned y);
@@ -363,6 +373,38 @@ arq_uint16_t arq__hton16(arq_uint16_t x);
 arq_uint16_t arq__ntoh16(arq_uint16_t x);
 arq_uint32_t arq__hton32(arq_uint32_t x);
 arq_uint32_t arq__ntoh32(arq_uint32_t x);
+
+#if ARQ_USE_CONNECTIONS == 1
+typedef struct arq__conn_state_ctx_t {
+    arq_cfg_t const *cfg;
+    arq_time_t dt;
+    arq__conn_t *conn;
+    arq__frame_hdr_t *sh;
+    arq__frame_hdr_t const *rh;
+} arq__conn_state_ctx_t;
+
+typedef enum {
+    ARQ__CONN_STATE_CONTINUE = ARQ_TRUE,
+    ARQ__CONN_STATE_STOP = ARQ_FALSE
+} arq__conn_state_next_t;
+
+typedef arq__conn_state_next_t (*arq__conn_poll_state_cb_t)(arq__conn_state_ctx_t *ctx,
+                                                            arq_bool_t *out_emit,
+                                                            arq_event_t *out_event);
+arq__conn_poll_state_cb_t arq__conn_poll_state_cb_get(arq_conn_state_t state);
+arq__conn_state_next_t arq__conn_poll_state_closed(arq__conn_state_ctx_t *ctx,
+                                                   arq_bool_t *out_emit,
+                                                   arq_event_t *out_event);
+arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
+                                                     arq_bool_t *out_emit,
+                                                     arq_event_t *out_event);
+arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx,
+                                                      arq_bool_t *out_emit,
+                                                      arq_event_t *out_event);
+arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
+                                                 arq_bool_t *out_emit,
+                                                 arq_event_t *out_event);
+#endif
 
 #define ARQ__ALIGNOF(x) __alignof__(x)
 #define ARQ__COUNT_TRAILING_ZERO_BITS(x) __builtin_ctz(x)
@@ -509,6 +551,9 @@ arq_err_t arq_connect(struct arq_t *arq)
         return ARQ_ERR_INVALID_PARAM;
     }
 
+#if ARQ_USE_CONNECTIONS == 0
+    return ARQ_OK_COMPLETED;
+#else
     if (arq->conn.state != ARQ_CONN_STATE_CLOSED) {
         return ARQ_ERR_NOT_DISCONNECTED;
     }
@@ -517,6 +562,7 @@ arq_err_t arq_connect(struct arq_t *arq)
     arq->conn.u.rst_sent.cnt = 0;
     arq->conn.u.rst_sent.tmr = 0;
     return ARQ_OK_POLL_REQUIRED;
+#endif
 }
 
 arq_err_t arq_recv(struct arq_t *arq, void *recv, unsigned recv_max, unsigned *out_recv_size)
@@ -583,7 +629,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
                            &rh,
                            dt,
                            arq->cfg.retransmission_timeout);
-    emit |= arq__conn_poll(&arq->conn, psh, &rh, dt, &arq->cfg);
+    emit |= arq__conn_poll(&arq->conn, psh, &rh, dt, &arq->cfg, out_event);
     if (psh && emit) {
         void *seg = ARQ_NULL_PTR;
         if (psh->seg) {
@@ -594,7 +640,7 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
             arq__frame_write(psh, seg, arq->cfg.checksum, arq->send_frame.buf, arq->send_frame.cap);
         arq->send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     }
-    *out_next_poll = arq__next_poll(&arq->send_wnd, &arq->recv_wnd);
+    *out_next_poll = arq__next_poll(&arq->send_wnd, &arq->recv_wnd, &arq->conn);
     *out_send_ready = (arq->send_frame.len > 0) ? ARQ_TRUE : ARQ_FALSE;
     *out_recv_ready = arq__recv_wnd_pending(&arq->recv_wnd);
     arq->need_poll = ARQ_FALSE;
@@ -648,36 +694,35 @@ arq_err_t arq_backend_recv_fill(struct arq_t *arq,
     return ARQ_OK_COMPLETED;
 }
 
-arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq_conn_t *conn,
+arq_bool_t ARQ_MOCKABLE(arq__conn_poll)(arq__conn_t *conn,
                                         arq__frame_hdr_t *sh,
                                         arq__frame_hdr_t const *rh,
                                         arq_time_t dt,
-                                        arq_cfg_t const *cfg)
+                                        arq_cfg_t const *cfg,
+                                        arq_event_t *out_event)
 {
+#if ARQ_USE_CONNECTIONS == 0
+    (void)conn; (void)sh; (void)rh; (void)dt; (void)cfg;
+    *out_event = ARQ_EVENT_NONE;
+    return ARQ_FALSE;
+#else
     arq_bool_t emit = ARQ_FALSE;
+    arq_event_t e = ARQ_EVENT_NONE;
+    arq__conn_state_next_t keep_going = ARQ__CONN_STATE_CONTINUE;
+    arq__conn_state_ctx_t ctx;
     ARQ_ASSERT(conn && rh && cfg);
-    switch (conn->state) {
-        case ARQ_CONN_STATE_RST_SENT: {
-            if (rh->rst && rh->ack) {
-                /* rst/ack received from peer, send ack */
-            } else if (rh->rst) {
-                /* simultaneous open */
-            } else {
-                conn->u.rst_sent.tmr = arq__sub_sat(conn->u.rst_sent.tmr, dt);
-                if ((conn->u.rst_sent.tmr == 0) && sh) {
-                    sh->rst = ARQ_TRUE;
-                    emit = ARQ_TRUE;
-                    ++conn->u.rst_sent.cnt;
-                    conn->u.rst_sent.tmr = cfg->connection_rst_period;
-                    if (conn->u.rst_sent.cnt > cfg->connection_rst_attempts) {
-                        /* peer not responding */
-                    }
-                }
-            }
-        } break;
-        default: break;
-    };
+    ctx.cfg = cfg;
+    ctx.conn = conn;
+    ctx.dt = dt;
+    ctx.rh = rh;
+    ctx.sh = sh;
+    while (keep_going == ARQ__CONN_STATE_CONTINUE) {
+        arq__conn_poll_state_cb_t cb = arq__conn_poll_state_cb_get(conn->state);
+        keep_going = cb(&ctx, &emit, &e);
+    }
+    *out_event = e;
     return sh && emit;
+#endif
 }
 
 void ARQ_MOCKABLE(arq__lin_alloc_init)(arq__lin_alloc_t *a, void *base, unsigned capacity)
@@ -1394,14 +1439,21 @@ void ARQ_MOCKABLE(arq__rst)(arq_t *arq)
     arq__recv_wnd_rst(&arq->recv_wnd);
     arq__recv_frame_rst(&arq->recv_frame);
     arq->need_poll = ARQ_FALSE;
+#if ARQ_USE_CONNECTIONS == 1
     arq->conn.state = ARQ_CONN_STATE_CLOSED;
+#else
+    arq->conn.state = ARQ_CONN_STATE_ESTABLISHED;
+#endif
 }
 
-arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw)
+arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t const *sw,
+                                        arq__recv_wnd_t const *rw,
+                                        arq__conn_t const *c)
 {
     arq_time_t np = ARQ_TIME_INFINITY;
     unsigned i;
     ARQ_ASSERT(sw && rw);
+    (void)c;
     for (i = 0; i < sw->w.size; ++i) {
         arq_time_t const t = sw->rtx[(sw->w.seq + i) % sw->w.cap];
         if (t > 0) {
@@ -1414,6 +1466,14 @@ arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t *sw, arq__recv_wnd_t *rw
     if (rw->inter_seg_ack_on && (rw->inter_seg_ack > 0)) {
         np = arq__min(np, rw->inter_seg_ack);
     }
+#if ARQ_USE_CONNECTIONS == 1
+    switch (c->state) {
+        case ARQ_CONN_STATE_RST_SENT: {
+            np = arq__min(np, c->u.rst_sent.tmr);
+        } break;
+        default: break;
+    }
+#endif
     return np;
 }
 
@@ -1525,6 +1585,91 @@ arq_uint32_t arq_crc32(void const *buf, unsigned size)
         crc = crc32_tab[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
     }
     return ~crc;
+}
+#endif
+
+#if ARQ_USE_CONNECTIONS == 1
+arq__conn_state_next_t arq__conn_poll_state_closed(arq__conn_state_ctx_t *ctx,
+                                                   arq_bool_t *out_emit,
+                                                   arq_event_t *out_event)
+{
+    (void)out_emit;
+    (void)out_event;
+    if (ctx->rh->rst) {
+        ctx->conn->state = ARQ_CONN_STATE_RST_RECVD;
+        ctx->conn->u.rst_recvd.tmr = 0;
+        ctx->conn->u.rst_recvd.cnt = 0;
+        ctx->conn->u.rst_recvd.sent_rst_ack = ARQ_FALSE;
+        return ARQ__CONN_STATE_CONTINUE;
+    }
+    return ARQ__CONN_STATE_STOP;
+}
+
+arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
+                                                     arq_bool_t *out_emit,
+                                                     arq_event_t *out_event)
+{
+    if (ctx->rh->rst && ctx->rh->ack) {
+        /* rst/ack received from peer, send ack */
+    } else if (ctx->rh->rst) {
+        /* simultaneous open */
+    } else {
+        ctx->conn->u.rst_sent.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
+        if ((ctx->conn->u.rst_sent.tmr == 0) && ctx->sh) {
+            ctx->sh->rst = ARQ_TRUE;
+            *out_emit = ARQ_TRUE;
+            ++ctx->conn->u.rst_sent.cnt;
+            ctx->conn->u.rst_sent.tmr = ctx->cfg->connection_rst_period;
+            if (ctx->conn->u.rst_sent.cnt > ctx->cfg->connection_rst_attempts) {
+                *out_event = ARQ_EVENT_CONN_FAILED_NO_RESPONSE;
+                ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+            }
+        }
+    }
+    return ARQ__CONN_STATE_STOP;
+}
+
+arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx,
+                                                      arq_bool_t *out_emit,
+                                                      arq_event_t *out_event)
+{
+    if (ctx->conn->u.rst_recvd.sent_rst_ack) {
+        if (ctx->rh->ack) {
+            ctx->conn->state = ARQ_CONN_STATE_ESTABLISHED;
+        }
+    } else {
+        ctx->conn->u.rst_recvd.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
+        if ((ctx->conn->u.rst_recvd.tmr == 0) && ctx->sh) {
+            ctx->sh->rst = ctx->sh->ack = *out_emit = ctx->conn->u.rst_recvd.sent_rst_ack = ARQ_TRUE;
+            ++ctx->conn->u.rst_recvd.cnt;
+            ctx->conn->u.rst_recvd.tmr = ctx->cfg->connection_rst_period;
+            if (ctx->conn->u.rst_recvd.cnt > ctx->cfg->connection_rst_attempts) {
+                *out_event = ARQ_EVENT_CONN_FAILED_NO_RESPONSE;
+                ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+            }
+        }
+    }
+    return ARQ__CONN_STATE_STOP;
+}
+
+arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
+                                                 arq_bool_t *out_emit,
+                                                 arq_event_t *out_event)
+{
+    (void)ctx;
+    (void)out_emit;
+    (void)out_event;
+    return ARQ__CONN_STATE_STOP;
+}
+
+arq__conn_poll_state_cb_t ARQ_MOCKABLE(arq__conn_poll_state_cb_get)(arq_conn_state_t state)
+{
+    switch (state) {
+        case ARQ_CONN_STATE_CLOSED:    return arq__conn_poll_state_closed;
+        case ARQ_CONN_STATE_RST_SENT:  return arq__conn_poll_state_rst_sent;
+        case ARQ_CONN_STATE_RST_RECVD: return arq__conn_poll_state_rst_recvd;
+        default:                       return arq__conn_poll_state_null;
+    }
 }
 #endif
 

@@ -51,6 +51,9 @@ add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
                                       test_recv_frame.cpp
                                       test_recv_poll.cpp
                                       test_conn_poll.cpp
+                                      test_conn_poll_state_cb_get.cpp
+                                      test_conn_poll_state_closed.cpp
+                                      test_conn_poll_state_rst_sent.cpp
                                       test_frame.cpp
                                       test_cobs.cpp
                                       test_minmax.cpp
@@ -70,7 +73,8 @@ set_source_files_properties(arq_unit_test.c PROPERTIES COMPILE_FLAGS "${ARQ_RUNT
 
 add_executable(arq_unit_tests ${ARQ_UNIT_TEST_SOURCES} $<TARGET_OBJECTS:arq_unit_test_objs>)
 add_dependencies(arq_unit_tests CppUTest_external)
-target_compile_options(arq_unit_tests PRIVATE ${ARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=1)
+target_compile_options(arq_unit_tests PRIVATE
+                       ${ARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=1 -DARQ_USE_CONNECTIONS=1)
 target_link_libraries(arq_unit_tests arq_test_support libCppUTest libCppUTestExt)
 if(CMAKE_GENERATOR STREQUAL Xcode)
     target_link_libraries(arq_unit_tests c++)
@@ -81,7 +85,8 @@ arq_add_test(arq_unit_tests)
 
 add_executable(arq_no_asserts_unit_tests ${ARQ_UNIT_TEST_SOURCES} $<TARGET_OBJECTS:arq_unit_test_objs>)
 add_dependencies(arq_no_asserts_unit_tests CppUTest_external)
-target_compile_options(arq_no_asserts_unit_tests PRIVATE ${ARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=0)
+target_compile_options(arq_no_asserts_unit_tests PRIVATE
+                       ${ARQ_COMMON_FLAGS} -DARQ_ASSERTS_ENABLED=0 -DARQ_USE_CONNECTIONS=1)
 target_link_libraries(arq_no_asserts_unit_tests arq_test_support libCppUTest libCppUTestExt)
 if(CMAKE_GENERATOR STREQUAL Xcode)
     target_link_libraries(arq_no_asserts_unit_tests c++)

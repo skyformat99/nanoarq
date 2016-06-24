@@ -47,7 +47,7 @@ arq_bool_t MockRecvPoll(arq__recv_wnd_t *rw,
                                                           .returnUnsignedIntValue();
 }
 
-arq_bool_t MockConnPoll(arq_conn_t *conn, arq__frame_hdr_t *sh, arq__frame_hdr_t const *rh, arq_time_t dt)
+arq_bool_t MockConnPoll(arq__conn_t *conn, arq__frame_hdr_t *sh, arq__frame_hdr_t const *rh, arq_time_t dt)
 {
     return (arq_bool_t)mock().actualCall("arq__conn_poll").withParameter("conn", conn)
                                                           .withParameter("sh", sh)

@@ -32,7 +32,8 @@ set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
                                 retransmission_timers.cpp
                                 lost_ack_payload_retransmitted_already_received.cpp
                                 losing_final_segment_in_message_triggers_nak.cpp
-                                losing_non_final_segment_triggers_nak.cpp)
+                                losing_non_final_segment_triggers_nak.cpp
+                                connect_times_out_after_n_attempts.cpp)
 
 string(REPLACE ";" " " ARQ_RUNTIME_FLAGS_STR "${ARQ_RUNTIME_FLAGS}")
 set_source_files_properties(arq_in_test_project.c PROPERTIES COMPILE_FLAGS "${ARQ_RUNTIME_FLAGS_STR}")
