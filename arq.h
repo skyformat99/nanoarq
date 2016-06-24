@@ -403,6 +403,9 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
 arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx,
                                                       arq_bool_t *out_emit,
                                                       arq_event_t *out_event);
+arq__conn_state_next_t arq__conn_poll_state_established(arq__conn_state_ctx_t *ctx,
+                                                        arq_bool_t *out_emit,
+                                                        arq_event_t *out_event);
 arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
                                                  arq_bool_t *out_emit,
                                                  arq_event_t *out_event);
@@ -1619,7 +1622,7 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
     } else if (ctx->rh->rst && ctx->rh->ack) {
         ctx->conn->u.rst_sent.recvd_rst_ack = ARQ_TRUE;
     } else if (ctx->rh->rst) { /* simultaneous open */
-    } else if (!ctx->conn->u.rst_sent.recvd_rst_ack) { /* send / resend rst to peer */
+    } else if (!ctx->conn->u.rst_sent.recvd_rst_ack) { /* send rst to peer */
         ctx->conn->u.rst_sent.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
         if ((ctx->conn->u.rst_sent.tmr == 0) && ctx->sh) {
             ctx->sh->rst = *out_emit = ARQ_TRUE;
@@ -1671,6 +1674,16 @@ arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx
     return ARQ__CONN_STATE_STOP;
 }
 
+arq__conn_state_next_t arq__conn_poll_state_established(arq__conn_state_ctx_t *ctx,
+                                                        arq_bool_t *out_emit,
+                                                        arq_event_t *out_event)
+{
+    (void)ctx;
+    (void)out_emit;
+    (void)out_event;
+    return ARQ__CONN_STATE_STOP;
+}
+
 arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
                                                  arq_bool_t *out_emit,
                                                  arq_event_t *out_event)
@@ -1682,10 +1695,11 @@ arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
 arq__conn_poll_state_cb_t ARQ_MOCKABLE(arq__conn_poll_state_cb_get)(arq_conn_state_t state)
 {
     switch (state) {
-        case ARQ_CONN_STATE_CLOSED:    return arq__conn_poll_state_closed;
-        case ARQ_CONN_STATE_RST_SENT:  return arq__conn_poll_state_rst_sent;
-        case ARQ_CONN_STATE_RST_RECVD: return arq__conn_poll_state_rst_recvd;
-        default:                       return arq__conn_poll_state_null;
+        case ARQ_CONN_STATE_CLOSED:      return arq__conn_poll_state_closed;
+        case ARQ_CONN_STATE_RST_SENT:    return arq__conn_poll_state_rst_sent;
+        case ARQ_CONN_STATE_RST_RECVD:   return arq__conn_poll_state_rst_recvd;
+        case ARQ_CONN_STATE_ESTABLISHED: return arq__conn_poll_state_established;
+        default:                         return arq__conn_poll_state_null;
     }
 }
 #endif
