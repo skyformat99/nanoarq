@@ -159,6 +159,7 @@ typedef struct arq__conn_t {
         struct {
             unsigned cnt;
             arq_time_t tmr;
+            arq_bool_t recvd_rst_ack;
         } rst_sent;
     } u;
 } arq__conn_t;
@@ -562,6 +563,7 @@ arq_err_t arq_connect(struct arq_t *arq)
     arq->conn.state = ARQ_CONN_STATE_RST_SENT;
     arq->conn.u.rst_sent.cnt = 0;
     arq->conn.u.rst_sent.tmr = 0;
+    arq->conn.u.rst_sent.recvd_rst_ack = ARQ_FALSE;
     return ARQ_OK_POLL_REQUIRED;
 #endif
 }
@@ -1595,15 +1597,14 @@ arq__conn_state_next_t arq__conn_poll_state_closed(arq__conn_state_ctx_t *ctx,
                                                    arq_event_t *out_event)
 {
     (void)out_emit;
-    if (ctx->rh->rst) {
+    if (ctx->rh->ack || ctx->rh->seg) {
+        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
+    } else if (ctx->rh->rst) {
         ctx->conn->state = ARQ_CONN_STATE_RST_RECVD;
         ctx->conn->u.rst_recvd.tmr = 0;
         ctx->conn->u.rst_recvd.cnt = 0;
         ctx->conn->u.rst_recvd.sent_rst_ack = ARQ_FALSE;
         return ARQ__CONN_STATE_CONTINUE;
-    }
-    if (ctx->rh->ack || ctx->rh->seg) {
-        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
     }
     return ARQ__CONN_STATE_STOP;
 }
@@ -1616,10 +1617,9 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
         *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
         ctx->conn->state = ARQ_CONN_STATE_CLOSED;
     } else if (ctx->rh->rst && ctx->rh->ack) {
-        /* rst/ack received from peer, send ack */
-    } else if (ctx->rh->rst) {
-        /* simultaneous open */
-    } else {
+        ctx->conn->u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    } else if (ctx->rh->rst) { /* simultaneous open */
+    } else if (!ctx->conn->u.rst_sent.recvd_rst_ack) { /* send / resend rst to peer */
         ctx->conn->u.rst_sent.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
         if ((ctx->conn->u.rst_sent.tmr == 0) && ctx->sh) {
             ctx->sh->rst = *out_emit = ARQ_TRUE;
@@ -1630,6 +1630,11 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
                 ctx->conn->state = ARQ_CONN_STATE_CLOSED;
             }
         }
+    }
+    if (ctx->sh && ctx->conn->u.rst_sent.recvd_rst_ack) { /* rst/ack received from peer, send ack */
+        ctx->sh->ack = *out_emit = ARQ_TRUE;
+        ctx->conn->state = ARQ_CONN_STATE_ESTABLISHED;
+        *out_event = ARQ_EVENT_CONN_ESTABLISHED;
     }
     return ARQ__CONN_STATE_STOP;
 }
