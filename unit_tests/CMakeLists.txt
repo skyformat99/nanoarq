@@ -56,6 +56,7 @@ add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
                                       test_conn_poll_state_rst_sent.cpp
                                       test_conn_poll_state_rst_recvd.cpp
                                       test_conn_poll_state_established.cpp
+                                      test_conn_next_poll.cpp
                                       test_frame.cpp
                                       test_cobs.cpp
                                       test_minmax.cpp

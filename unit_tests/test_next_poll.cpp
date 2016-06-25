@@ -1,11 +1,20 @@
 #include "arq_in_unit_tests.h"
+#include "arq_runtime_mock_plugin.h"
 #include <CppUTest/TestHarness.h>
+#include <CppUTestExt/MockSupport.h>
 #include <array>
 #include <cstring>
 
 TEST_GROUP(next_poll) {};
 
 namespace {
+
+arq_time_t MockConnNextPoll(arq__conn_t const *c)
+{
+    return (arq_time_t)mock().actualCall("arq__conn_next_poll")
+                             .withParameter("c", (void const *)c)
+                             .returnUnsignedIntValue();
+}
 
 struct Fixture
 {
@@ -152,21 +161,22 @@ TEST(next_poll, returns_ack_seg_timer_if_smaller_than_rtx_timer)
     CHECK_EQUAL(10, t);
 }
 
-TEST(next_poll, returns_rst_sent_timer_if_in_rst_sent_state_and_smaller_than_other_timers)
+TEST(next_poll, calls_conn_next_poll)
 {
     Fixture f;
-    f.conn.state = ARQ_CONN_STATE_RST_SENT;
-    f.conn.u.rst_sent.tmr = 7;
-    arq_time_t const t = arq__next_poll(&f.sw, &f.rw, &f.conn);
-    CHECK_EQUAL(7, t);
+    ARQ_MOCK_HOOK(arq__conn_next_poll, MockConnNextPoll);
+    mock().expectOneCall("arq__conn_next_poll").withParameter("c", (void const *)&f.conn);
+    arq__next_poll(&f.sw, &f.rw, &f.conn);
 }
 
-TEST(next_poll, ignores_rst_sent_timer_if_not_in_rst_sent_state)
+TEST(next_poll, returns_result_of_next_poll_if_smaller)
 {
     Fixture f;
-    f.conn.u.rst_sent.tmr = 7;
+    ARQ_MOCK_HOOK(arq__conn_next_poll, MockConnNextPoll);
+    mock().expectOneCall("arq__conn_next_poll").withParameter("c", (void const *)&f.conn)
+                                               .andReturnValue(12345);
     arq_time_t const t = arq__next_poll(&f.sw, &f.rw, &f.conn);
-    CHECK_EQUAL(ARQ_TIME_INFINITY, t);
+    CHECK_EQUAL(12345, t);
 }
 
 }

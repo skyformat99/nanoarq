@@ -32,6 +32,7 @@
     ARQ_MOCK(arq__recv_poll) \
     ARQ_MOCK(arq__conn_poll) \
     ARQ_MOCK(arq__conn_poll_state_cb_get) \
+    ARQ_MOCK(arq__conn_next_poll) \
     ARQ_MOCK(arq__frame_len) \
     ARQ_MOCK(arq__frame_hdr_init) \
     ARQ_MOCK(arq__frame_hdr_read) \

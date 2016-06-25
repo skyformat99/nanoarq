@@ -409,6 +409,7 @@ arq__conn_state_next_t arq__conn_poll_state_established(arq__conn_state_ctx_t *c
 arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
                                                  arq_bool_t *out_emit,
                                                  arq_event_t *out_event);
+arq_time_t arq__conn_next_poll(arq__conn_t const *c);
 #endif
 
 #define ARQ__ALIGNOF(x) __alignof__(x)
@@ -562,7 +563,6 @@ arq_err_t arq_connect(struct arq_t *arq)
     if (arq->conn.state != ARQ_CONN_STATE_CLOSED) {
         return ARQ_ERR_NOT_DISCONNECTED;
     }
-
     arq->conn.state = ARQ_CONN_STATE_RST_SENT;
     arq->conn.u.rst_sent.cnt = 0;
     arq->conn.u.rst_sent.tmr = 0;
@@ -1473,12 +1473,7 @@ arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t const *sw,
         np = arq__min(np, rw->inter_seg_ack);
     }
 #if ARQ_USE_CONNECTIONS == 1
-    switch (c->state) {
-        case ARQ_CONN_STATE_RST_SENT: {
-            np = arq__min(np, c->u.rst_sent.tmr);
-        } break;
-        default: break;
-    }
+    np = arq__min(np, arq__conn_next_poll(c));
 #endif
     return np;
 }
@@ -1678,9 +1673,7 @@ arq__conn_state_next_t arq__conn_poll_state_established(arq__conn_state_ctx_t *c
                                                         arq_bool_t *out_emit,
                                                         arq_event_t *out_event)
 {
-    (void)ctx;
-    (void)out_emit;
-    (void)out_event;
+    (void)ctx; (void)out_emit; (void)out_event;
     return ARQ__CONN_STATE_STOP;
 }
 
@@ -1701,6 +1694,24 @@ arq__conn_poll_state_cb_t ARQ_MOCKABLE(arq__conn_poll_state_cb_get)(arq_conn_sta
         case ARQ_CONN_STATE_ESTABLISHED: return arq__conn_poll_state_established;
         default:                         return arq__conn_poll_state_null;
     }
+}
+
+arq_time_t ARQ_MOCKABLE(arq__conn_next_poll)(arq__conn_t const *c)
+{
+    arq_time_t np = ARQ_TIME_INFINITY;
+    ARQ_ASSERT(c);
+    switch (c->state) {
+        case ARQ_CONN_STATE_RST_SENT: {
+            if (!c->u.rst_sent.recvd_rst_ack) {
+                np = arq__min(np, c->u.rst_sent.tmr);
+            }
+        } break;
+        case ARQ_CONN_STATE_RST_RECVD: {
+            np = arq__min(np, c->u.rst_recvd.tmr);
+        } break;
+        default: break;
+    }
+    return np;
 }
 #endif
 
