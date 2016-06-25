@@ -14,6 +14,8 @@ struct Fixture
         c.state = ARQ_CONN_STATE_RST_SENT;
         c.u.rst_sent.tmr = 0;
         c.u.rst_sent.cnt = 0;
+        c.u.rst_sent.recvd_rst_ack = ARQ_FALSE;
+        c.u.rst_sent.simultaneous = ARQ_FALSE;
         cfg.connection_rst_period = 500;
         cfg.connection_rst_attempts = 8;
         arq__frame_hdr_init(&sh);
@@ -127,6 +129,15 @@ TEST(conn_poll_state_rst_sent, transitions_to_closed_if_connect_fails)
     CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, f.c.state);
 }
 
+TEST(conn_poll_state_rst_sent, doesnt_send_pending_ack_if_bad_header_arrives)
+{
+    Fixture f;
+    f.c.u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    f.rh.seg = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_FALSE, f.emit);
+}
+
 TEST(conn_poll_state_rst_sent, returns_stop_when_not_transitioning)
 {
     Fixture f;
@@ -142,6 +153,90 @@ TEST(conn_poll_state_rst_sent, returns_stop_when_transitioning_to_closed)
     f.c.u.rst_sent.tmr = f.ctx.dt;
     arq__conn_state_next_t const go = arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
     CHECK_EQUAL(ARQ__CONN_STATE_STOP, go);
+}
+
+TEST(conn_poll_state_rst_sent, transitions_to_close_and_raises_desync_if_ack_without_rst_arrives)
+{
+    Fixture f;
+    f.rh.ack = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, f.c.state);
+    CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_DESYNC, f.e);
+}
+
+TEST(conn_poll_state_rst_sent, transitions_to_close_and_raises_desync_if_seg_arrives)
+{
+    Fixture f;
+    f.rh.seg = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, f.c.state);
+    CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_DESYNC, f.e);
+}
+
+TEST(conn_poll_state_rst_sent, receiving_rst_ack_sets_recvd_to_true)
+{
+    Fixture f;
+    f.rh.rst = ARQ_TRUE;
+    f.rh.ack = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK(f.c.u.rst_sent.recvd_rst_ack);
+    CHECK_FALSE(f.c.u.rst_sent.simultaneous);
+}
+
+TEST(conn_poll_state_rst_sent, receiving_rst_sets_simultaneous_to_true)
+{
+    Fixture f;
+    f.rh.rst = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK(f.c.u.rst_sent.simultaneous);
+    CHECK_FALSE(f.c.u.rst_sent.recvd_rst_ack);
+}
+
+TEST(conn_poll_state_rst_sent, writes_ack_to_send_header_if_recvd_rst_ack_is_true)
+{
+    Fixture f;
+    f.c.u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK(f.sh.ack);
+}
+
+TEST(conn_poll_state_rst_sent, writes_ack_to_send_header_if_recvd_simultaneous_is_true)
+{
+    Fixture f;
+    f.c.u.rst_sent.simultaneous = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK(f.sh.ack);
+}
+
+TEST(conn_poll_state_rst_sent, sets_emit_flag_when_writing_ack)
+{
+    Fixture f;
+    f.c.u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    f.emit = ARQ_FALSE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_TRUE, f.emit);
+}
+
+TEST(conn_poll_state_rst_sent, transitions_to_established_after_sending_ack)
+{
+    Fixture f;
+    f.c.u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_ESTABLISHED, f.c.state);
+}
+
+TEST(conn_poll_state_rst_sent, waits_for_non_null_send_header_to_send_ack_and_transition)
+{
+    Fixture f;
+    f.ctx.sh = nullptr;
+    f.c.u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_RST_SENT, f.c.state);
+    f.ctx.sh = &f.sh;
+    arq__conn_poll_state_rst_sent(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_ESTABLISHED, f.c.state);
 }
 
 }

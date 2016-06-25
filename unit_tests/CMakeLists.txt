@@ -54,10 +54,14 @@ add_library(arq_unit_test_objs OBJECT test_mock_hooks.cpp
                                       test_conn_poll_state_cb_get.cpp
                                       test_conn_poll_state_closed.cpp
                                       test_conn_poll_state_rst_sent.cpp
+                                      test_conn_poll_state_rst_recvd.cpp
+                                      test_conn_poll_state_established.cpp
+                                      test_conn_next_poll.cpp
                                       test_frame.cpp
                                       test_cobs.cpp
                                       test_minmax.cpp
                                       test_saturated_subtraction.cpp
+                                      test_bool.cpp
                                       test_crc32.cpp)
 
 target_compile_options(arq_unit_test_objs PRIVATE ${ARQ_COMMON_FLAGS})

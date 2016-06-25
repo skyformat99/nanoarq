@@ -59,5 +59,23 @@ TEST(conn_poll_state_closed, returns_continue_if_transitioning)
     CHECK_EQUAL(ARQ__CONN_STATE_CONTINUE, next);
 }
 
+TEST(conn_poll_state_closed, raises_desync_event_if_ack_arrives)
+{
+    Fixture f;
+    f.rh.ack = ARQ_TRUE;
+    arq__conn_poll_state_closed(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, f.c.state);
+    CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_DESYNC, f.e);
+}
+
+TEST(conn_poll_state_closed, raises_desync_event_if_seg_arrives)
+{
+    Fixture f;
+    f.rh.seg = ARQ_TRUE;
+    arq__conn_poll_state_closed(&f.ctx, &f.emit, &f.e);
+    CHECK_EQUAL(ARQ_CONN_STATE_CLOSED, f.c.state);
+    CHECK_EQUAL(ARQ_EVENT_CONN_FAILED_DESYNC, f.e);
+}
+
 }
 

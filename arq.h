@@ -60,6 +60,7 @@ typedef enum {
     ARQ_EVENT_NONE,
     ARQ_EVENT_CONN_ESTABLISHED,
     ARQ_EVENT_CONN_FAILED_NO_RESPONSE,
+    ARQ_EVENT_CONN_FAILED_DESYNC,
     ARQ_EVENT_CONN_CLOSED,
     ARQ_EVENT_CONN_RESET_BY_PEER,
     ARQ_EVENT_CONN_LOST_PEER_TIMEOUT
@@ -158,6 +159,8 @@ typedef struct arq__conn_t {
         struct {
             unsigned cnt;
             arq_time_t tmr;
+            arq_bool_t recvd_rst_ack;
+            arq_bool_t simultaneous;
         } rst_sent;
     } u;
 } arq__conn_t;
@@ -401,9 +404,13 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
 arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx,
                                                       arq_bool_t *out_emit,
                                                       arq_event_t *out_event);
+arq__conn_state_next_t arq__conn_poll_state_established(arq__conn_state_ctx_t *ctx,
+                                                        arq_bool_t *out_emit,
+                                                        arq_event_t *out_event);
 arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
                                                  arq_bool_t *out_emit,
                                                  arq_event_t *out_event);
+arq_time_t arq__conn_next_poll(arq__conn_t const *c);
 #endif
 
 #define ARQ__ALIGNOF(x) __alignof__(x)
@@ -557,10 +564,11 @@ arq_err_t arq_connect(struct arq_t *arq)
     if (arq->conn.state != ARQ_CONN_STATE_CLOSED) {
         return ARQ_ERR_NOT_DISCONNECTED;
     }
-
     arq->conn.state = ARQ_CONN_STATE_RST_SENT;
     arq->conn.u.rst_sent.cnt = 0;
     arq->conn.u.rst_sent.tmr = 0;
+    arq->conn.u.rst_sent.recvd_rst_ack = ARQ_FALSE;
+    arq->conn.u.rst_sent.simultaneous = ARQ_FALSE;
     return ARQ_OK_POLL_REQUIRED;
 #endif
 }
@@ -1467,12 +1475,7 @@ arq_time_t ARQ_MOCKABLE(arq__next_poll)(arq__send_wnd_t const *sw,
         np = arq__min(np, rw->inter_seg_ack);
     }
 #if ARQ_USE_CONNECTIONS == 1
-    switch (c->state) {
-        case ARQ_CONN_STATE_RST_SENT: {
-            np = arq__min(np, c->u.rst_sent.tmr);
-        } break;
-        default: break;
-    }
+    np = arq__min(np, arq__conn_next_poll(c));
 #endif
     return np;
 }
@@ -1594,8 +1597,9 @@ arq__conn_state_next_t arq__conn_poll_state_closed(arq__conn_state_ctx_t *ctx,
                                                    arq_event_t *out_event)
 {
     (void)out_emit;
-    (void)out_event;
-    if (ctx->rh->rst) {
+    if (ctx->rh->ack || ctx->rh->seg) {
+        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
+    } else if (ctx->rh->rst) {
         ctx->conn->state = ARQ_CONN_STATE_RST_RECVD;
         ctx->conn->u.rst_recvd.tmr = 0;
         ctx->conn->u.rst_recvd.cnt = 0;
@@ -1609,15 +1613,20 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
                                                      arq_bool_t *out_emit,
                                                      arq_event_t *out_event)
 {
-    if (ctx->rh->rst && ctx->rh->ack) {
-        /* rst/ack received from peer, send ack */
-    } else if (ctx->rh->rst) {
-        /* simultaneous open */
-    } else {
+    arq_bool_t send_ack = ARQ_FALSE;
+    if (ctx->rh->seg || (ctx->rh->ack && !ctx->rh->rst)) {
+        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
+        ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+        return ARQ__CONN_STATE_STOP;
+    }
+    if (ctx->rh->rst && ctx->rh->ack) { /* rst/ack response from peer */
+        ctx->conn->u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    } else if (ctx->rh->rst) { /* simultaneous open */
+        ctx->conn->u.rst_sent.simultaneous = ARQ_TRUE;
+    } else if (!ctx->conn->u.rst_sent.recvd_rst_ack) { /* send rst to peer */
         ctx->conn->u.rst_sent.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
         if ((ctx->conn->u.rst_sent.tmr == 0) && ctx->sh) {
-            ctx->sh->rst = ARQ_TRUE;
-            *out_emit = ARQ_TRUE;
+            ctx->sh->rst = *out_emit = ARQ_TRUE;
             ++ctx->conn->u.rst_sent.cnt;
             ctx->conn->u.rst_sent.tmr = ctx->cfg->connection_rst_period;
             if (ctx->conn->u.rst_sent.cnt > ctx->cfg->connection_rst_attempts) {
@@ -1626,6 +1635,12 @@ arq__conn_state_next_t arq__conn_poll_state_rst_sent(arq__conn_state_ctx_t *ctx,
             }
         }
     }
+    send_ack = ctx->conn->u.rst_sent.simultaneous || ctx->conn->u.rst_sent.recvd_rst_ack;
+    if (ctx->sh && send_ack) { /* rst/ack received from peer, send ack */
+        ctx->sh->ack = *out_emit = ARQ_TRUE;
+        ctx->conn->state = ARQ_CONN_STATE_ESTABLISHED;
+        *out_event = ARQ_EVENT_CONN_ESTABLISHED;
+    }
     return ARQ__CONN_STATE_STOP;
 }
 
@@ -1633,12 +1648,21 @@ arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx
                                                       arq_bool_t *out_emit,
                                                       arq_event_t *out_event)
 {
-    if (ctx->conn->u.rst_recvd.sent_rst_ack) {
-        if (ctx->rh->ack) {
+    if (ctx->rh->rst || ctx->rh->seg) {
+        ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+        *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
+        return ARQ__CONN_STATE_STOP;
+    }
+    if (ctx->rh->ack) {
+        if (ctx->conn->u.rst_recvd.sent_rst_ack) {
             ctx->conn->state = ARQ_CONN_STATE_ESTABLISHED;
+            *out_event = ARQ_EVENT_CONN_ESTABLISHED;
+        } else {
+            ctx->conn->state = ARQ_CONN_STATE_CLOSED;
+            *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
         }
     } else {
-        ctx->conn->u.rst_recvd.tmr = arq__sub_sat(ctx->conn->u.rst_sent.tmr, ctx->dt);
+        ctx->conn->u.rst_recvd.tmr = arq__sub_sat(ctx->conn->u.rst_recvd.tmr, ctx->dt);
         if ((ctx->conn->u.rst_recvd.tmr == 0) && ctx->sh) {
             ctx->sh->rst = ctx->sh->ack = *out_emit = ctx->conn->u.rst_recvd.sent_rst_ack = ARQ_TRUE;
             ++ctx->conn->u.rst_recvd.cnt;
@@ -1652,24 +1676,49 @@ arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx
     return ARQ__CONN_STATE_STOP;
 }
 
+arq__conn_state_next_t arq__conn_poll_state_established(arq__conn_state_ctx_t *ctx,
+                                                        arq_bool_t *out_emit,
+                                                        arq_event_t *out_event)
+{
+    (void)ctx; (void)out_emit; (void)out_event;
+    return ARQ__CONN_STATE_STOP;
+}
+
 arq__conn_state_next_t arq__conn_poll_state_null(arq__conn_state_ctx_t *ctx,
                                                  arq_bool_t *out_emit,
                                                  arq_event_t *out_event)
 {
-    (void)ctx;
-    (void)out_emit;
-    (void)out_event;
+    (void)ctx; (void)out_emit; (void)out_event;
     return ARQ__CONN_STATE_STOP;
 }
 
 arq__conn_poll_state_cb_t ARQ_MOCKABLE(arq__conn_poll_state_cb_get)(arq_conn_state_t state)
 {
     switch (state) {
-        case ARQ_CONN_STATE_CLOSED:    return arq__conn_poll_state_closed;
-        case ARQ_CONN_STATE_RST_SENT:  return arq__conn_poll_state_rst_sent;
-        case ARQ_CONN_STATE_RST_RECVD: return arq__conn_poll_state_rst_recvd;
-        default:                       return arq__conn_poll_state_null;
+        case ARQ_CONN_STATE_CLOSED:      return arq__conn_poll_state_closed;
+        case ARQ_CONN_STATE_RST_SENT:    return arq__conn_poll_state_rst_sent;
+        case ARQ_CONN_STATE_RST_RECVD:   return arq__conn_poll_state_rst_recvd;
+        case ARQ_CONN_STATE_ESTABLISHED: return arq__conn_poll_state_established;
+        default:                         return arq__conn_poll_state_null;
     }
+}
+
+arq_time_t ARQ_MOCKABLE(arq__conn_next_poll)(arq__conn_t const *c)
+{
+    arq_time_t np = ARQ_TIME_INFINITY;
+    ARQ_ASSERT(c);
+    switch (c->state) {
+        case ARQ_CONN_STATE_RST_SENT: {
+            if (!c->u.rst_sent.recvd_rst_ack) {
+                np = arq__min(np, c->u.rst_sent.tmr);
+            }
+        } break;
+        case ARQ_CONN_STATE_RST_RECVD: {
+            np = arq__min(np, c->u.rst_recvd.tmr);
+        } break;
+        default: break;
+    }
+    return np;
 }
 #endif
 

@@ -45,6 +45,24 @@ TEST(connect, sets_tmr_to_zero)
     CHECK_EQUAL(0, arq.conn.u.rst_sent.tmr);
 }
 
+TEST(connect, sets_recvd_rst_ack_to_false)
+{
+    arq_t arq;
+    arq.conn.state = ARQ_CONN_STATE_CLOSED;
+    arq.conn.u.rst_sent.recvd_rst_ack = ARQ_TRUE;
+    arq_connect(&arq);
+    CHECK_EQUAL(ARQ_FALSE, arq.conn.u.rst_sent.recvd_rst_ack);
+}
+
+TEST(connect, sets_simultaneous_to_false)
+{
+    arq_t arq;
+    arq.conn.state = ARQ_CONN_STATE_CLOSED;
+    arq.conn.u.rst_sent.simultaneous = ARQ_TRUE;
+    arq_connect(&arq);
+    CHECK_EQUAL(ARQ_FALSE, arq.conn.u.rst_sent.simultaneous);
+}
+
 TEST(connect, returns_success)
 {
     arq_t arq;
