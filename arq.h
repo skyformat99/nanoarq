@@ -1709,7 +1709,7 @@ arq_time_t ARQ_MOCKABLE(arq__conn_next_poll)(arq__conn_t const *c)
     ARQ_ASSERT(c);
     switch (c->state) {
         case ARQ_CONN_STATE_RST_SENT: {
-            if (!c->u.rst_sent.recvd_rst_ack) {
+            if (!c->u.rst_sent.recvd_rst_ack && !c->u.rst_sent.simultaneous) {
                 np = arq__min(np, c->u.rst_sent.tmr);
             }
         } break;
