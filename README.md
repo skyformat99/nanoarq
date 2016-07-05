@@ -13,7 +13,7 @@ The nanoarq runtime is written in 99% ANSI C90 and delivered as a single header 
 nanoarq compiles to roughly 5KB of ARM Thumb2 object code, and its runtime memory footprint is determined by the user via runtime configuration. nanoarq performs no memory allocation, operating entirely in the user-provided seat it gets at initialization.
 
 ### Motivation
-Sometimes there's a need for reliable communications over strange or non-traditional transports that don't come with reliability guarantees. There don't appear to be easily-reused embeddable open-source implementations of reliable protocols, so I wrote one.
+Sometimes there's a need for reliable communications over strange or nontraditional transports that don't come with reliability guarantees. There don't appear to be easily-reused embeddable open-source implementations of reliable protocols, so I wrote one.
 
 Interesting places I've wished I'd had nanoarq:
 * Inter-chip UART with only TX and RX signals.
