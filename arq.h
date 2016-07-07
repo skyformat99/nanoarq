@@ -1648,7 +1648,7 @@ arq__conn_state_next_t arq__conn_poll_state_rst_recvd(arq__conn_state_ctx_t *ctx
                                                       arq_bool_t *out_emit,
                                                       arq_event_t *out_event)
 {
-    if (ctx->rh->rst || ctx->rh->seg) {
+    if (ctx->rh->seg) {
         ctx->conn->state = ARQ_CONN_STATE_CLOSED;
         *out_event = ARQ_EVENT_CONN_FAILED_DESYNC;
         return ARQ__CONN_STATE_STOP;
