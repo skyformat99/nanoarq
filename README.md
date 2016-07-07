@@ -1,4 +1,4 @@
-nanoarq [![](https://travis-ci.org/charlesnicholson/nanoarq.svg?branch=master)](https://travis-ci.org/charlesnicholson/nanoarq) [![](https://img.shields.io/badge/license-public_domain-brightgreen.svg)](https://github.com/charlesnicholson/nanoarq/blob/master/LICENSE)
+nanoarq [![](https://travis-ci.org/charlesnicholson/nanoarq.svg?branch=master)](https://travis-ci.org/charlesnicholson/nanoarq) [![](https://img.shields.io/badge/license-public_domain-brightgreen.svg)](https://github.com/charlesnicholson/nanoarq/blob/master/LICENSE) [![](https://img.shields.io/badge/tip-%24charles-brightgreen.svg)](https://cash.me/$charles)
 -
 
 ### **current nanoarq status:**
