@@ -80,4 +80,5 @@ include_directories(${CMAKE_SOURCE_DIR})
 add_subdirectory(compilation_tests)
 add_subdirectory(unit_tests)
 add_subdirectory(functional_tests)
+add_subdirectory(samples)
 
