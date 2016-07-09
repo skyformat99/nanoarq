@@ -14,5 +14,7 @@ set_source_files_properties(file_transfer_arq.cpp PROPERTIES COMPILE_FLAGS "${AR
 
 set(FILE_TRANSFER_SOURCES main.cpp)
 add_executable(file_transfer ${FILE_TRANSFER_SOURCES} ${ARQ_SOURCES})
+target_compile_options(file_transfer PRIVATE ${ARQ_COMMON_FLAGS})
 set_target_properties(file_transfer PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+arq_depend_on_test(file_transfer arq_functional_tests)
 

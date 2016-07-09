@@ -61,6 +61,10 @@ function(arq_add_test TEST_TARGET_EXECUTABLE)
                        COMMENT "Running ${TEST_TARGET_EXECUTABLE}")
 endfunction()
 
+macro(arq_depend_on_test TARGET TEST)
+    add_dependencies(${TARGET} RUN_${TEST}_TESTS)
+endmacro()
+
 ################ Arq compilation flags
 
 set(ARQ_RUNTIME_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
