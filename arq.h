@@ -995,7 +995,7 @@ unsigned arq__ctz(unsigned x)
 	return idx;
 #else
 	(void)idx;
-	return __builtin_ctz(x);
+	return (unsigned)__builtin_ctz(x);
 #endif
 }
 
