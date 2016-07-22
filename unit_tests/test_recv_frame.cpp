@@ -43,6 +43,7 @@ TEST(recv_frame, init_resets_frame)
 
 struct Fixture
 {
+	enum { BUFSIZE = 254 };
     Fixture()
     {
         f.buf = buf.data();
@@ -51,7 +52,7 @@ struct Fixture
         std::fill(std::begin(buf), std::end(buf), 0xFF);
     }
     arq__recv_frame_t f;
-    std::array< arq_uchar_t, 254 > buf;
+    std::array< arq_uchar_t, BUFSIZE > buf;
     std::vector< arq_uchar_t > fill;
 };
 
@@ -92,7 +93,7 @@ TEST(recv_frame, fill_buffer_without_zeroes_copies_buffer_in)
 TEST(recv_frame, fill_buffer_without_zeroes_doesnt_overflow_buffer)
 {
     Fixture f;
-    std::array< arq_uchar_t, f.buf.size() + 1 > sentinel_buf;
+    std::array< arq_uchar_t, Fixture::BUFSIZE + 1 > sentinel_buf;
     sentinel_buf[sentinel_buf.size() - 1] = 0x25;
     f.f.buf = sentinel_buf.data();
     PopulateFill(f, f.buf.size() * 2, false);
@@ -125,7 +126,7 @@ TEST(recv_frame, fill_multiple_buffers_without_zeroes_accumulates_into_frame_len
 TEST(recv_frame, fill_multiple_buffers_without_zeroes_doesnt_overflow_buffer)
 {
     Fixture f;
-    std::array< arq_uchar_t, f.buf.size() + 1 > sentinel_buf;
+    std::array< arq_uchar_t, Fixture::BUFSIZE + 1 > sentinel_buf;
     sentinel_buf[sentinel_buf.size() - 1] = 0x25;
     f.f.buf = sentinel_buf.data();
     PopulateFill(f, 100, false);

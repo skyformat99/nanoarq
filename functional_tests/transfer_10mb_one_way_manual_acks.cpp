@@ -19,7 +19,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
 
     std::vector< unsigned char > send_test_data(1024 * 1024 * 10);
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
-        uint16_t const v = i;
+        arq_uint16_t const v = (arq_uint16_t)i;
         std::memcpy(&send_test_data[i * 2], &v, sizeof(v));
     }
 
@@ -80,7 +80,7 @@ TEST(functional, transfer_10mb_one_way_manual_acks)
                 arq__frame_read_result_t const r =
                     arq__frame_read(decode.data(), frame_len, cfg.checksum, &h, &seg);
                 CHECK(ARQ_SUCCEEDED(r));
-                unsigned const ack_vec = (1 << (h.seg_id + 1)) - 1u;
+                arq_uint16_t const ack_vec = (1 << (h.seg_id + 1)) - 1u;
                 arq__send_wnd_ack(&sender.arq->send_wnd, h.seq_num, ack_vec);
             }
 

@@ -8,7 +8,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED on)
 
 include_directories(${CPPUTEST_INCLUDE_DIR})
 
-set(ARQ_FUNCTIONAL_TEST_SOURCES main.cpp
+set(ARQ_FUNCTIONAL_TEST_SOURCES ${CMAKE_SOURCE_DIR}/arq.h
+								main.cpp
                                 functional_tests.h
                                 arq_in_functional_tests.h
                                 arq_in_functional_tests.c
@@ -44,5 +45,7 @@ add_executable(arq_functional_tests ${ARQ_FUNCTIONAL_TEST_SOURCES})
 target_compile_options(arq_functional_tests PRIVATE ${ARQ_COMMON_FLAGS})
 add_dependencies(arq_functional_tests CppUTest_external all_unit_tests)
 target_link_libraries(arq_functional_tests libCppUTest libCppUTestExt)
+if (MSVC)
+	target_link_libraries(arq_functional_tests winmm)
+endif()
 arq_add_test(arq_functional_tests)
-

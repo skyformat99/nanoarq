@@ -68,7 +68,7 @@ TEST(functional, recv_full_window_one_segment_at_a_time)
         arq_err_t const e = arq_recv(ctx.arq, recv.data(), recv.size(), &recvd);
         CHECK(ARQ_SUCCEEDED(e));
         CHECK(recvd > 0);
-        std::copy(&recv[0], &recv[recvd], std::back_inserter(test_output));
+        std::copy(recv.data(), recv.data() + recvd, std::back_inserter(test_output));
     }
     CHECK_EQUAL(test_input.size(), test_output.size());
     MEMCMP_EQUAL(test_input.data(), test_output.data(), test_input.size());
