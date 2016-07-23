@@ -18,8 +18,8 @@ TEST(send_wnd_ptr, rst_sets_valid_to_zero)
 TEST(send_wnd_ptr, rst_sets_seq_and_seg_to_zero)
 {
     arq__send_wnd_ptr_t p;
-	p.valid = ARQ_TRUE;
-	p.seq = p.seg = 1;
+    p.valid = ARQ_TRUE;
+    p.seq = p.seg = 1;
     arq__send_wnd_ptr_rst(&p);
     CHECK_EQUAL(0, p.seq);
     CHECK_EQUAL(0, p.seg);
@@ -351,8 +351,8 @@ TEST(send_wnd_ptr, next_returns_one_when_finishing_final_msg)
 {
     Fixture f;
     f.sw.w.size = 2;
-	f.sw.w.msg[0].len = f.sw.w.msg[0].full_ack_vec = 1;
-	f.sw.rtx[0] = 1;
+    f.sw.w.msg[0].len = f.sw.w.msg[0].full_ack_vec = 1;
+    f.sw.rtx[0] = 1;
     f.sw.w.msg[1].len = f.sw.w.msg[1].full_ack_vec = 1;
     f.p.valid = 1;
     f.p.seq = 1;
