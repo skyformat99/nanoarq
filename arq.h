@@ -451,12 +451,12 @@ arq_time_t arq__conn_next_poll(arq__conn_t const *c);
 #endif
 
 #ifdef _MSC_VER
-	#include <intrin.h>
-	#define ARQ__EXPECT(x, e) (x)
-	#define ARQ__ALIGNOF(x) (sizeof(x) - sizeof(x) + __alignof(x))
+    #include <intrin.h>
+    #define ARQ__EXPECT(x, e) (x)
+    #define ARQ__ALIGNOF(x) (sizeof(x) - sizeof(x) + __alignof(x))
 #else
-	#define ARQ__EXPECT(x, e) __builtin_expect((x), (e))
-	#define ARQ__ALIGNOF(x) __alignof__(x)
+    #define ARQ__EXPECT(x, e) __builtin_expect((x), (e))
+    #define ARQ__ALIGNOF(x) __alignof__(x)
 #endif
 
 typedef ARQ_UINTPTR_TYPE arq_uintptr_t;
@@ -625,12 +625,12 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
     if (!arq || !out_event || !out_send_ready || !out_recv_ready || !out_next_poll) {
         return ARQ_ERR_INVALID_PARAM;
     }
-	arq__frame_hdr_init(&sh);
-	arq__frame_hdr_init(&rh);
-	if ((arq->send_frame.len == 0) && (arq->send_frame.state != ARQ__SEND_FRAME_STATE_HELD)) {
+    arq__frame_hdr_init(&sh);
+    arq__frame_hdr_init(&rh);
+    if ((arq->send_frame.len == 0) && (arq->send_frame.state != ARQ__SEND_FRAME_STATE_HELD)) {
         psh = &sh;
     }
-	emit |= arq__recv_poll(&arq->recv_wnd,
+    emit |= arq__recv_poll(&arq->recv_wnd,
                            &arq->recv_frame,
                            arq->cfg.checksum,
                            psh,
@@ -651,8 +651,11 @@ arq_err_t arq_backend_poll(struct arq_t *arq,
             arq__wnd_seg(&arq->send_wnd.w, sh.seq_num, sh.seg_id, &seg, &psh->seg_len);
             ARQ_ASSERT(psh->seg_len);
         }
-        arq->send_frame.len =
-            (arq_uint16_t)arq__frame_write(psh, seg, arq->cfg.checksum, arq->send_frame.buf, arq->send_frame.cap);
+        arq->send_frame.len = (arq_uint16_t)arq__frame_write(psh,
+                                                             seg,
+                                                             arq->cfg.checksum,
+                                                             arq->send_frame.buf,
+                                                             arq->send_frame.cap);
         arq->send_frame.state = ARQ__SEND_FRAME_STATE_FREE;
     }
     *out_next_poll = arq__next_poll(&arq->send_wnd, &arq->recv_wnd, &arq->conn);
@@ -988,14 +991,14 @@ arq_uint32_t arq__sub_sat(arq_uint32_t x, arq_uint32_t y)
 
 unsigned arq__ctz(unsigned x)
 {
-	unsigned long idx;
-	ARQ_ASSERT(x);
+    unsigned long idx;
+    ARQ_ASSERT(x);
 #ifdef _MSC_VER
-	_BitScanForward(&idx, x);
-	return idx;
+    _BitScanForward(&idx, x);
+    return idx;
 #else
-	(void)idx;
-	return (unsigned)__builtin_ctz(x);
+    (void)idx;
+    return (unsigned)__builtin_ctz(x);
 #endif
 }
 

@@ -29,5 +29,12 @@ TEST(ctz, only_highest_bit_set_returns_unsigned_bit_len_minus_one)
     CHECK_EQUAL((sizeof(unsigned) * 8) - 1u, arq__ctz(max & ~(max >> 1u)));
 }
 
+TEST(ctz, test_all_single_bits)
+{
+    for (auto i = 0u; i < sizeof(unsigned) * 8; ++i) {
+        CHECK_EQUAL(i, arq__ctz(1u << i));
+    }
+}
+
 }
 
