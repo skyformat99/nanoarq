@@ -71,18 +71,18 @@ endfunction()
 ################ Arq compilation flags
 
 if (MSVC)
-	set(ARQ_COMMON_FLAGS /W4 /wd4127)
+    set(ARQ_COMMON_FLAGS /W4 /wd4127)
 else()
-	set(ARQ_RUNTIME_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
-	set(ARQ_COMMON_FLAGS -Wall
-		                 -Wextra
-			             -Wunreachable-code
-				         -Wshadow
-					     -Wcast-align
-						 -Wcast-qual
-						 -Wstrict-aliasing
-						 -Wmissing-braces
-						 -march=native)
+    set(ARQ_RUNTIME_FLAGS -pedantic -ansi -fstrict-aliasing -Wsign-conversion)
+    set(ARQ_COMMON_FLAGS -Wall
+                         -Wextra
+                         -Wunreachable-code
+                         -Wshadow
+                         -Wcast-align
+                         -Wcast-qual
+                         -Wstrict-aliasing
+                         -Wmissing-braces
+                         -march=native)
 endif()
 
 include_directories(${CMAKE_SOURCE_DIR})
@@ -90,8 +90,8 @@ include_directories(${CMAKE_SOURCE_DIR})
 ################ Targets
 
 if (NOT MSVC)
-	add_subdirectory(compilation_tests)
+    add_subdirectory(compilation_tests)
+    add_subdirectory(unit_tests)
 endif()
 
-add_subdirectory(unit_tests)
 add_subdirectory(functional_tests)
