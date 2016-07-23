@@ -33,14 +33,14 @@ TEST(functional, recv_10mb_through_window)
     size_t test_input_offset = 0;
     while (test_output.size() < test_input.size()) {
         for (auto i = 0u; i < cfg.recv_window_size_in_messages; ++i) {
-            arq_bool_t recv_pending;
+            arq_bool_t recv_pending = ARQ_FALSE;
             for (auto seg = 0u; seg < cfg.message_length_in_segments; ++seg) {
                 h.seg = 1;
                 h.seg_len = arq__min(cfg.segment_length_in_bytes, test_input.size() - test_input_offset);
                 h.seg_id = seg;
                 frame.resize(arq__frame_len(h.seg_len));
                 unsigned const frame_len = arq__frame_write(&h,
-                                                            &test_input[test_input_offset],
+                                                            test_input.data() + test_input_offset,
                                                             arq_crc32,
                                                             frame.data(),
                                                             frame.size());
@@ -67,7 +67,7 @@ TEST(functional, recv_10mb_through_window)
             std::array< arq_uchar_t, 256 > recv;
             arq_err_t const e = arq_recv(ctx.arq, recv.data(), recv.size(), &bytes_recvd_from_window);
             CHECK(ARQ_SUCCEEDED(e));
-            std::copy(&recv[0], &recv[bytes_recvd_from_window], std::back_inserter(test_output));
+            std::copy(recv.data(), recv.data() + bytes_recvd_from_window, std::back_inserter(test_output));
         } while (bytes_recvd_from_window);
     }
     CHECK_EQUAL(test_input.size(), test_output.size());

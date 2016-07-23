@@ -23,7 +23,7 @@ TEST(functional, ack_full_window)
                                               cfg.send_window_size_in_messages);
 
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
-        uint16_t const v = i;
+        arq_uint16_t const v = (arq_uint16_t)i;
         std::memcpy(&send_test_data[i * 2], &v, sizeof(v));
     }
 

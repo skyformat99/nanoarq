@@ -19,7 +19,7 @@ TEST(functional, send_full_window)
                                               cfg.message_length_in_segments *
                                               cfg.segment_length_in_bytes);
     for (auto i = 0u; i < send_test_data.size() / 2; ++i) {
-        uint16_t const v = i;
+        arq_uint16_t const v = (arq_uint16_t)i;
         std::memcpy(&send_test_data[i * 2], &v, sizeof(v));
     }
 

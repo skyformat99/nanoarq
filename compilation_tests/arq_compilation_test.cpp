@@ -34,4 +34,3 @@ using namespace std;
 
 #define ARQ_IMPLEMENTATION
 #include "arq.h"
-

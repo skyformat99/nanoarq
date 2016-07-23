@@ -19,7 +19,7 @@ struct UninitializedFixture
 {
     UninitializedFixture()
     {
-        rw.w.cap = msg.size();
+        rw.w.cap = (arq_uint16_t)msg.size();
         buf.resize(1024 * 1024);
         rw.ack = ack.data();
         rw.w.msg = msg.data();
@@ -293,7 +293,7 @@ TEST(recv_wnd, frame_doesnt_slide_window_when_msg_arrives_and_window_can_grow_to
 {
     Fixture f;
     f.rw.w.size = f.rw.w.cap - 1;
-    unsigned const slide = f.rw.w.size;
+    arq_uint16_t const slide = f.rw.w.size;
     f.rw.slide = slide;
     f.seg.resize(1);
     arq__recv_wnd_frame(&f.rw, f.rw.w.size, 0, 1, f.seg.data(), f.seg.size(), 0);
@@ -448,11 +448,11 @@ void PopulateReceiveWindow(Fixture& f, int bytes)
         auto const max = f.rw.w.cap * f.rw.w.msg_len;
         std::memcpy(&f.buf[(offset + (i * 2)) % max], &x, sizeof(x));
     }
-    f.rw.w.size = (bytes + f.rw.w.msg_len - 1) / f.rw.w.msg_len;
+    f.rw.w.size = (arq_uint16_t)((bytes + f.rw.w.msg_len - 1) / f.rw.w.msg_len);
     int idx = 0;
     while (bytes) {
         arq__msg_t *m = &f.rw.w.msg[(f.rw.w.seq + idx++) % f.rw.w.cap];
-        m->len = arq__min(bytes, f.rw.w.msg_len);
+        m->len = (arq_uint16_t)arq__min(bytes, f.rw.w.msg_len);
         m->cur_ack_vec = m->full_ack_vec = f.rw.w.full_ack_vec;
         bytes -= m->len;
     }
@@ -568,7 +568,7 @@ TEST(recv_wnd, recv_dst_two_full_messages_returns_two_times_msg_len)
     Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len * 2);
     unsigned const recv_size = arq__recv_wnd_recv(&f.rw, f.recv.data(), f.recv.size());
-    CHECK_EQUAL(f.rw.w.msg_len * 2, recv_size);
+    CHECK_EQUAL((unsigned)(f.rw.w.msg_len * 2), recv_size);
 }
 
 TEST(recv_wnd, recv_full_msg_sets_copy_seq_to_base_seq_plus_one)
@@ -647,7 +647,7 @@ TEST(recv_wnd, recv_two_messages_one_byte_at_a_time)
     Fixture f;
     PopulateReceiveWindow(f, f.rw.w.msg_len * 2);
     CHECK_EQUAL(2, f.rw.w.size);
-    for (auto i = 0u; i < f.rw.w.msg_len * 2; ++i) {
+    for (auto i = 0u; i < (unsigned)(f.rw.w.msg_len * 2); ++i) {
         unsigned const n = arq__recv_wnd_recv(&f.rw, &f.recv[i], 1);
         CHECK_EQUAL(1, n);
     }

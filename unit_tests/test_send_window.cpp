@@ -293,7 +293,7 @@ TEST(send_wnd, send_copies_data_to_current_message_space_in_buf)
 TEST(send_wnd, send_wraps_copy_around_if_inside_window_at_end_of_buf)
 {
     Fixture f;
-    int const orig_msg_idx = f.sw.w.cap - 1;
+    arq_uint16_t const orig_msg_idx = f.sw.w.cap - 1;
     f.sw.w.seq = orig_msg_idx;
     f.snd.resize(f.sw.w.msg_len * 2);
     for (size_t i = 0; i < f.snd.size(); ++i) {
@@ -313,7 +313,7 @@ TEST(send_wnd, send_wraps_copy_around_and_respects_partially_filled_starting_mes
         f.snd[i] = (unsigned char)i;
     }
     std::fill(std::begin(f.buf), std::end(f.buf), 0xFE);
-    int const orig_msg_idx = f.sw.w.cap - 1;
+    arq_uint16_t const orig_msg_idx = f.sw.w.cap - 1;
     f.sw.w.seq = orig_msg_idx;
     f.msg[orig_msg_idx].len = 3;
     arq__send_wnd_send(&f.sw, f.snd.data(), f.snd.size(), 1);
