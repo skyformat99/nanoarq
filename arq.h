@@ -995,11 +995,10 @@ unsigned arq__ctz(unsigned x)
     ARQ_ASSERT(x);
 #ifdef _MSC_VER
     _BitScanForward(&idx, x);
-    return idx;
 #else
-    (void)idx;
-    return (unsigned)__builtin_ctz(x);
+    idx = (unsigned)__builtin_ctz(x);
 #endif
+    return idx;
 }
 
 void ARQ_MOCKABLE(arq__wnd_init)(arq__wnd_t *w, unsigned wnd_cap, unsigned msg_len, unsigned seg_len)
