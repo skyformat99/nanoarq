@@ -19,7 +19,7 @@ TEST(functional, send_10mb_through_window)
 
     std::vector< arq_uchar_t > input_data(1024 * 1024 * 10);
     for (auto i = 0u; i < input_data.size() / 2; ++i) {
-        uint16_t const v = i;
+        arq_uint16_t const v = (arq_uint16_t)i;
         std::memcpy(&input_data[i * 2], &v, sizeof(v));
     }
     auto input_idx = 0u;

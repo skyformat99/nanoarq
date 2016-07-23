@@ -108,7 +108,7 @@ TEST(wnd, seg_returns_msg_len_remainder_for_final_segment)
     Fixture f;
     f.w.msg[0].len = f.w.msg_len - (f.w.seg_len / 2);
     arq__wnd_seg(&f.w, 0, (f.w.msg_len / f.w.seg_len) - 1, &f.p, &f.n);
-    CHECK_EQUAL(f.w.seg_len / 2, f.n);
+    CHECK_EQUAL((unsigned)(f.w.seg_len / 2), f.n);
 }
 
 TEST(wnd, seg_size_looks_up_message_by_message_index)

@@ -33,8 +33,8 @@ struct Fixture
     }
     arq__frame_hdr_t h;
     unsigned const frame_len = arq__frame_len(sizeof(seg));
-    char const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    char frame[64];
+    arq_uchar_t const seg[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    arq_uchar_t frame[64];
 };
 
 TEST(frame, write_returns_frame_len)

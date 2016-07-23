@@ -90,14 +90,14 @@ TEST(cobs, encode_maximum_payload_size_every_other_byte_zero)
     unsigned char buf[256];
     for (int i = 0; i < 256; i += 2) {
         buf[i] = 0;
-        buf[i + 1] = i + 1;
+        buf[i + 1] = (unsigned char)(i + 1);
     }
     buf[0] = 0xFF;
     arq__cobs_encode(buf, sizeof(buf));
     unsigned char encoded[256];
     for (int i = 0; i < 256; i += 2) {
         encoded[i] = 2;
-        encoded[i + 1] = i + 1;
+        encoded[i + 1] = (unsigned char)(i + 1);
     }
     encoded[254] = 1;
     encoded[255] = 0;
@@ -189,14 +189,14 @@ TEST(cobs, decode_maximum_payload_size_every_other_byte_zero)
     unsigned char buf[256];
     for (int i = 0; i < 256; i += 2) {
         buf[i] = 2;
-        buf[i + 1] = i + 1;
+        buf[i + 1] = (unsigned char)(i + 1);
     }
     buf[254] = 1;
     arq__cobs_decode(buf, sizeof(buf));
     unsigned char decoded[256];
     for (int i = 0; i < 256; i += 2) {
         decoded[i] = 0;
-        decoded[i + 1] = i + 1;
+        decoded[i + 1] = (unsigned char)(i + 1);
     }
     MEMCMP_EQUAL(buf, decoded, sizeof(buf));
 }

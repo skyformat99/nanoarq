@@ -22,7 +22,7 @@ struct Fixture
     {
         sw.rtx = rtx.data();
         std::memset(rtx.data(), 0, sizeof(arq_time_t) * rtx.size());
-        sw.w.cap = rtx.size();
+        sw.w.cap = (arq_uint16_t)rtx.size();
         sw.w.size = 0;
         sw.w.seq = 0;
         sw.tiny_on = ARQ_FALSE;
@@ -67,7 +67,7 @@ TEST(next_poll, returns_smallest_rtx_timer)
 TEST(next_poll, looks_at_rtx_timers_inside_of_active_send_window)
 {
     Fixture f;
-    f.sw.w.size = f.rtx.size();
+    f.sw.w.size = (arq_uint16_t)f.rtx.size();
     for (auto i = 0u; i < f.sw.w.size; ++i) {
         f.rtx[i] = 2;
     }

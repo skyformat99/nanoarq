@@ -48,3 +48,5 @@ doc/*.toc
 # hooray for osx
 .DS_Store
 
+# hooray for windows
+*.TMP
