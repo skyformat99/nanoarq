@@ -5,7 +5,7 @@ SCRIPT_PATH=$(cd $(dirname $0); pwd -P)
 
 CMAKE_DIR="$SCRIPT_PATH/../external/cmake"
 HOST_OS=$(uname -s)
-CMAKE_PREFIX=cmake-3.6.1-$HOST_OS-x86_64
+CMAKE_PREFIX=cmake-3.7.0-$HOST_OS-x86_64
 
 if [ ! -f "$CMAKE_DIR/cmake" ]; then
     if [ "$HOST_OS" == "Darwin" ]; then
@@ -19,7 +19,7 @@ if [ ! -f "$CMAKE_DIR/cmake" ]; then
 
     CMAKE_ARCHIVE="$CMAKE_PREFIX.tar.gz"
     rm -f "$CMAKE_DIR/$CMAKE_ARCHIVE"
-    CMAKE_URL=https://cmake.org/files/v3.6/$CMAKE_ARCHIVE
+    CMAKE_URL=https://cmake.org/files/v3.7/$CMAKE_ARCHIVE
 
     if [ "$HOST_OS" == "Darwin" ]; then
         curl -L -o "$CMAKE_DIR/$CMAKE_ARCHIVE" $CMAKE_URL

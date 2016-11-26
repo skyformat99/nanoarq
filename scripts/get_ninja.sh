@@ -10,7 +10,7 @@ if [ ! -f "$NINJA" ]; then
     echo Ninja not found at $NINJA, retrieving...
     mkdir -p "$NINJA_DIR"
 
-    NINJA_URL_PREFIX=https://github.com/ninja-build/ninja/releases/download/v1.7.1
+    NINJA_URL_PREFIX=https://github.com/ninja-build/ninja/releases/download/v1.7.2
 
     HOST_OS=$(uname -s)
     if [ "$HOST_OS" == "Darwin" ]; then
